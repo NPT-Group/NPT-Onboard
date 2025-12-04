@@ -1,36 +1,172 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NPTonboard – Employee Hiring & Onboarding Platform
+
+**NPTonboard** is a standalone internal application designed to streamline and digitize employee onboarding for **NPT’s global subsidiaries—India, Canada, and the United States.**
+
+Version **1.0** focuses on activating the India onboarding workflow, while the architecture is fully prepared for Canada and US expansion in future versions.
+
+---
+
+## Current Status
+
+| Component                 | Stack                                                    | Status             |
+| ------------------------- | -------------------------------------------------------- | ------------------ |
+| **Frontend**              | Next.js 15 • TypeScript • Tailwind CSS                   | Active Development |
+| **Backend**               | Next.js Route Handlers • Node.js • Shared Contract Types | In Progress        |
+| **HR Authentication**     | Secure login & sessions                                  | Upcoming           |
+| **Candidate Invite Flow** | Public invite link + token                               | UI Scaffold Ready  |
+| **India Onboarding Flow** | Digital form + PDF/manual workflows                      | Building           |
+| **Canada & US**           | Disabled in v1 (UI-ready, backend pending)               | Scheduled for v2   |
+
+---
+
+## Project Overview
+
+NPTonboard manages onboarding for employees across multiple subsidiaries. The system supports two primary user groups:
+
+### 👤 Candidates
+
+- Access onboarding using a secure invite link
+- Identity verification (token + OTP)
+- Multi-step forms (India activated in v1)
+- Document uploads
+- Digital signature & declarations
+- Handle HR modification requests
+
+### 🧑‍💼 HR Team
+
+- View onboarding dashboard by subsidiary
+- Create candidate invitations (Digital or Manual PDF)
+- Track statuses and expiration
+- Review submissions
+- Request modifications
+- Approve employees & assign employee numbers
+
+---
+
+## 🏗️ Project Structure
+
+```
+src/
+  app/
+    (employee)/
+      onboarding/
+        [inviteToken]/     # Candidate onboarding entry point
+    (hr)/
+      login/               # HR login screen (placeholder)
+      dashboard/           # HR Dashboard (placeholder)
+    layout.tsx             # Root layout wrapper
+    page.tsx               # Root landing
+  components/
+    ui/                    # Reusable UI primitives
+  lib/
+    api/                   # API client layer (mock until backend ready)
+    config/                # App-wide configs
+    utils/                 # Utility helpers
+  types/
+    index.ts               # Placeholder shared types (to be replaced by backend contracts)
+```
+
+---
+
+## ⚙️ Tech Stack
+
+- **Next.js 15** (App Router)
+- **TypeScript + React**
+- **Tailwind CSS**
+- **React Hook Form + Zod**
+- **Node.js Route Handlers**
+- Shared Type Contracts (upcoming)
+- AWS S3 (planned)
+- Cloudflare Turnstile (planned)
+
+---
 
 ## Getting Started
 
-First, run the development server:
+### 1. Install dependencies
+
+```bash
+npm install
+# or
+pnpm install
+```
+
+### 2. Run development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit:  
+http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Copy the example file:
 
-## Learn More
+```bash
+cp .env.example .env.local
+```
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Version 1 Scope
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### ✔️ Active
 
-## Deploy on Vercel
+- Full **India** onboarding flow (Digital + Manual PDF)
+- HR dashboard with subsidiary switcher
+- Invite generation for India
+- Candidate landing page scaffold
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### ❌ Disabled until v2
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Canada onboarding**
+- **US onboarding**
+
+When HR switches to CA/US:
+
+> “This module will be available in Version 2.”
+
+---
+
+## Development Standards
+
+- TypeScript strict mode enabled
+- ESLint + Prettier enforced
+- Modular, feature-driven folder structure
+- UI primitives under `components/ui`
+- API layer replaceable with backend contracts
+- CI (upcoming): lint, build, type checks
+
+---
+
+## 🤝 Collaboration
+
+### Branch Strategy
+
+- `main` → stable
+- `dev` → integration branch
+- `feature/*` → individual development branches
+
+### Pull Requests
+
+- Must build & lint cleanly
+- Include screenshots for UI updates
+- Must not break shared types or app structure
+
+---
+
+## 👥 Contributors
+
+| Name      | Role                 |
+| --------- | -------------------- |
+| **Parv**  | Team Lead & Designer |
+| **Faruq** | Frontend Engineer    |
+| **Ridoy** | Backend Engineer     |
+
+---
+
+## 📄 License
+
+Internal use only — © NPT.
