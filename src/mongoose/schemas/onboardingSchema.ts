@@ -84,7 +84,15 @@ export const onboardingSchema = new Schema<TOnboarding>(
 );
 
 // per-subsidiary uniqueness of employeeNumber
-onboardingSchema.index({ subsidiary: 1, employeeNumber: 1 }, { unique: true, sparse: true });
+onboardingSchema.index(
+  { subsidiary: 1, employeeNumber: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      employeeNumber: { $type: "string" },
+    },
+  }
+);
 
 // Validate presence of per-subsidiary formData *only when status requires it*
 onboardingSchema.pre<TOnboardingDoc>("save", function () {
