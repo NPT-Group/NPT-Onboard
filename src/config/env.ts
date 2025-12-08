@@ -1,4 +1,4 @@
-// src/app/config/env.ts
+// src/config/env.ts
 export const MONGO_URI = process.env.MONGO_URI!;
 export const INVITATION_EXPIRES_AT_IN_MILSEC = process.env.INVITATION_EXPIRES_AT_IN_MILSEC!;
 export const HASH_SECRET = process.env.HASH_SECRET!;

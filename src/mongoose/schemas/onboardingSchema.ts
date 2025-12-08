@@ -20,6 +20,7 @@ const onboardingOtpSchema = new Schema<IOnboardingOtp>(
     expiresAt: { type: Date, required: true },
     attempts: { type: Number, required: true, default: 0 },
     lockedAt: { type: Date },
+    lastSentAt: { type: Date, required: true },
   },
   { _id: false }
 );
@@ -85,17 +86,23 @@ export const onboardingSchema = new Schema<TOnboarding>(
 // per-subsidiary uniqueness of employeeNumber
 onboardingSchema.index({ subsidiary: 1, employeeNumber: 1 }, { unique: true, sparse: true });
 
-// Validate presence of per-subsidiary formData based on subsidiary field
-onboardingSchema.pre("save", function (this: TOnboardingDoc) {
+// Validate presence of per-subsidiary formData *only when status requires it*
+onboardingSchema.pre<TOnboardingDoc>("save", function () {
+  // Decide in which statuses full formData must be present.
+  const requiresFormData = this.status === EOnboardingStatus.Submitted || this.status === EOnboardingStatus.Resubmitted || this.status === EOnboardingStatus.Approved;
+
+  // If not in a “form should exist” state, don’t enforce anything.
+  if (!requiresFormData) return;
+
   if (this.subsidiary === ESubsidiary.INDIA && !this.indiaFormData) {
-    throw new Error("indiaFormData is required for INDIA subsidiary");
+    throw new Error("indiaFormData is required for INDIA subsidiary when onboarding is submitted/approved");
   }
 
   if (this.subsidiary === ESubsidiary.CANADA && !this.canadaFormData) {
-    throw new Error("canadaFormData is required for CANADA subsidiary");
+    throw new Error("canadaFormData is required for CANADA subsidiary when onboarding is submitted/approved");
   }
 
   if (this.subsidiary === ESubsidiary.USA && !this.usFormData) {
-    throw new Error("usFormData is required for USA subsidiary");
+    throw new Error("usFormData is required for USA subsidiary when onboarding is submitted/approved");
   }
 });

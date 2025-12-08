@@ -74,6 +74,7 @@ export interface IOnboardingOtp {
   expiresAt: Date | string; // ISO date string
   attempts: number;
   lockedAt?: Date | string; // optional lock timestamp if you implement lockout
+  lastSentAt?: Date | string;
 }
 
 /**

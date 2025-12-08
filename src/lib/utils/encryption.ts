@@ -1,6 +1,10 @@
 // src/lib/utils/encryption.ts
 import crypto from "crypto";
-import { ENC_KEY } from "@/app/config/env";
+import { ENC_KEY, HASH_SECRET } from "@/config/env";
+
+// =============================
+// Symmetric Encryption (AES-GCM)
+// =============================
 
 // ENC_KEY must be 32 bytes when decoded. For simplicity, assume it's hex.
 const KEY = Buffer.from(ENC_KEY, "hex");
@@ -50,4 +54,28 @@ export const encryptField = (value: string | null | undefined): string | undefin
 
 export const decryptField = (value: string | null | undefined): string | undefined => {
   return decryptString(value);
+};
+
+// =============================
+// One-way Hashing (HMAC-SHA256)
+// =============================
+
+/**
+ * Deterministic HMAC-SHA256 hash with HASH_SECRET.
+ *
+ * Intended for opaque tokens (invite tokens, OTP secrets, etc.),
+ * NOT for user passwords (for those, prefer bcrypt/argon2).
+ */
+export const hashString = (value?: string | null): string | undefined => {
+  if (value == null || value === "") return undefined;
+
+  return crypto.createHmac("sha256", HASH_SECRET).update(value, "utf8").digest("hex");
+};
+
+/**
+ * Convenience helper for use in Mongoose schema setters:
+ *   { type: String, set: hashField }
+ */
+export const hashField = (value: string | null | undefined): string | undefined => {
+  return hashString(value);
 };
