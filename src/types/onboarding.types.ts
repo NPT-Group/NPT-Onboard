@@ -1,5 +1,6 @@
 // src/types/onboarding.types.ts
 
+import { HydratedDocument } from "mongoose";
 import type { IFileAsset, IGeoLocation, IResidentialAddress } from "./shared.types";
 import { ESubsidiary } from "./shared.types";
 
@@ -25,15 +26,6 @@ export enum EOnboardingStatus {
   Resubmitted = "Resubmitted",
   Approved = "Approved",
   Terminated = "Terminated",
-}
-
-/**
- * Who performed an action in the audit log.
- */
-export enum EOnboardingActor {
-  HR = "HR",
-  EMPLOYEE = "EMPLOYEE",
-  SYSTEM = "SYSTEM",
 }
 
 /**
@@ -70,8 +62,8 @@ export enum EAccountType {
  */
 export interface IOnboardingInvite {
   tokenHash: string;
-  expiresAt: string; // ISO date string
-  lastSentAt: string; // ISO date string
+  expiresAt: Date | string; // ISO date string
+  lastSentAt: Date | string; // ISO date string
 }
 
 /**
@@ -79,33 +71,9 @@ export interface IOnboardingInvite {
  */
 export interface IOnboardingOtp {
   otpHash: string;
-  expiresAt: string; // ISO date string
+  expiresAt: Date | string; // ISO date string
   attempts: number;
-  lockedAt?: string; // optional lock timestamp if you implement lockout
-}
-
-/**
- * Single audit log entry.
- */
-export enum EOnboardingAuditAction {
-  STATUS_CHANGED = "STATUS_CHANGED",
-  INVITE_GENERATED = "INVITE_GENERATED",
-  INVITE_RESENT = "INVITE_RESENT",
-  MODIFICATION_REQUESTED = "MODIFICATION_REQUESTED",
-  SUBMITTED = "SUBMITTED",
-  RESUBMITTED = "RESUBMITTED",
-  APPROVED = "APPROVED",
-  TERMINATED = "TERMINATED",
-  DELETED = "DELETED",
-}
-
-export interface IOnboardingAuditEntry {
-  id: string; // e.g. Mongo ObjectId as string
-  action: EOnboardingAuditAction;
-  actorType: EOnboardingActor;
-  actorEmail?: string;
-  createdAt: string; // ISO date string
-  metadata?: Record<string, unknown>;
+  lockedAt?: Date | string; // optional lock timestamp if you implement lockout
 }
 
 /**
@@ -116,7 +84,7 @@ export interface IPersonalInfo {
   lastName: string;
   email: string; // prefilled, non-editable in UI
   gender: EGender;
-  dateOfBirth: string; // ISO
+  dateOfBirth: Date | string; // ISO
   canProvideProofOfAge: boolean;
   residentialAddress: IResidentialAddress;
 
@@ -340,8 +308,8 @@ export interface IEducationDetails {
 export interface IEmploymentHistoryEntry {
   organizationName: string;
   designation: string;
-  startDate: string; // ISO
-  endDate: string; // ISO
+  startDate: Date | string; // ISO
+  endDate: Date | string; // ISO
   reasonForLeaving: string;
   experienceCertificateFile?: IFileAsset | null;
 }
@@ -352,13 +320,13 @@ export interface IEmploymentHistoryEntry {
  */
 export interface ISignatureInfo {
   file: IFileAsset; // image stored in S3
-  signedAt: string; // ISO date
+  signedAt: Date | string; // ISO date
 }
 
 export interface IDeclarationAndSignature {
   hasAcceptedDeclaration: boolean;
   signature: ISignatureInfo;
-  declarationDate: string; // ISO date (UI default = today)
+  declarationDate: Date | string; // ISO date (UI default = today)
 }
 
 /* ------------------------------------------------------------------ */
@@ -387,6 +355,7 @@ export interface IUsOnboardingFormData {
   personalInfo: IPersonalInfo;
   governmentIds: IUsGovernmentIds;
   education: IEducationDetails[];
+  hasPreviousEmployment: boolean;
   employmentHistory: IEmploymentHistoryEntry[];
   bankDetails: IUsBankDetails;
   declaration: IDeclarationAndSignature;
@@ -419,34 +388,36 @@ export interface IOnboardingBase {
   locationAtSubmit?: IGeoLocation;
 
   isCompleted: boolean;
-  createdAt: string;
-  updatedAt: string;
-  submittedAt?: string;
-  completedAt?: string;
-  approvedAt?: string;
-  terminatedAt?: string;
-
-  auditLog: IOnboardingAuditEntry[];
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  submittedAt?: Date | string;
+  completedAt?: Date | string;
+  approvedAt?: Date | string;
+  terminatedAt?: Date | string;
 }
 
 /**
- * Subsidiary-discriminated onboarding types — lets TS narrow formData
- * by subsidiary where needed.
+ * Subsidiary-discriminated onboarding types — lets TS narrow
+ * to the correct *FormData based on subsidiary.
  */
 
 export interface IIndiaOnboarding extends IOnboardingBase {
   subsidiary: ESubsidiary.INDIA;
-  formData?: IIndiaOnboardingFormData;
+  indiaFormData?: IIndiaOnboardingFormData;
 }
 
 export interface ICanadaOnboarding extends IOnboardingBase {
   subsidiary: ESubsidiary.CANADA;
-  formData?: ICanadaOnboardingFormData;
+  canadaFormData?: ICanadaOnboardingFormData;
 }
 
 export interface IUsOnboarding extends IOnboardingBase {
   subsidiary: ESubsidiary.USA;
-  formData?: IUsOnboardingFormData;
+  usFormData?: IUsOnboardingFormData;
 }
 
+// Union of all onboarding types
 export type TOnboarding = IIndiaOnboarding | ICanadaOnboarding | IUsOnboarding;
+
+// Mongoose hydrated document type
+export type TOnboardingDoc = HydratedDocument<TOnboarding>;

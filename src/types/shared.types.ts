@@ -55,6 +55,6 @@ export interface IResidentialAddress {
   city?: string;
   state?: string;
   postalCode?: string;
-  fromDate: string; // ISO
-  toDate: string; // ISO
+  fromDate: Date | string; // ISO
+  toDate: Date | string; // ISO
 }
