@@ -8,7 +8,7 @@ import { errorResponse, successResponse } from "@/lib/utils/apiResponse";
 import { guard } from "@/lib/utils/auth/authUtils";
 import { parseJsonBody } from "@/lib/utils/reqParser";
 import { hashString } from "@/lib/utils/encryption";
-import { buildOnboardingInvite } from "@/lib/utils/onboardingUtils";
+import { buildOnboardingInvite, createOnboardingAuditLogSafe } from "@/lib/utils/onboardingUtils";
 import { sendEmployeeOnboardingInvitation } from "@/lib/mail/employee/sendEmployeeOnboardingInvitation";
 
 import { OnboardingModel } from "@/mongoose/models/Onboarding";
@@ -16,6 +16,7 @@ import { OnboardingModel } from "@/mongoose/models/Onboarding";
 import { EOnboardingMethod, EOnboardingStatus, type TOnboarding } from "@/types/onboarding.types";
 import { ESubsidiary } from "@/types/shared.types";
 import type { GraphAttachment } from "@/lib/mail/mailer";
+import { EOnboardingActor, EOnboardingAuditAction } from "@/types/onboardingAuditLog.types";
 
 /* --------------------- Request body shape --------------------- */
 type PostBody = {
@@ -27,28 +28,10 @@ type PostBody = {
 };
 
 /* -------------------------- POST /admin/onboardings -------------------------- */
-/**
- * POST /api/admin/onboardings
- *
- * Creates a new onboarding record for an employee.
- *
- * Rules:
- *  - Only INDIA subsidiary is supported for now.
- *  - method = DIGITAL:
- *      - status = InviteGenerated
- *      - generate invite token + hash
- *      - send digital email with onboarding link
- *  - method = MANUAL:
- *      - status = ManualPDFSent
- *      - send email with blank India onboarding PDF attached
- *
- * All-or-nothing:
- *  - If email sending (or PDF read) fails, the created onboarding doc is deleted.
- */
 export const POST = async (req: NextRequest) => {
   try {
     await connectDB();
-    await guard();
+    const user = await guard();
 
     const body = await parseJsonBody<PostBody>(req);
     const { subsidiary, method, firstName, lastName, email } = body;
@@ -123,6 +106,23 @@ export const POST = async (req: NextRequest) => {
           baseUrl,
           inviteToken: rawInviteToken!, // safe: only set for DIGITAL
         });
+
+        // Audit: digital invite generated
+        await createOnboardingAuditLogSafe({
+          onboardingId: (onboarding as any)._id.toString(),
+          action: EOnboardingAuditAction.INVITE_GENERATED,
+          actor: {
+            type: EOnboardingActor.HR,
+            id: user.id,
+            name: user.name,
+            email: user.email,
+          },
+          metadata: {
+            status: onboarding.status,
+            method,
+            subsidiary,
+          },
+        });
       } else {
         // MANUAL: attach blank India onboarding PDF
         const pdfPath = `${process.cwd()}/src/lib/assets/pdfs/npt-india-onboarding-form.pdf`;
@@ -143,17 +143,32 @@ export const POST = async (req: NextRequest) => {
           baseUrl,
           manualFormAttachment,
         });
+
+        // Audit: manual onboarding created / status set to ManualPDFSent
+        await createOnboardingAuditLogSafe({
+          onboardingId: (onboarding as any)._id.toString(),
+          action: EOnboardingAuditAction.MANUAL_PDF_SENT,
+          actor: {
+            type: EOnboardingActor.HR,
+            id: user.id,
+            name: user.name,
+            email: user.email,
+          },
+          metadata: {
+            newStatus: onboarding.status,
+            method,
+            subsidiary,
+          },
+        });
       }
     } catch (emailError) {
       // Rollback: delete the onboarding doc if email (or PDF read) fails
       try {
         await OnboardingModel.findByIdAndDelete((onboarding as any)._id);
       } catch (cleanupError) {
-        // Optionally log cleanupError somewhere; we still surface the emailError
         console.error("Failed to rollback onboarding after email error", cleanupError);
       }
 
-      // Re-throw so it hits the outer catch and returns a proper errorResponse
       throw emailError;
     }
 

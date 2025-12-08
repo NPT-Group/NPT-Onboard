@@ -38,12 +38,6 @@ export enum ES3Folder {
 
   // Declaration & signature (final step)
   DECLARATION_SIGNATURE = "declaration/signature",
-
-  // Manual flow: scanned PDFs or attachments HR may upload
-  MANUAL_UPLOADS = "manual/uploads",
-
-  // System-generated onboarding PDFs (per-subsidiary final docs)
-  GENERATED_PDFS = "generated/pdfs",
 }
 
 export interface IPresignRequest {

@@ -1,4 +1,17 @@
 // src/lib/utils/s3Helper.ts
+// -----------------------------------------------------------------------------
+// S3 utilities and higher-level helpers for:
+// - Direct server-side uploads
+// - Presigned PUT/GET URLs
+// - Temp vs final key management
+// - File asset finalization (moving from temp → final prefixes)
+// - Client-side upload / deletion helpers
+//
+// This module is shared between server and browser environments.
+// Server-only functions rely directly on the AWS SDK client.
+// Browser-safe helpers only call HTTP APIs exposed by our Next.js backend.
+// -----------------------------------------------------------------------------
+
 import { APP_AWS_ACCESS_KEY_ID, APP_AWS_BUCKET_NAME, APP_AWS_REGION, APP_AWS_SECRET_ACCESS_KEY } from "@/config/env";
 import { S3Client, PutObjectCommand, DeleteObjectCommand, CopyObjectCommand, HeadObjectCommand, GetObjectCommand, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from "uuid";
@@ -221,7 +234,7 @@ export async function finalizeVectorWithCache(vec: IFileAsset[] | undefined, des
 
 /**
  * These helpers are safe to import in the browser.
- * They call your /api/v1/presign endpoint, PUT the file to S3, and return metadata.
+ * They call your /api/v1/presign/upload endpoint, PUT the file to S3, and return metadata.
  */
 
 export interface UploadToS3Options {
@@ -242,6 +255,10 @@ export interface UploadResult {
   originalName: string;
 }
 
+/**
+ *
+ * Upload a file to S3 via presigned URL obtained from your API.
+ */
 export async function uploadToS3Presigned({
   file,
   namespace,
@@ -262,7 +279,7 @@ export async function uploadToS3Presigned({
     throw new Error(`File size exceeds ${maxSizeMB}MB.`);
   }
 
-  const res = await fetch("/api/v1/presign", {
+  const res = await fetch("/api/v1/presign/upload", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -456,7 +473,7 @@ export async function getDownloadUrlFromS3Key({
   filename?: string; // optional; if no extension, server appends from the key
   expiresIn?: number;
 }): Promise<string> {
-  const res = await fetch("/api/v1/presign-get", {
+  const res = await fetch("/api/v1/presign/download", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ key: s3Key, filename, expiresIn }),
