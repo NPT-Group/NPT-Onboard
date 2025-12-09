@@ -1,4 +1,4 @@
-// src/app/api/presign/upload/route.ts
+// src/app/api/v1/presign/upload/route.ts
 /**
  * Presign Upload API
  *

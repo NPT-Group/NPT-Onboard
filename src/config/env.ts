@@ -14,7 +14,7 @@ export const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET!;
 export const isProd = process.env.NODE_ENV === "production";
 export const PORT = process.env.PORT! ?? 3000;
 export const DISABLE_AUTH = process.env.DISABLE_AUTH === "true";
-export const ONBOARDING_SESSION_COOKIE_NAME = process.env.ONBOARDING_SESSION_COOKIE_NAME || "NPT_ONBOARDING_SESSION";
+export const ONBOARDING_SESSION_COOKIE_NAME = process.env.ONBOARDING_SESSION_COOKIE_NAME!;
 export const AZURE_AD_CLIENT_ID = process.env.AZURE_AD_CLIENT_ID!;
 export const AZURE_AD_CLIENT_SECRET = process.env.AZURE_AD_CLIENT_SECRET!;
 export const AZURE_AD_TENANT_ID = process.env.AZURE_AD_TENANT_ID!;

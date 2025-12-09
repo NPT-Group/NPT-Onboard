@@ -132,10 +132,14 @@ export interface IIndiaPanCardDocument extends IFileDocumentBase {
 }
 
 export interface IIndiaPassportDocument extends IFrontBackDocumentBase {
+  frontFile: IFileAsset;
+  backFile: IFileAsset;
   // future passport-specific fields go here (e.g. passportNumber, expiryDate)
 }
 
 export interface IIndiaDriversLicenseDocument extends IFrontBackDocumentBase {
+  frontFile: IFileAsset;
+  backFile: IFileAsset;
   // future license-specific fields go here (e.g. licenseNumber, class)
 }
 
@@ -180,6 +184,8 @@ export interface ICanadaSinCardDocument extends IFileDocumentBase {
 }
 
 export interface ICanadaPassportDocument extends IFrontBackDocumentBase {
+  frontFile: IFileAsset;
+  backFile: IFileAsset;
   // future passport-specific fields go here
 }
 
@@ -192,6 +198,8 @@ export interface ICanadaWorkPermitDocument extends IFileDocumentBase {
 }
 
 export interface ICanadaDriversLicenseDocument extends IFrontBackDocumentBase {
+  frontFile: IFileAsset;
+  backFile: IFileAsset;
   // future license-specific fields go here
 }
 
@@ -233,6 +241,8 @@ export interface IUsSsnCardDocument extends IFileDocumentBase {
 }
 
 export interface IUsPassportDocument extends IFrontBackDocumentBase {
+  frontFile: IFileAsset;
+  backFile: IFileAsset;
   // future passport-specific fields go here
 }
 
@@ -245,6 +255,8 @@ export interface IUsWorkPermitDocument extends IFileDocumentBase {
 }
 
 export interface IUsDriversLicenseDocument extends IFrontBackDocumentBase {
+  frontFile: IFileAsset;
+  backFile: IFileAsset;
   // future license-specific fields go here
 }
 
@@ -388,7 +400,7 @@ export interface IOnboardingBase {
 
   locationAtSubmit?: IGeoLocation;
 
-  isCompleted: boolean;
+  isCompleted: boolean; // employee has filled out their portion of the form
   createdAt: Date | string;
   updatedAt: Date | string;
   submittedAt?: Date | string;

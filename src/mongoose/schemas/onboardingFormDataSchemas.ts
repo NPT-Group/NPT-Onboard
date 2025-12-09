@@ -34,6 +34,15 @@ const frontBackDocumentSchema = new Schema<IFrontBackDoc>(
   { _id: false }
 );
 
+// Variant where front & back are both required
+const requiredFrontBackDocumentSchema = new Schema<IFrontBackDoc>(
+  {
+    frontFile: { type: fileAssetSchema, required: true },
+    backFile: { type: fileAssetSchema, required: true },
+  },
+  { _id: false }
+);
+
 /* ------------------------------------------------------------------ */
 /* INDIA                                                              */
 /* ------------------------------------------------------------------ */
@@ -85,8 +94,8 @@ const indiaGovernmentIdsSchema = new Schema<IIndiaGovernmentIds>(
   {
     aadhaar: { type: indiaAadhaarDetailsSchema, required: true },
     panCard: { type: indiaPanCardSchema, required: true },
-    passport: { type: frontBackDocumentSchema, required: true },
-    driversLicense: { type: frontBackDocumentSchema, required: false },
+    passport: { type: requiredFrontBackDocumentSchema, required: true },
+    driversLicense: { type: requiredFrontBackDocumentSchema, required: false },
   },
   { _id: false }
 );
@@ -142,9 +151,9 @@ const canadaSinCardDocumentSchema = canadaSimpleFileDocSchema;
 const canadaWorkPermitDocumentSchema = canadaSimpleFileDocSchema.clone();
 const canadaDirectDepositDocumentSchema = canadaSimpleFileDocSchema.clone();
 
-const canadaPassportDocumentSchema = frontBackDocumentSchema.clone();
+const canadaPassportDocumentSchema = requiredFrontBackDocumentSchema.clone();
 const canadaPrCardDocumentSchema = frontBackDocumentSchema.clone();
-const canadaDriversLicenseDocumentSchema = frontBackDocumentSchema.clone();
+const canadaDriversLicenseDocumentSchema = requiredFrontBackDocumentSchema.clone();
 
 const canadaSinDetailsSchema = new Schema<ICanadaSinDetails>(
   {
@@ -225,9 +234,9 @@ const usSsnCardDocumentSchema = usSimpleFileDocSchema;
 const usWorkPermitDocumentSchema = usSimpleFileDocSchema.clone();
 const usVoidChequeOrDepositSlipDocumentSchema = usSimpleFileDocSchema.clone();
 
-const usPassportDocumentSchema = frontBackDocumentSchema.clone();
+const usPassportDocumentSchema = requiredFrontBackDocumentSchema.clone();
 const usGreenCardDocumentSchema = frontBackDocumentSchema.clone();
-const usDriversLicenseDocumentSchema = frontBackDocumentSchema.clone();
+const usDriversLicenseDocumentSchema = requiredFrontBackDocumentSchema.clone();
 
 const usSsnDetailsSchema = new Schema<IUsSsnDetails>(
   {

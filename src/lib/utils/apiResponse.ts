@@ -26,7 +26,6 @@ function mapStatusToCode(status: number): EEApiErrorType {
   if (status === 404) return EEApiErrorType.NOT_FOUND;
   if (status === 409) return EEApiErrorType.CONFLICT;
   if (status === 429) return EEApiErrorType.RATE_LIMITED;
-  if (status >= 500 && status < 600) return EEApiErrorType.INTERNAL;
   // Treat anything else (>=500 or uncommon 4xx) as INTERNAL by default
   return EEApiErrorType.INTERNAL;
 }

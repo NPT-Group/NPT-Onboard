@@ -1,4 +1,4 @@
-// src/app/api/admin/onboardings/route.ts
+// src/app/api/v1/admin/onboardings/route.ts
 import { NextRequest } from "next/server";
 import fs from "fs/promises";
 import crypto from "crypto";
@@ -13,7 +13,7 @@ import { sendEmployeeOnboardingInvitation } from "@/lib/mail/employee/sendEmploy
 
 import { OnboardingModel } from "@/mongoose/models/Onboarding";
 
-import { EOnboardingMethod, EOnboardingStatus, type TOnboarding } from "@/types/onboarding.types";
+import { EOnboardingMethod, EOnboardingStatus } from "@/types/onboarding.types";
 import { ESubsidiary } from "@/types/shared.types";
 import type { GraphAttachment } from "@/lib/mail/mailer";
 import { EOnboardingActor, EOnboardingAuditAction } from "@/types/onboardingAuditLog.types";
@@ -71,7 +71,7 @@ export const POST = async (req: NextRequest) => {
       isCompleted: false,
       createdAt: now,
       updatedAt: now,
-    }) as TOnboarding;
+    });
 
     let rawInviteToken: string | undefined;
 
@@ -85,12 +85,12 @@ export const POST = async (req: NextRequest) => {
       invite.tokenHash = hashString(rawInviteToken)!;
 
       // attach invite to onboarding
-      (onboarding as any).invite = invite;
+      onboarding.invite = invite;
     }
 
     // Validate and persist the onboarding record
-    await (onboarding as any).validate();
-    await (onboarding as any).save();
+    await onboarding.validate();
+    await onboarding.save();
 
     /* ---------------------- Email sending logic (with rollback) ---------------------- */
     const baseUrl = req.nextUrl.origin;
@@ -109,7 +109,7 @@ export const POST = async (req: NextRequest) => {
 
         // Audit: digital invite generated
         await createOnboardingAuditLogSafe({
-          onboardingId: (onboarding as any)._id.toString(),
+          onboardingId: onboarding._id.toString(),
           action: EOnboardingAuditAction.INVITE_GENERATED,
           actor: {
             type: EOnboardingActor.HR,
@@ -146,7 +146,7 @@ export const POST = async (req: NextRequest) => {
 
         // Audit: manual onboarding created / status set to ManualPDFSent
         await createOnboardingAuditLogSafe({
-          onboardingId: (onboarding as any)._id.toString(),
+          onboardingId: onboarding._id.toString(),
           action: EOnboardingAuditAction.MANUAL_PDF_SENT,
           actor: {
             type: EOnboardingActor.HR,
@@ -164,7 +164,7 @@ export const POST = async (req: NextRequest) => {
     } catch (emailError) {
       // Rollback: delete the onboarding doc if email (or PDF read) fails
       try {
-        await OnboardingModel.findByIdAndDelete((onboarding as any)._id);
+        await OnboardingModel.findByIdAndDelete(onboarding._id);
       } catch (cleanupError) {
         console.error("Failed to rollback onboarding after email error", cleanupError);
       }
