@@ -13,7 +13,7 @@ export type InviteVerifyResponse = {
 
 export async function requestOnboardingOtp(inviteToken: string) {
   return postJson<{ token: string }, InviteVerifyResponse>(
-    "/api/onboarding/invite/verify",
+    "/api/v1/onboarding/invite/verify",
     { token: inviteToken }
   );
 }
@@ -24,7 +24,7 @@ export type OtpVerifyResponse = {
 
 export async function verifyOnboardingOtp(inviteToken: string, otp: string) {
   return postJson<{ token: string; otp: string }, OtpVerifyResponse>(
-    "/api/onboarding/otp/verify",
+    "/api/v1/onboarding/otp/verify",
     { token: inviteToken, otp }
   );
 }
