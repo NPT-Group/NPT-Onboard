@@ -15,6 +15,7 @@ import { EOnboardingStatus, type IIndiaOnboardingFormData } from "@/types/onboar
 import { ESubsidiary, type IFileAsset, type IGeoLocation } from "@/types/shared.types";
 import { EOnboardingActor, EOnboardingAuditAction } from "@/types/onboardingAuditLog.types";
 import { validateIndiaOnboardingForm } from "@/lib/validation/onboardingFormValidation";
+import { verifyTurnstileToken } from "@/lib/security/verifyTurnstile";
 
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
@@ -22,7 +23,8 @@ import { validateIndiaOnboardingForm } from "@/lib/validation/onboardingFormVali
 
 type SubmitIndiaFormBody = {
   indiaFormData: IIndiaOnboardingFormData;
-  locationAtSubmit?: IGeoLocation;
+  locationAtSubmit: IGeoLocation;
+  turnstileToken: string; // Cloudflare Turnstile token from client
 };
 
 /**
@@ -163,7 +165,8 @@ export const GET = async (_req: NextRequest, { params }: { params: Promise<{ id:
  * Expected body (India only for now):
  * {
  *   "indiaFormData": { ...full IIndiaOnboardingFormData payload... },
- *   "locationAtSubmit": { ...optional IGeoLocation... }
+ *   "locationAtSubmit": { ...IGeoLocation... },
+ *   "turnstileToken": "string-from-client-widget"
  * }
  *
  * Behavior:
@@ -212,11 +215,33 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
 
     // Parse body
     const body = await parseJsonBody<SubmitIndiaFormBody>(req);
-    if (!body || typeof body !== "object" || !body.indiaFormData) {
+
+    if (!body || typeof body !== "object") {
+      return errorResponse(400, "Invalid request body");
+    }
+
+    const { indiaFormData, locationAtSubmit, turnstileToken } = body;
+
+    // Basic shape checks
+    if (!indiaFormData) {
       return errorResponse(400, "Missing indiaFormData in request body");
     }
 
-    const { indiaFormData } = body;
+    if (!locationAtSubmit || typeof locationAtSubmit !== "object") {
+      return errorResponse(400, "Missing locationAtSubmit in request body");
+    }
+
+    // Turnstile verification (bot protection)
+    if (!turnstileToken || typeof turnstileToken !== "string") {
+      return errorResponse(400, "Missing Turnstile token");
+    }
+
+    const turnstileResult = await verifyTurnstileToken(turnstileToken);
+
+    if (!turnstileResult.ok) {
+      const status = turnstileResult.error === "Missing TURNSTILE_SECRET_KEY" ? 500 : 400;
+      return errorResponse(status, `Turnstile verification failed: ${turnstileResult.error}`);
+    }
 
     // Enforce canonical identity from onboarding doc
     indiaFormData.personalInfo.firstName = onboarding.firstName;
@@ -249,10 +274,7 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
     onboarding.status = nextStatus;
     onboarding.submittedAt = now;
     onboarding.isCompleted = true; // completed meaning "form fully filled out"
-
-    if (body.locationAtSubmit) {
-      onboarding.locationAtSubmit = body.locationAtSubmit;
-    }
+    onboarding.locationAtSubmit = locationAtSubmit;
 
     // Let Mongoose enforce schema-level validation (including pre-save hook
     // that requires per-subsidiary formData when status is Submitted/Resubmitted)

@@ -1,18 +1,7 @@
 // src/mongoose/schemas/onboardingSchema.ts
 import { geoLocationSchema } from "./sharedSchemas";
-import {
-  indiaOnboardingFormDataSchema,
-  canadaOnboardingFormDataSchema,
-  usOnboardingFormDataSchema,
-} from "./onboardingFormDataSchemas";
-import {
-  EOnboardingMethod,
-  EOnboardingStatus,
-  IOnboardingInvite,
-  IOnboardingOtp,
-  TOnboarding,
-  TOnboardingDoc,
-} from "@/types/onboarding.types";
+import { indiaOnboardingFormDataSchema, canadaOnboardingFormDataSchema, usOnboardingFormDataSchema } from "./onboardingFormDataSchemas";
+import { EOnboardingMethod, EOnboardingStatus, IOnboardingInvite, IOnboardingOtp, TOnboarding, TOnboardingDoc } from "@/types/onboarding.types";
 import { ESubsidiary } from "@/types/shared.types";
 import { Schema } from "mongoose";
 
@@ -63,6 +52,15 @@ export const onboardingSchema = new Schema<TOnboarding>(
       index: true,
     },
 
+    modificationRequestMessage: {
+      type: String,
+      required: false,
+    },
+    modificationRequestedAt: {
+      type: Date,
+      required: false,
+    },
+
     employeeNumber: {
       type: String,
       index: true,
@@ -108,29 +106,20 @@ onboardingSchema.index(
 // Validate presence of per-subsidiary formData *only when status requires it*
 onboardingSchema.pre<TOnboardingDoc>("save", function () {
   // Decide in which statuses full formData must be present.
-  const requiresFormData =
-    this.status === EOnboardingStatus.Submitted ||
-    this.status === EOnboardingStatus.Resubmitted ||
-    this.status === EOnboardingStatus.Approved;
+  const requiresFormData = this.status === EOnboardingStatus.Submitted || this.status === EOnboardingStatus.Resubmitted || this.status === EOnboardingStatus.Approved;
 
   // If not in a “form should exist” state, don’t enforce anything.
   if (!requiresFormData) return;
 
   if (this.subsidiary === ESubsidiary.INDIA && !this.indiaFormData) {
-    throw new Error(
-      "indiaFormData is required for INDIA subsidiary when onboarding is submitted/approved"
-    );
+    throw new Error("indiaFormData is required for INDIA subsidiary when onboarding is submitted/approved");
   }
 
   if (this.subsidiary === ESubsidiary.CANADA && !this.canadaFormData) {
-    throw new Error(
-      "canadaFormData is required for CANADA subsidiary when onboarding is submitted/approved"
-    );
+    throw new Error("canadaFormData is required for CANADA subsidiary when onboarding is submitted/approved");
   }
 
   if (this.subsidiary === ESubsidiary.USA && !this.usFormData) {
-    throw new Error(
-      "usFormData is required for USA subsidiary when onboarding is submitted/approved"
-    );
+    throw new Error("usFormData is required for USA subsidiary when onboarding is submitted/approved");
   }
 });
