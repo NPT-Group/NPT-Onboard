@@ -78,33 +78,34 @@ src/
           page.tsx        # HR detail view: tabs (personal, bank, docs, audit, etc.)
 
   api/
-    admin/
-      onboardings/
-        route.ts          # POST (create new onboarding), GET (list for active subsidiary)
-      onboardings/
+    v1/
+      admin/
+        onboardings/
+          route.ts          # POST (create new onboarding), GET (list for active subsidiary)
+        onboardings/
+          [id]/
+            route.ts        # GET (detail), PUT (update formData), DELETE (permanent delete)
+            approve/
+              route.ts      # POST (approve + employeeNumber)
+            terminate/
+              route.ts      # POST (terminate onboarding)
+            resend-invite/
+              route.ts      # POST (resend digital invite, new token)
+            request-modification/
+              route.ts      # POST (ModificationRequested + new token + HR message)
+
+      onboarding/
+        invite/
+          verify/
+            route.ts        # POST: validate invite token, generate OTP, email OTP
+        otp/
+          verify/
+            route.ts        # POST: validate OTP, set secure cookie
         [id]/
-          route.ts        # GET (detail), PUT (update formData), DELETE (permanent delete)
-          approve/
-            route.ts      # POST (approve + employeeNumber)
-          terminate/
-            route.ts      # POST (terminate onboarding)
-          resend-invite/
-            route.ts      # POST (resend digital invite, new token)
-          request-modification/
-            route.ts      # POST (ModificationRequested + new token + HR message)
+          route.ts          # GET: employee fetch; POST: final submit (Submitted/Resubmitted)
 
-    onboarding/
-      invite/
-        verify/
-          route.ts        # POST: validate invite token, generate OTP, email OTP
-      otp/
-        verify/
-          route.ts        # POST: validate OTP, set secure cookie
-      [id]/
-        route.ts          # GET: employee fetch; POST: final submit (Submitted/Resubmitted)
-
-    presign/
-      route.ts            # POST: presigned S3 URLs (shared HR/employee uploads)
+      presign/
+        route.ts            # POST: presigned S3 URLs (shared HR/employee uploads)
 
   components/
     ui/                   # Reusable UI primitives (buttons, inputs, dialogs, etc.)
@@ -123,7 +124,7 @@ src/
 ```
 
 > The **frontend** and **API** folder structures are intentionally aligned with domain concepts:
-> `dashboard` ↔ `/api/admin/onboardings` and `onboarding` ↔ `/api/onboarding/...`.
+> `dashboard` ↔ `/api/v1/admin/onboardings` and `onboarding` ↔ `/api/v1/onboarding/...`.
 
 ---
 

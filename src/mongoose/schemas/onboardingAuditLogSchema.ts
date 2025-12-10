@@ -1,6 +1,30 @@
 // src/mongoose/schemas/onboardingAuditLogSchema.ts
 import { Schema } from "mongoose";
-import { EOnboardingActor, EOnboardingAuditAction, IOnboardingAuditLog } from "@/types/onboardingAuditLog.types";
+import { EOnboardingActor, EOnboardingAuditAction, type IOnboardingAuditLog, type TOnboardingAuditActor } from "@/types/onboardingAuditLog.types";
+
+const onboardingAuditActorSchema = new Schema<TOnboardingAuditActor>(
+  {
+    type: {
+      type: String,
+      enum: Object.values(EOnboardingActor),
+      required: true,
+    },
+    id: {
+      type: String,
+    },
+    name: {
+      type: String,
+      required: true,
+    },
+    email: {
+      type: String,
+      required: true,
+    },
+  },
+  {
+    _id: false,
+  }
+);
 
 export const onboardingAuditLogSchema = new Schema<IOnboardingAuditLog>(
   {
@@ -18,15 +42,14 @@ export const onboardingAuditLogSchema = new Schema<IOnboardingAuditLog>(
       index: true,
     },
 
-    actorType: {
-      type: String,
-      enum: Object.values(EOnboardingActor),
+    actor: {
+      type: onboardingAuditActorSchema,
       required: true,
     },
 
-    actorEmail: { type: String },
-
-    metadata: { type: Schema.Types.Mixed },
+    metadata: {
+      type: Schema.Types.Mixed,
+    },
 
     createdAt: {
       type: Date,

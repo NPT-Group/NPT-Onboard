@@ -1,4 +1,4 @@
-// src/app/api/onboarding/otp/verify/route.ts
+// src/app/api/v1//onboarding/otp/verify/route.ts
 import { NextRequest } from "next/server";
 
 import connectDB from "@/lib/utils/connectDB";
@@ -25,14 +25,14 @@ type OtpVerifyBody = {
 };
 
 /* -------------------------------------------------------------------------- */
-/* POST /api/onboarding/otp/verify                                           */
+/* POST /api/v1/onboarding/otp/verify                                           */
 /* -------------------------------------------------------------------------- */
 /**
  * Verifies a previously issued OTP and grants an onboarding session cookie.
  *
  * High-level flow:
  *  1. Accept the raw invite token and the OTP from the client:
- *       POST /api/onboarding/otp/verify
+ *       POST /api/v1/onboarding/otp/verify
  *       Body: { "token": "<rawInviteTokenFromUrl>", "otp": "123456" }
  *
  *  2. Identify the onboarding:

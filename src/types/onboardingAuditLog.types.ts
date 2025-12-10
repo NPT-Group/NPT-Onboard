@@ -17,6 +17,7 @@ export enum EOnboardingActor {
 export enum EOnboardingAuditAction {
   STATUS_CHANGED = "STATUS_CHANGED",
   INVITE_GENERATED = "INVITE_GENERATED",
+  MANUAL_PDF_SENT = "MANUAL_PDF_SENT",
   INVITE_RESENT = "INVITE_RESENT",
   MODIFICATION_REQUESTED = "MODIFICATION_REQUESTED",
   SUBMITTED = "SUBMITTED",
@@ -26,12 +27,18 @@ export enum EOnboardingAuditAction {
   DELETED = "DELETED",
 }
 
+export type TOnboardingAuditActor = {
+  type: EOnboardingActor;
+  id?: string;
+  name: string;
+  email: string;
+};
+
 export interface IOnboardingAuditLog {
   id: string; // e.g. Mongo ObjectId as string
   onboardingId: Schema.Types.ObjectId | string;
   action: EOnboardingAuditAction;
-  actorType: EOnboardingActor;
-  actorEmail?: string;
+  actor: TOnboardingAuditActor;
   createdAt: Date | string; // ISO date string
   metadata?: Record<string, unknown>;
 }

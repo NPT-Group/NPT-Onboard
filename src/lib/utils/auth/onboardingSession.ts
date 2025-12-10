@@ -5,7 +5,7 @@ import { Types } from "mongoose";
 
 import connectDB from "@/lib/utils/connectDB";
 import { OnboardingModel } from "@/mongoose/models/Onboarding";
-import { EOnboardingMethod, EOnboardingStatus, type TOnboarding } from "@/types/onboarding.types";
+import { EOnboardingMethod, EOnboardingStatus, TOnboardingDoc, type TOnboarding } from "@/types/onboarding.types";
 import { AppError, EEApiErrorType } from "@/types/api.types";
 import { ONBOARDING_SESSION_COOKIE_NAME } from "@/config/env";
 // Adjust this import to whatever you actually use for hashing invite tokens.
@@ -36,7 +36,7 @@ export function clearOnboardingCookieHeader(): string {
  * - Computes Max-Age as the remaining lifetime of the invite.
  * - Returns the Set-Cookie header string so the caller can `NextResponse.headers.set`.
  *
- * Typical usage in POST /api/onboarding/otp/verify:
+ * Typical usage in POST /api/v1/onboarding/otp/verify:
  *   const { setCookie } = await issueOnboardingSessionCookie(onboarding, rawToken);
  *   const res = NextResponse.json(...);
  *   res.headers.set("Set-Cookie", setCookie);
@@ -96,9 +96,10 @@ type RequireOptions = {
  * Success:
  *  - Returns { onboarding } – caller decides how to use it.
  */
-export async function requireOnboardingSession(onboardingId: string, opts: RequireOptions = { allowSubmittedReadOnly: true }): Promise<{ onboarding: TOnboarding }> {
+export async function requireOnboardingSession(onboardingId: string, opts: RequireOptions = { allowSubmittedReadOnly: true }): Promise<{ onboarding: TOnboardingDoc }> {
   await connectDB();
 
+  if (!ONBOARDING_SESSION_COOKIE_NAME) throw new AppError(500, "ONBOARDING_SESSION_COOKIE_NAME is not configured");
   const jar = await cookies();
   const rawToken = jar.get(ONBOARDING_SESSION_COOKIE_NAME)?.value;
 
@@ -122,11 +123,11 @@ export async function requireOnboardingSession(onboardingId: string, opts: Requi
   const tokenHash = hashString(rawToken);
 
   // Enforce: same onboarding id, digital method, matching invite hash.
-  const onboarding = (await OnboardingModel.findOne({
-    id: new Types.ObjectId(onboardingId),
+  const onboarding = await OnboardingModel.findOne({
+    _id: onboardingId,
     method: EOnboardingMethod.DIGITAL,
     "invite.tokenHash": tokenHash,
-  })) as TOnboarding | null;
+  });
 
   if (!onboarding) {
     // Cookie doesn't match any active digital invite for this onboarding.
@@ -135,7 +136,6 @@ export async function requireOnboardingSession(onboardingId: string, opts: Requi
       clearCookieHeader: clearCookie,
     });
   }
-
   // Basic invite validity (aligned with spec: cookie should die when invite expires).
   if (!onboarding.invite || !onboarding.invite.expiresAt) {
     throw new AppError(401, "invite no longer valid", EEApiErrorType.SESSION_REQUIRED, {
@@ -158,7 +158,6 @@ export async function requireOnboardingSession(onboardingId: string, opts: Requi
       clearCookieHeader: clearCookie,
     });
   }
-
   // Optionally enforce that Submitted/Resubmitted are read-only only.
   if (!opts.allowSubmittedReadOnly) {
     if (onboarding.status === EOnboardingStatus.Submitted || onboarding.status === EOnboardingStatus.Resubmitted) {

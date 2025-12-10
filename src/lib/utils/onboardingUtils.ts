@@ -1,7 +1,9 @@
 // src/lib/utils/onboardingUtils.ts
 import { INVITATION_EXPIRES_AT_IN_MILSEC } from "@/config/env";
+import { OnboardingAuditLogModel } from "@/mongoose/models/OnboardingAuditLog";
 import { AppError } from "@/types/api.types";
 import { EOnboardingMethod, EOnboardingStatus, IOnboardingInvite, TOnboardingContext, type TOnboarding } from "@/types/onboarding.types";
+import { EOnboardingActor, EOnboardingAuditAction } from "@/types/onboardingAuditLog.types";
 import { ESubsidiary } from "@/types/shared.types";
 
 /**
@@ -125,5 +127,47 @@ export function createOnboardingContext(onboarding: TOnboarding): TOnboardingCon
     default:
       // Should be unreachable if TOnboarding is in sync with ESubsidiary
       throw new AppError(500, "Unsupported subsidiary for onboarding context");
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Audit log helpers                                                          */
+/* -------------------------------------------------------------------------- */
+
+export interface CreateOnboardingAuditLogParams {
+  onboardingId: string;
+  action: EOnboardingAuditAction;
+  actor: {
+    type: EOnboardingActor;
+    id?: string;
+    name: string;
+    email: string;
+  };
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Fire-and-forget helper for creating onboarding audit log entries.
+ *
+ * Usage rules:
+ *  - Call ONLY after the main operation has succeeded (DB + side effects).
+ *  - If logging fails, the error is swallowed and only logged to stderr.
+ */
+export async function createOnboardingAuditLogSafe(params: CreateOnboardingAuditLogParams): Promise<void> {
+  try {
+    await OnboardingAuditLogModel.create({
+      onboardingId: params.onboardingId,
+      action: params.action,
+      actor: {
+        type: params.actor.type,
+        id: params.actor.id,
+        name: params.actor.name,
+        email: params.actor.email,
+      },
+      metadata: params.metadata,
+    } as any);
+  } catch (err) {
+    // Non-critical: never break the main request because of audit logging
+    console.error("Failed to create onboarding audit log entry", err);
   }
 }

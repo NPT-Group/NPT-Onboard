@@ -1,4 +1,4 @@
-// src/app/api/onboarding/invite/verify/route.ts
+// src/app/api/v1/onboarding/invite/verify/route.ts
 import { NextRequest } from "next/server";
 
 import connectDB from "@/lib/utils/connectDB";
@@ -23,14 +23,14 @@ type InviteVerifyBody = {
 };
 
 /* -------------------------------------------------------------------------- */
-/* POST /api/onboarding/invite/verify                                         */
+/* POST /api/v1/onboarding/invite/verify                                         */
 /* -------------------------------------------------------------------------- */
 /**
  * Validates a digital invite token and issues a one-time verification code (OTP).
  *
  * High-level flow:
  *  1. Accept the raw invite token from the employee-facing link:
- *       POST /api/onboarding/invite/verify
+ *       POST /api/v1/onboarding/invite/verify
  *       Body: { "token": "<rawInviteTokenFromUrl>" }
  *
  *  2. Look up the matching onboarding by HMAC hash of the token:
@@ -55,7 +55,7 @@ type InviteVerifyBody = {
  *  5. Send the OTP via email to the employee.
  *
  *  6. Respond with a success payload (no cookie yet – cookie is only set in
- *     /api/onboarding/otp/verify after the OTP is validated):
+ *     /api/v1/onboarding/otp/verify after the OTP is validated):
  *       200 OK
  *       {
  *         "message": "Verification code sent",
