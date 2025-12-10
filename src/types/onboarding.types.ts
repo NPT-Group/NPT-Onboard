@@ -124,6 +124,7 @@ interface IFrontBackDocumentBase {
 // Concrete INDIA document interfaces (future-safe)
 
 export interface IIndiaAadhaarCardDocument extends IFileDocumentBase {
+  aadhaarNumber: string;
   // future India-specific Aadhaar fields can go here (e.g. last4, expiryDate)
 }
 
@@ -147,18 +148,9 @@ export interface IIndiaVoidChequeDocument extends IFileDocumentBase {
   // future void-cheque-specific fields go here
 }
 
-export interface IIndiaAadhaarDetails {
-  aadhaarNumber: string;
-  card: IIndiaAadhaarCardDocument;
-}
-
-export interface IIndiaPanCard {
-  card: IIndiaPanCardDocument;
-}
-
 export interface IIndiaGovernmentIds {
-  aadhaar: IIndiaAadhaarDetails;
-  panCard: IIndiaPanCard;
+  aadhaar: IIndiaAadhaarCardDocument;
+  panCard: IIndiaPanCardDocument;
   passport: IIndiaPassportDocument; // required front/back in validation
   driversLicense?: IIndiaDriversLicenseDocument; // optional
 }
@@ -180,6 +172,7 @@ export interface IIndiaBankDetails {
 // Concrete CANADA document interfaces
 
 export interface ICanadaSinCardDocument extends IFileDocumentBase {
+  sinNumber: string;
   // future SIN-card-specific fields go here
 }
 
@@ -207,13 +200,8 @@ export interface ICanadaDirectDepositDocument extends IFileDocumentBase {
   // future direct-deposit-specific fields go here
 }
 
-export interface ICanadaSinDetails {
-  sinNumber: string;
-  card: ICanadaSinCardDocument;
-}
-
 export interface ICanadaGovernmentIds {
-  sin: ICanadaSinDetails;
+  sin: ICanadaSinCardDocument;
 
   passport: ICanadaPassportDocument; // required front/back in validation
   prCard?: ICanadaPrCardDocument;
@@ -237,6 +225,7 @@ export interface ICanadaBankDetails {
 // Concrete USA document interfaces
 
 export interface IUsSsnCardDocument extends IFileDocumentBase {
+  ssnNumber: string;
   // future SSN-card-specific fields go here
 }
 
@@ -264,13 +253,8 @@ export interface IUsVoidChequeOrDepositSlipDocument extends IFileDocumentBase {
   // future cheque/deposit-slip-specific fields go here
 }
 
-export interface IUsSsnDetails {
-  ssnNumber: string;
-  card: IUsSsnCardDocument;
-}
-
 export interface IUsGovernmentIds {
-  ssn: IUsSsnDetails;
+  ssn: IUsSsnCardDocument;
 
   passport: IUsPassportDocument; // required front/back in validation
   greenCard?: IUsGreenCardDocument;
@@ -294,25 +278,25 @@ export interface IUsBankDetails {
 export interface IEducationDetails {
   highestLevel: EEducationLevel;
 
-  // Primary school fields
-  schoolName?: string;
-  schoolLocation?: string;
-  primaryYearCompleted?: number;
+  // Primary school fields (used only if highestLevel = PrimarySchool)
+  schoolName?: string; // required
+  schoolLocation?: string; // optional
+  primaryYearCompleted?: number; // required
 
-  // High school
-  highSchoolInstitutionName?: string;
-  highSchoolBoard?: string;
-  highSchoolStream?: string;
-  highSchoolYearCompleted?: number;
-  highSchoolGradeOrPercentage?: string;
+  // High school fields (used only if highestLevel = HighSchoolSecondary)
+  highSchoolInstitutionName?: string; // required
+  highSchoolBoard?: string; // optional
+  highSchoolStream?: string; // optional
+  highSchoolYearCompleted?: number; // required
+  highSchoolGradeOrPercentage?: string; // optional
 
-  // Diploma / Bachelor / Master / PhD / Other
-  institutionName?: string;
-  universityOrBoard?: string;
-  fieldOfStudy?: string;
-  startYear?: number;
-  endYear?: number;
-  gradeOrCgpa?: string;
+  // Diploma / Bachelor / Master / PhD / Other (used only if highestLevel = Diploma, Bachelors, Masters, Doctorate, Other)
+  institutionName?: string; // required
+  universityOrBoard?: string; // optional
+  fieldOfStudy?: string; // required
+  startYear?: number; // optional
+  endYear?: number; // required
+  gradeOrCgpa?: string; // optional
 }
 
 /**
@@ -350,6 +334,7 @@ export interface IIndiaOnboardingFormData {
   personalInfo: IPersonalInfo;
   governmentIds: IIndiaGovernmentIds;
   education: IEducationDetails[];
+  hasPreviousEmployment: boolean;
   employmentHistory: IEmploymentHistoryEntry[];
   bankDetails: IIndiaBankDetails;
   declaration: IDeclarationAndSignature;
@@ -359,6 +344,7 @@ export interface ICanadaOnboardingFormData {
   personalInfo: IPersonalInfo;
   governmentIds: ICanadaGovernmentIds;
   education: IEducationDetails[];
+  hasPreviousEmployment: boolean;
   employmentHistory: IEmploymentHistoryEntry[];
   bankDetails: ICanadaBankDetails;
   declaration: IDeclarationAndSignature;

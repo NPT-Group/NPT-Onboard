@@ -10,7 +10,7 @@
  *    touching S3 / DB.
  */
 
-import { EAccountType, EEducationLevel, EGender, type IIndiaOnboardingFormData, type ICanadaOnboardingFormData, type IUsOnboardingFormData, type IEducationDetails } from "@/types/onboarding.types";
+import { EAccountType, EEducationLevel, EGender, type IIndiaOnboardingFormData, type ICanadaOnboardingFormData, type IUsOnboardingFormData } from "@/types/onboarding.types";
 
 import type { IFileAsset } from "@/types/shared.types";
 import { vAssert, isObj, vString, vBoolean, vNumber, vOneOf, vFileish } from "./validationHelpers";
@@ -97,15 +97,80 @@ function validatePersonalInfo(personalInfo: any) {
 function validateEducationEntry(entry: any, label: string) {
   vAssert(isObj(entry), `${label} is required`);
 
-  vOneOf(entry.highestLevel, `${label}.highestLevel`, Object.values(EEducationLevel) as readonly string[]);
+  const level = entry.highestLevel;
+  vOneOf(level, `${label}.highestLevel`, Object.values(EEducationLevel) as readonly string[]);
 
-  // Year / numeric fields: if present, must be valid numbers
-  const intFields: Array<keyof IEducationDetails> = ["primaryYearCompleted", "highSchoolYearCompleted", "startYear", "endYear"];
+  const disallow = (value: any, fieldPath: string) => {
+    vAssert(value == null, `${fieldPath} is not allowed when ${label}.highestLevel is ${level}`);
+  };
 
-  for (const f of intFields) {
-    if (entry[f] != null) {
-      vNumber(entry[f], `${label}.${String(f)}`);
+  if (level === EEducationLevel.PRIMARY_SCHOOL) {
+    // Primary
+    vString(entry.schoolName, `${label}.schoolName`);
+    vOptionalString(entry.schoolLocation, `${label}.schoolLocation`);
+    vNumber(entry.primaryYearCompleted, `${label}.primaryYearCompleted`);
+
+    // Disallow high-school and diploma/bachelor+ fields
+    disallow(entry.highSchoolInstitutionName, `${label}.highSchoolInstitutionName`);
+    disallow(entry.highSchoolBoard, `${label}.highSchoolBoard`);
+    disallow(entry.highSchoolStream, `${label}.highSchoolStream`);
+    disallow(entry.highSchoolYearCompleted, `${label}.highSchoolYearCompleted`);
+    disallow(entry.highSchoolGradeOrPercentage, `${label}.highSchoolGradeOrPercentage`);
+
+    disallow(entry.institutionName, `${label}.institutionName`);
+    disallow(entry.universityOrBoard, `${label}.universityOrBoard`);
+    disallow(entry.fieldOfStudy, `${label}.fieldOfStudy`);
+    disallow(entry.startYear, `${label}.startYear`);
+    disallow(entry.endYear, `${label}.endYear`);
+    disallow(entry.gradeOrCgpa, `${label}.gradeOrCgpa`);
+  } else if (level === EEducationLevel.HIGH_SCHOOL) {
+    // High school
+    vString(entry.highSchoolInstitutionName, `${label}.highSchoolInstitutionName`);
+    vOptionalString(entry.highSchoolBoard, `${label}.highSchoolBoard`);
+    vOptionalString(entry.highSchoolStream, `${label}.highSchoolStream`);
+    vNumber(entry.highSchoolYearCompleted, `${label}.highSchoolYearCompleted`);
+    vOptionalString(entry.highSchoolGradeOrPercentage, `${label}.highSchoolGradeOrPercentage`);
+
+    // Disallow primary and diploma/bachelor+ fields
+    disallow(entry.schoolName, `${label}.schoolName`);
+    disallow(entry.schoolLocation, `${label}.schoolLocation`);
+    disallow(entry.primaryYearCompleted, `${label}.primaryYearCompleted`);
+
+    disallow(entry.institutionName, `${label}.institutionName`);
+    disallow(entry.universityOrBoard, `${label}.universityOrBoard`);
+    disallow(entry.fieldOfStudy, `${label}.fieldOfStudy`);
+    disallow(entry.startYear, `${label}.startYear`);
+    disallow(entry.endYear, `${label}.endYear`);
+    disallow(entry.gradeOrCgpa, `${label}.gradeOrCgpa`);
+  } else {
+    // Diploma / Bachelor / Masters / Doctorate / Other
+
+    // Required core fields
+    vString(entry.institutionName, `${label}.institutionName`);
+    vString(entry.fieldOfStudy, `${label}.fieldOfStudy`);
+
+    // Optional metadata
+    vOptionalString(entry.universityOrBoard, `${label}.universityOrBoard`);
+
+    // Dates: endYear required, startYear optional but must be a number when present
+    if (entry.startYear != null) {
+      vNumber(entry.startYear, `${label}.startYear`);
     }
+    vNumber(entry.endYear, `${label}.endYear`);
+
+    // Grades/GPA optional
+    vOptionalString(entry.gradeOrCgpa, `${label}.gradeOrCgpa`);
+
+    // Disallow primary + high-school-specific fields
+    disallow(entry.schoolName, `${label}.schoolName`);
+    disallow(entry.schoolLocation, `${label}.schoolLocation`);
+    disallow(entry.primaryYearCompleted, `${label}.primaryYearCompleted`);
+
+    disallow(entry.highSchoolInstitutionName, `${label}.highSchoolInstitutionName`);
+    disallow(entry.highSchoolBoard, `${label}.highSchoolBoard`);
+    disallow(entry.highSchoolStream, `${label}.highSchoolStream`);
+    disallow(entry.highSchoolYearCompleted, `${label}.highSchoolYearCompleted`);
+    disallow(entry.highSchoolGradeOrPercentage, `${label}.highSchoolGradeOrPercentage`);
   }
 }
 
@@ -128,7 +193,7 @@ function validateEmploymentHistoryEntry(entry: any, label: string) {
   vString(entry.reasonForLeaving, `${label}.reasonForLeaving`);
 
   if (entry.experienceCertificateFile != null) {
-    vFileish(entry.experienceCertificateFile, `${label}.experienceCertificateFile`);
+    vFileAsset(entry.experienceCertificateFile, `${label}.experienceCertificateFile`);
   }
 }
 
@@ -167,30 +232,28 @@ function validateIndiaGovernmentIds(gov: any) {
   const aadhaar = gov.aadhaar;
   vAssert(isObj(aadhaar), "governmentIds.aadhaar is required");
   vString(aadhaar.aadhaarNumber, "governmentIds.aadhaar.aadhaarNumber");
-  vAssert(isObj(aadhaar.card), "governmentIds.aadhaar.card is required");
-  vFileish(aadhaar.card.file, "governmentIds.aadhaar.card.file");
+  vFileAsset(aadhaar.file, "governmentIds.aadhaar.file");
 
   // PAN
   const panCard = gov.panCard;
   vAssert(isObj(panCard), "governmentIds.panCard is required");
-  vAssert(isObj(panCard.card), "governmentIds.panCard.card is required");
-  vFileish(panCard.card.file, "governmentIds.panCard.card.file");
+  vFileAsset(panCard.file, "governmentIds.panCard.file");
 
   // Passport (front/back both required)
   const passport = gov.passport;
   vAssert(isObj(passport), "governmentIds.passport is required");
   vAssert(passport.frontFile, "governmentIds.passport.frontFile is required");
   vAssert(passport.backFile, "governmentIds.passport.backFile is required");
-  vFileish(passport.frontFile, "governmentIds.passport.frontFile");
-  vFileish(passport.backFile, "governmentIds.passport.backFile");
+  vFileAsset(passport.frontFile, "governmentIds.passport.frontFile");
+  vFileAsset(passport.backFile, "governmentIds.passport.backFile");
 
   // Drivers license (optional doc, but if present front/back required)
   const dl = gov.driversLicense;
   if (dl) {
     vAssert(dl.frontFile, "governmentIds.driversLicense.frontFile is required");
     vAssert(dl.backFile, "governmentIds.driversLicense.backFile is required");
-    vFileish(dl.frontFile, "governmentIds.driversLicense.frontFile");
-    vFileish(dl.backFile, "governmentIds.driversLicense.backFile");
+    vFileAsset(dl.frontFile, "governmentIds.driversLicense.frontFile");
+    vFileAsset(dl.backFile, "governmentIds.driversLicense.backFile");
   }
 }
 
@@ -207,7 +270,7 @@ function validateIndiaBankDetails(bank: any) {
 
   const voidCheque = bank.voidCheque;
   if (voidCheque) {
-    vFileish(voidCheque.file, "bankDetails.voidCheque.file");
+    vFileAsset(voidCheque.file, "bankDetails.voidCheque.file");
   }
 }
 
@@ -221,7 +284,10 @@ export function validateIndiaOnboardingForm(data: any): asserts data is IIndiaOn
   validatePersonalInfo(data.personalInfo);
   validateIndiaGovernmentIds(data.governmentIds);
   validateEducationArray(data.education);
-  validateEmploymentHistoryArray(data.employmentHistory, { requireAtLeastOne: true });
+  vBoolean(data.hasPreviousEmployment, "hasPreviousEmployment");
+  const requireAtLeastOne = !!data.hasPreviousEmployment;
+  validateEmploymentHistoryArray(data.employmentHistory, { requireAtLeastOne });
+
   validateIndiaBankDetails(data.bankDetails);
   validateDeclaration(data.declaration);
 }
@@ -235,8 +301,7 @@ function validateCanadaGovernmentIds(gov: any) {
   const sin = gov.sin;
   vAssert(isObj(sin), "governmentIds.sin is required");
   vString(sin.sinNumber, "governmentIds.sin.sinNumber");
-  vAssert(isObj(sin.card), "governmentIds.sin.card is required");
-  vFileish(sin.card.file, "governmentIds.sin.card.file");
+  vFileAsset(sin.file, "governmentIds.sin.file");
 
   // Passport (front/back both required)
   const passport = gov.passport;
@@ -298,7 +363,10 @@ export function validateCanadaOnboardingForm(data: any): asserts data is ICanada
   validatePersonalInfo(data.personalInfo);
   validateCanadaGovernmentIds(data.governmentIds);
   validateEducationArray(data.education);
-  validateEmploymentHistoryArray(data.employmentHistory, { requireAtLeastOne: true });
+  vBoolean(data.hasPreviousEmployment, "hasPreviousEmployment");
+  const requireAtLeastOne = !!data.hasPreviousEmployment;
+  validateEmploymentHistoryArray(data.employmentHistory, { requireAtLeastOne });
+
   validateCanadaBankDetails(data.bankDetails);
   validateDeclaration(data.declaration);
 }
@@ -312,8 +380,7 @@ function validateUsGovernmentIds(gov: any) {
   const ssn = gov.ssn;
   vAssert(isObj(ssn), "governmentIds.ssn is required");
   vString(ssn.ssnNumber, "governmentIds.ssn.ssnNumber");
-  vAssert(isObj(ssn.card), "governmentIds.ssn.card is required");
-  vFileish(ssn.card.file, "governmentIds.ssn.card.file");
+  vFileAsset(ssn.file, "governmentIds.ssn.file");
 
   // Passport (front/back both required)
   const passport = gov.passport;

@@ -5,16 +5,16 @@ import {
   IIndiaOnboardingFormData,
   ICanadaOnboardingFormData,
   IUsOnboardingFormData,
-  IIndiaAadhaarDetails,
-  IIndiaPanCard,
   IIndiaGovernmentIds,
   IIndiaBankDetails,
-  ICanadaSinDetails,
   ICanadaGovernmentIds,
   ICanadaBankDetails,
-  IUsSsnDetails,
   IUsGovernmentIds,
   IUsBankDetails,
+  IIndiaAadhaarCardDocument,
+  IIndiaPanCardDocument,
+  ICanadaSinCardDocument,
+  IUsSsnCardDocument,
 } from "@/types/onboarding.types";
 import { EAccountType } from "@/types/onboarding.types";
 
@@ -51,14 +51,18 @@ interface IIndiaSimpleFileDoc {
   file: any;
 }
 
-const indiaAadhaarCardDocumentSchema = new Schema<IIndiaSimpleFileDoc>(
+const indiaAadhaarCardDocumentSchema = new Schema<IIndiaAadhaarCardDocument>(
   {
+    aadhaarNumber: {
+      ...encryptedStringField,
+      required: true,
+    },
     file: { type: fileAssetSchema, required: true },
   },
   { _id: false }
 );
 
-const indiaPanCardDocumentSchema = new Schema<IIndiaSimpleFileDoc>(
+const indiaPanCardDocumentSchema = new Schema<IIndiaPanCardDocument>(
   {
     file: { type: fileAssetSchema, required: true },
   },
@@ -72,28 +76,10 @@ const indiaVoidChequeDocumentSchema = new Schema<IIndiaSimpleFileDoc>(
   { _id: false }
 );
 
-const indiaAadhaarDetailsSchema = new Schema<IIndiaAadhaarDetails>(
-  {
-    aadhaarNumber: {
-      ...encryptedStringField,
-      required: true,
-    },
-    card: { type: indiaAadhaarCardDocumentSchema, required: true },
-  },
-  { _id: false }
-);
-
-const indiaPanCardSchema = new Schema<IIndiaPanCard>(
-  {
-    card: { type: indiaPanCardDocumentSchema, required: true },
-  },
-  { _id: false }
-);
-
 const indiaGovernmentIdsSchema = new Schema<IIndiaGovernmentIds>(
   {
-    aadhaar: { type: indiaAadhaarDetailsSchema, required: true },
-    panCard: { type: indiaPanCardSchema, required: true },
+    aadhaar: { type: indiaAadhaarCardDocumentSchema, required: true },
+    panCard: { type: indiaPanCardDocumentSchema, required: true },
     passport: { type: requiredFrontBackDocumentSchema, required: true },
     driversLicense: { type: requiredFrontBackDocumentSchema, required: false },
   },
@@ -126,6 +112,7 @@ export const indiaOnboardingFormDataSchema = new Schema<IIndiaOnboardingFormData
     personalInfo: { type: personalInfoSchema, required: true },
     governmentIds: { type: indiaGovernmentIdsSchema, required: true },
     education: { type: [educationDetailsSchema], required: true },
+    hasPreviousEmployment: { type: Boolean, required: true },
     employmentHistory: {
       type: [employmentHistoryEntrySchema],
       required: true,
@@ -147,7 +134,18 @@ const canadaSimpleFileDocSchema = new Schema<IIndiaSimpleFileDoc>(
   { _id: false }
 );
 
-const canadaSinCardDocumentSchema = canadaSimpleFileDocSchema;
+// SIN card now has sinNumber + file
+const canadaSinCardDocumentSchema = new Schema<ICanadaSinCardDocument>(
+  {
+    sinNumber: {
+      ...encryptedStringField,
+      required: true,
+    },
+    file: { type: fileAssetSchema, required: true },
+  },
+  { _id: false }
+);
+
 const canadaWorkPermitDocumentSchema = canadaSimpleFileDocSchema.clone();
 const canadaDirectDepositDocumentSchema = canadaSimpleFileDocSchema.clone();
 
@@ -155,20 +153,9 @@ const canadaPassportDocumentSchema = requiredFrontBackDocumentSchema.clone();
 const canadaPrCardDocumentSchema = frontBackDocumentSchema.clone();
 const canadaDriversLicenseDocumentSchema = requiredFrontBackDocumentSchema.clone();
 
-const canadaSinDetailsSchema = new Schema<ICanadaSinDetails>(
-  {
-    sinNumber: {
-      ...encryptedStringField,
-      required: true,
-    },
-    card: { type: canadaSinCardDocumentSchema, required: true },
-  },
-  { _id: false }
-);
-
 const canadaGovernmentIdsSchema = new Schema<ICanadaGovernmentIds>(
   {
-    sin: { type: canadaSinDetailsSchema, required: true },
+    sin: { type: canadaSinCardDocumentSchema, required: true },
     passport: { type: canadaPassportDocumentSchema, required: true },
     prCard: { type: canadaPrCardDocumentSchema, required: false },
     workPermit: { type: canadaWorkPermitDocumentSchema, required: false },
@@ -209,6 +196,7 @@ export const canadaOnboardingFormDataSchema = new Schema<ICanadaOnboardingFormDa
     personalInfo: { type: personalInfoSchema, required: true },
     governmentIds: { type: canadaGovernmentIdsSchema, required: true },
     education: { type: [educationDetailsSchema], required: true },
+    hasPreviousEmployment: { type: Boolean, required: true },
     employmentHistory: {
       type: [employmentHistoryEntrySchema],
       required: true,
@@ -230,7 +218,18 @@ const usSimpleFileDocSchema = new Schema<IIndiaSimpleFileDoc>(
   { _id: false }
 );
 
-const usSsnCardDocumentSchema = usSimpleFileDocSchema;
+// SSN card now has ssnNumber + file
+const usSsnCardDocumentSchema = new Schema<IUsSsnCardDocument>(
+  {
+    ssnNumber: {
+      ...encryptedStringField,
+      required: true,
+    },
+    file: { type: fileAssetSchema, required: true },
+  },
+  { _id: false }
+);
+
 const usWorkPermitDocumentSchema = usSimpleFileDocSchema.clone();
 const usVoidChequeOrDepositSlipDocumentSchema = usSimpleFileDocSchema.clone();
 
@@ -238,20 +237,9 @@ const usPassportDocumentSchema = requiredFrontBackDocumentSchema.clone();
 const usGreenCardDocumentSchema = frontBackDocumentSchema.clone();
 const usDriversLicenseDocumentSchema = requiredFrontBackDocumentSchema.clone();
 
-const usSsnDetailsSchema = new Schema<IUsSsnDetails>(
-  {
-    ssnNumber: {
-      ...encryptedStringField,
-      required: true,
-    },
-    card: { type: usSsnCardDocumentSchema, required: true },
-  },
-  { _id: false }
-);
-
 const usGovernmentIdsSchema = new Schema<IUsGovernmentIds>(
   {
-    ssn: { type: usSsnDetailsSchema, required: true },
+    ssn: { type: usSsnCardDocumentSchema, required: true },
     passport: { type: usPassportDocumentSchema, required: true },
     greenCard: { type: usGreenCardDocumentSchema, required: false },
     workPermit: { type: usWorkPermitDocumentSchema, required: false },

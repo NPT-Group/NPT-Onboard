@@ -48,19 +48,19 @@ async function finalizeIndiaOnboardingAssets(onboardingId: string, payload: IInd
   /* --------------------------- Government IDs --------------------------- */
 
   // Aadhaar card file
-  if (form.governmentIds?.aadhaar?.card?.file) {
+  if (form.governmentIds?.aadhaar?.file) {
     const dest = makeEntityFinalPrefix(ns, onboardingId, ES3Folder.GOV_AADHAAR);
-    const current = form.governmentIds.aadhaar.card.file;
+    const current = form.governmentIds.aadhaar.file;
     const finalized = (await finalizeAssetWithCache(current, dest, cache, pushMoved)) || current;
-    form.governmentIds.aadhaar.card.file = finalized;
+    form.governmentIds.aadhaar.file = finalized;
   }
 
   // PAN card file
-  if (form.governmentIds?.panCard?.card?.file) {
+  if (form.governmentIds?.panCard?.file) {
     const dest = makeEntityFinalPrefix(ns, onboardingId, ES3Folder.GOV_PAN);
-    const current = form.governmentIds.panCard.card.file;
+    const current = form.governmentIds.panCard.file;
     const finalized = (await finalizeAssetWithCache(current, dest, cache, pushMoved)) || current;
-    form.governmentIds.panCard.card.file = finalized;
+    form.governmentIds.panCard.file = finalized;
   }
 
   // Passport front/back
