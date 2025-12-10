@@ -1,6 +1,68 @@
+/**
+ * Global CSS Stylesheet
+ * 
+ * This file contains global styles and utility classes for the NPT Onboarding application.
+ * It imports Tailwind CSS and defines custom styles used across the application.
+ * 
+ * @fileoverview Global application styles including base resets and custom component styles.
+ */
+
 @import "tailwindcss";
 
+/* ================================================================== */
+/* Base HTML/Body Styles                                              */
+/* ================================================================== */
+
+/**
+ * Ensures the html and body elements take up the full viewport height.
+ * This is essential for proper layout with flexbox/grid-based designs.
+ */
 html,
 body {
   height: 100%;
+}
+
+/* ================================================================== */
+/* Hero Brand Pill Component                                          */
+/* ================================================================== */
+/**
+ * Brand pill styling for "NPT Group" text in the hero section.
+ * 
+ * Design inspiration: Apple × Linear hybrid aesthetic
+ * Creates a distinctive branded badge element with gradient background,
+ * used prominently in the onboarding invitation screen hero section.
+ * 
+ * Features:
+ * - Gradient background using NPT brand colors (red spectrum)
+ * - Pill-shaped border radius for modern appearance
+ * - Subtle shadow for depth and elevation
+ * - Optical alignment adjustments for visual balance
+ */
+.hero-brand-pill {
+  /* Flexbox layout for centered content */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Padding: more horizontal space, minimal vertical for pill shape */
+  padding: 0.58rem 0.8rem;
+  /* Soft pill shape with generous border radius */
+  border-radius: 12px;
+
+  /* NPT brand gradient: diagonal gradient from lighter to darker red */
+  background: linear-gradient(135deg, #e4494d, #c31c20);
+  /* White text for contrast against red gradient */
+  color: #ffffff;
+
+  /* Typography: compact size relative to parent, bold weight */
+  font-size: 0.65em; /* Slightly smaller for refined appearance */
+  font-weight: 600;
+  line-height: 1; /* Tight line height for compact display */
+  letter-spacing: 0.04em; /* Slight letter spacing for readability */
+
+  /* Subtle shadow with brand color tint for depth */
+  box-shadow: 0 10px 24px rgba(195, 28, 32, 0.18);
+
+  /* Optical alignment: small vertical nudge to align baseline with "Welcome to" text */
+  transform: translateY(0.05em);
 }
