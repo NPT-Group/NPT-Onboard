@@ -12,6 +12,7 @@
     "@aws-sdk/client-s3": "^3.946.0",
     "@aws-sdk/s3-request-presigner": "^3.946.0",
     "@azure/identity": "^4.13.0",
+    "@hookform/resolvers": "^5.2.2",
     "framer-motion": "^12.23.25",
     "lucide-react": "^0.556.0",
     "mongoose": "^9.0.1",
@@ -19,7 +20,9 @@
     "next-auth": "^4.24.13",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "uuid": "^13.0.0"
+    "react-hook-form": "^7.68.0",
+    "uuid": "^13.0.0",
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

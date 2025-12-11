@@ -31,7 +31,6 @@ export const geoLocationSchema = new Schema<IGeoLocation>(
 export const residentialAddressSchema = new Schema<IResidentialAddress>(
   {
     addressLine1: { type: String, required: true },
-    addressLine2: String,
     city: String,
     state: String,
     postalCode: String,
