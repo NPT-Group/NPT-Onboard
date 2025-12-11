@@ -98,7 +98,7 @@ export function createOnboardingContext(onboarding: TOnboarding): TOnboardingCon
     modificationRequestedAt: onboarding.modificationRequestedAt,
 
     employeeNumber: onboarding.employeeNumber,
-
+    isFormComplete: onboarding.isFormComplete,
     isCompleted: onboarding.isCompleted,
     createdAt: onboarding.createdAt,
     updatedAt: onboarding.updatedAt,

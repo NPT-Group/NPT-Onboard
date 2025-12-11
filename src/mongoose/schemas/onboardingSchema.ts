@@ -1,7 +1,7 @@
 // src/mongoose/schemas/onboardingSchema.ts
 import { geoLocationSchema } from "./sharedSchemas";
 import { indiaOnboardingFormDataSchema, canadaOnboardingFormDataSchema, usOnboardingFormDataSchema } from "./onboardingFormDataSchemas";
-import { EOnboardingMethod, EOnboardingStatus, IOnboardingInvite, IOnboardingOtp, TOnboarding, TOnboardingDoc } from "@/types/onboarding.types";
+import { EOnboardingMethod, EOnboardingStatus, ETerminationType, IOnboardingInvite, IOnboardingOtp, TOnboarding, TOnboardingDoc } from "@/types/onboarding.types";
 import { ESubsidiary } from "@/types/shared.types";
 import { Schema } from "mongoose";
 
@@ -71,7 +71,22 @@ export const onboardingSchema = new Schema<TOnboarding>(
 
     locationAtSubmit: { type: geoLocationSchema, required: false },
 
+    // New field – tracks whether the *form* has ever been fully submitted
+    isFormComplete: { type: Boolean, required: true, default: false },
+
+    // Existing lifecycle completion flag (Approved or Terminated)
     isCompleted: { type: Boolean, required: true, default: false },
+
+    // Termination metadata
+    terminationType: {
+      type: String,
+      enum: Object.values(ETerminationType),
+      required: false,
+    },
+    terminationReason: {
+      type: String,
+      required: false,
+    },
 
     createdAt: { type: Date, required: true, default: Date.now },
     updatedAt: { type: Date, required: true, default: Date.now },

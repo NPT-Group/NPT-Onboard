@@ -13,12 +13,17 @@ import { sendEmployeeOnboardingInvitation } from "@/lib/mail/employee/sendEmploy
 
 import { OnboardingModel } from "@/mongoose/models/Onboarding";
 
-import { EOnboardingMethod, EOnboardingStatus } from "@/types/onboarding.types";
+import { EOnboardingMethod, EOnboardingStatus, type TOnboarding } from "@/types/onboarding.types";
 import { ESubsidiary } from "@/types/shared.types";
 import type { GraphAttachment } from "@/lib/mail/mailer";
 import { EOnboardingActor, EOnboardingAuditAction } from "@/types/onboardingAuditLog.types";
 
-/* --------------------- Request body shape --------------------- */
+import { parseBool, rx, parseIsoDate, inclusiveEndOfDay, parseEnumParam, parsePagination, parseSort, buildMeta } from "@/lib/utils/queryUtils";
+
+/* -------------------------------------------------------------------------- */
+/* Types                                                                      */
+/* -------------------------------------------------------------------------- */
+
 type PostBody = {
   subsidiary: ESubsidiary;
   method: EOnboardingMethod;
@@ -27,7 +32,240 @@ type PostBody = {
   email: string;
 };
 
-/* -------------------------- POST /admin/onboardings -------------------------- */
+type OnboardingListItem = {
+  id: string;
+  subsidiary: ESubsidiary;
+  method: EOnboardingMethod;
+
+  firstName: string;
+  lastName: string;
+  email: string;
+
+  status: EOnboardingStatus;
+
+  employeeNumber?: string;
+  isFormComplete: boolean;
+  isCompleted: boolean;
+
+  modificationRequestedAt?: Date | string;
+  terminationType?: string;
+
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  submittedAt?: Date | string;
+  approvedAt?: Date | string;
+  terminatedAt?: Date | string;
+};
+
+type OnboardingListFilters = {
+  subsidiary: ESubsidiary;
+  q?: string | null;
+  method?: EOnboardingMethod | null;
+  statuses?: EOnboardingStatus[];
+  hasEmployeeNumber?: boolean | null;
+  isCompleted?: boolean | null;
+  dateField: "created" | "submitted" | "approved" | "terminated" | "updated";
+  from?: string | null;
+  to?: string | null;
+  statusGroup?: string | null;
+};
+
+/* -------------------------------------------------------------------------- */
+/* Helper: Map TOnboarding → minimal admin list item                         */
+/* -------------------------------------------------------------------------- */
+
+function mapOnboardingToListItem(o: TOnboarding): OnboardingListItem {
+  return {
+    id: (o as any)._id?.toString?.() ?? (o as any).id ?? "",
+    subsidiary: o.subsidiary,
+    method: o.method,
+
+    firstName: o.firstName,
+    lastName: o.lastName,
+    email: o.email,
+
+    status: o.status,
+
+    employeeNumber: o.employeeNumber,
+    isFormComplete: o.isFormComplete,
+    isCompleted: o.isCompleted,
+
+    modificationRequestedAt: o.modificationRequestedAt,
+    terminationType: (o as any).terminationType,
+
+    createdAt: o.createdAt,
+    updatedAt: o.updatedAt,
+    submittedAt: o.submittedAt,
+    approvedAt: (o as any).approvedAt,
+    terminatedAt: (o as any).terminatedAt,
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* GET /api/v1/admin/onboardings                                             */
+/* Rich search, filtering, sorting, pagination                               */
+/* -------------------------------------------------------------------------- */
+
+export const GET = async (req: NextRequest) => {
+  try {
+    await connectDB();
+    await guard(); // ensure HR/admin only
+
+    const url = new URL(req.url);
+    const sp = url.searchParams;
+
+    // ── Required: subsidiary context (no cross-mixing between IN/CA/US) :contentReference[oaicite:0]{index=0}
+    const subsidiary = parseEnumParam(sp.get("subsidiary"), Object.values(ESubsidiary) as readonly ESubsidiary[], "subsidiary");
+    if (!subsidiary) {
+      return errorResponse(400, "subsidiary query param is required");
+    }
+
+    // Generic search: name / email / employeeNumber
+    const q = sp.get("q");
+
+    // Method filter: digital / manual
+    const method = parseEnumParam(sp.get("method"), Object.values(EOnboardingMethod) as readonly EOnboardingMethod[], "method");
+
+    // Status filter (comma-separated list)
+    const statusRaw = sp.get("status");
+    let statuses: EOnboardingStatus[] | undefined;
+
+    if (statusRaw) {
+      const parts = statusRaw
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      const allowed = Object.values(EOnboardingStatus) as readonly EOnboardingStatus[];
+      statuses = parts.map((p) => {
+        const val = parseEnumParam(p, allowed, "status");
+        // parseEnumParam will throw if invalid
+        return val as EOnboardingStatus;
+      });
+    } else {
+      // Optional status groups to match the dashboard chips :contentReference[oaicite:1]{index=1}
+      const statusGroup = sp.get("statusGroup");
+      const groupMap: Record<string, EOnboardingStatus[]> = {
+        pending: [EOnboardingStatus.InviteGenerated],
+        modificationRequested: [EOnboardingStatus.ModificationRequested],
+        pendingReview: [EOnboardingStatus.Submitted, EOnboardingStatus.Resubmitted],
+        approved: [EOnboardingStatus.Approved],
+        manual: [EOnboardingStatus.ManualPDFSent],
+        terminated: [EOnboardingStatus.Terminated],
+      };
+      if (statusGroup && groupMap[statusGroup]) {
+        statuses = groupMap[statusGroup];
+      }
+    }
+
+    // Booleans
+    const hasEmployeeNumber = parseBool(sp.get("hasEmployeeNumber"));
+    const isCompleted = parseBool(sp.get("isCompleted"));
+
+    // Date filtering (Created / Submitted / Approved / Terminated / Updated) :contentReference[oaicite:2]{index=2}
+    const allowedDateFields = ["created", "submitted", "approved", "terminated", "updated"] as const;
+    const dateFieldRaw = sp.get("dateField") as (typeof allowedDateFields)[number] | null;
+    const dateField: (typeof allowedDateFields)[number] = allowedDateFields.includes(dateFieldRaw ?? "created") ? (dateFieldRaw as any) || "created" : "created";
+
+    const dateFieldMap: Record<(typeof allowedDateFields)[number], keyof TOnboarding> = {
+      created: "createdAt",
+      submitted: "submittedAt",
+      approved: "approvedAt",
+      terminated: "terminatedAt",
+      updated: "updatedAt",
+    };
+
+    const fromRaw = sp.get("from");
+    const toRaw = sp.get("to");
+    const fromDate = parseIsoDate(fromRaw);
+    const toDate = inclusiveEndOfDay(parseIsoDate(toRaw) ?? new Date(), toRaw ?? null);
+
+    // Pagination & sorting
+    const { page, limit, skip } = parsePagination(sp.get("page"), sp.get("pageSize"), 100);
+    const allowedSortKeys = ["createdAt", "updatedAt", "submittedAt", "approvedAt", "terminatedAt", "firstName", "lastName", "email", "status", "employeeNumber"] as const;
+
+    const { sortBy, sortDir } = parseSort(sp.get("sortBy"), sp.get("sortDir"), allowedSortKeys, "createdAt");
+
+    // ── Build Mongo filter
+    const filter: any = {
+      subsidiary, // always scoped to one subsidiary :contentReference[oaicite:3]{index=3}
+    };
+
+    if (q && q.trim()) {
+      const pattern = rx(q.trim());
+      filter.$or = [{ firstName: pattern }, { lastName: pattern }, { email: pattern }, { employeeNumber: pattern }];
+    }
+
+    if (method) {
+      filter.method = method;
+    }
+
+    if (statuses && statuses.length > 0) {
+      filter.status = { $in: statuses };
+    }
+
+    if (hasEmployeeNumber !== null) {
+      if (hasEmployeeNumber) {
+        filter.employeeNumber = { $exists: true, $type: "string", $ne: "" };
+      } else {
+        filter.$or = (filter.$or || []).concat([{ employeeNumber: { $exists: false } }, { employeeNumber: null }, { employeeNumber: "" }]);
+      }
+    }
+
+    if (isCompleted !== null) {
+      filter.isCompleted = isCompleted;
+    }
+
+    if (fromDate || toRaw) {
+      const field = dateFieldMap[dateField];
+      filter[field] = {
+        ...(fromDate ? { $gte: fromDate } : {}),
+        ...(toRaw ? { $lte: toDate } : {}),
+      };
+    }
+
+    // ── Query DB
+    const total = await OnboardingModel.countDocuments(filter);
+    const docs = (await OnboardingModel.find(filter)
+      .sort({ [sortBy]: sortDir })
+      .skip(skip)
+      .limit(limit)
+      .lean()) as unknown as TOnboarding[];
+
+    const items = docs.map(mapOnboardingToListItem);
+
+    const filters: OnboardingListFilters = {
+      subsidiary,
+      q,
+      method: method ?? null,
+      statuses,
+      hasEmployeeNumber,
+      isCompleted,
+      dateField,
+      from: fromRaw,
+      to: toRaw,
+      statusGroup: sp.get("statusGroup"),
+    };
+
+    const meta = buildMeta<OnboardingListFilters>({
+      page,
+      pageSize: limit,
+      total,
+      sortBy,
+      sortDir,
+      filters,
+    });
+
+    return successResponse(200, "Onboardings list", { items, meta });
+  } catch (error) {
+    return errorResponse(error);
+  }
+};
+
+/* -------------------------------------------------------------------------- */
+/* POST /api/v1/admin/onboardings                                             */
+/* Existing: create onboarding + send invite/PDF                              */
+/* -------------------------------------------------------------------------- */
 export const POST = async (req: NextRequest) => {
   try {
     await connectDB();
@@ -68,6 +306,7 @@ export const POST = async (req: NextRequest) => {
       lastName,
       email,
       status: method === EOnboardingMethod.DIGITAL ? EOnboardingStatus.InviteGenerated : EOnboardingStatus.ManualPDFSent,
+      isFormComplete: false,
       isCompleted: false,
       createdAt: now,
       updatedAt: now,

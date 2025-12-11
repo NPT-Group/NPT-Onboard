@@ -74,7 +74,15 @@ export interface IOnboardingOtp {
   expiresAt: Date | string; // ISO date string
   attempts: number;
   lockedAt?: Date | string; // optional lock timestamp if you implement lockout
-  lastSentAt?: Date | string;
+  lastSentAt: Date | string;
+}
+
+/**
+ * How the onboarding was closed when status = Terminated.
+ */
+export enum ETerminationType {
+  TERMINATED = "Terminated", // company-initiated termination
+  RESIGNED = "Resigned", // employee resignation
 }
 
 /**
@@ -390,7 +398,13 @@ export interface IOnboardingBase {
 
   locationAtSubmit?: IGeoLocation;
 
-  isCompleted: boolean; // employee has filled out their portion of the form
+  isFormComplete: boolean; // form-level completeness flag
+
+  isCompleted: boolean; // overall onboarding completion flag
+
+  terminationType?: ETerminationType; // when status = Terminated
+  terminationReason?: string; // when status = Terminated
+
   createdAt: Date | string;
   updatedAt: Date | string;
   submittedAt?: Date | string;

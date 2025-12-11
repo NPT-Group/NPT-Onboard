@@ -1,30 +1,32 @@
-// src/app/api/v1/onboarding/[id]/route.ts
+// src/app/api/v1/admin/onboardings/[id]/route.ts
 import { NextRequest } from "next/server";
 
 import connectDB from "@/lib/utils/connectDB";
 import { errorResponse, successResponse } from "@/lib/utils/apiResponse";
+import { guard } from "@/lib/utils/auth/authUtils";
 import { parseJsonBody } from "@/lib/utils/reqParser";
-
-import { requireOnboardingSession } from "@/lib/utils/auth/onboardingSession";
-import { createOnboardingContext, createOnboardingAuditLogSafe } from "@/lib/utils/onboardingUtils";
 
 import { makeEntityFinalPrefix, finalizeAssetWithCache, deleteS3Objects } from "@/lib/utils/s3Helper";
 
-import { ES3Namespace, ES3Folder } from "@/types/aws.types";
+import { OnboardingModel } from "@/mongoose/models/Onboarding";
+
 import { EOnboardingStatus, type IIndiaOnboardingFormData } from "@/types/onboarding.types";
-import { ESubsidiary, type IFileAsset, type IGeoLocation } from "@/types/shared.types";
+import { ES3Namespace, ES3Folder } from "@/types/aws.types";
+import { type IFileAsset } from "@/types/shared.types";
 import { EOnboardingActor, EOnboardingAuditAction } from "@/types/onboardingAuditLog.types";
+import { createOnboardingAuditLogSafe } from "@/lib/utils/onboardingUtils";
+import { ESubsidiary } from "@/types/shared.types";
 import { validateIndiaOnboardingForm } from "@/lib/validation/onboardingFormValidation";
-import { verifyTurnstileToken } from "@/lib/security/verifyTurnstile";
 
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
 /* -------------------------------------------------------------------------- */
 
-type SubmitIndiaFormBody = {
-  indiaFormData: IIndiaOnboardingFormData;
-  locationAtSubmit: IGeoLocation;
-  turnstileToken: string; // Cloudflare Turnstile token from client
+type PutBody = {
+  indiaFormData?: IIndiaOnboardingFormData;
+  // For future:
+  // canadaFormData?: ICanadaOnboardingFormData;
+  // usFormData?: IUsOnboardingFormData;
 };
 
 /**
@@ -34,8 +36,11 @@ type SubmitIndiaFormBody = {
  * Returns a deep-cloned, mutated copy of the payload with FINAL S3 keys.
  * Any newly created final keys are pushed into `collector` for potential
  * cleanup on failure.
+ *
+ * NOTE: This mirrors the employee-side logic. If you want to DRY it up,
+ * extract this helper into a shared util and reuse it in both routes.
  */
-async function finalizeIndiaOnboardingAssets(onboardingId: string, payload: IIndiaOnboardingFormData, collector: string[]): Promise<IIndiaOnboardingFormData> {
+async function finalizeIndiaOnboardingAssetsForAdmin(onboardingId: string, payload: IIndiaOnboardingFormData, collector: string[]): Promise<IIndiaOnboardingFormData> {
   const ns = ES3Namespace.ONBOARDINGS;
   const cache = new Map<string, IFileAsset>();
 
@@ -132,24 +137,32 @@ async function finalizeIndiaOnboardingAssets(onboardingId: string, payload: IInd
 }
 
 /* -------------------------------------------------------------------------- */
-/* GET /api/v1/onboarding/[id]                                                  */
+/* GET /api/v1/admin/onboardings/[id]                                         */
 /* -------------------------------------------------------------------------- */
 /**
- * Fetch sanitized onboarding context for the employee.
+ * HR: Retrieve full onboarding details for a single record.
+ * Includes per-subsidiary form data, locationAtSubmit, invite/otp metadata, etc.
  */
 export const GET = async (_req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   try {
     await connectDB();
+    await guard(); // ensure HR / admin
 
     const { id } = await params;
 
-    // Validates cookie, onboardingId, invite, status, etc.
-    const { onboarding } = await requireOnboardingSession(id);
+    const onboarding = await OnboardingModel.findById(id);
+    if (!onboarding) {
+      return errorResponse(404, "Onboarding not found");
+    }
 
-    const onboardingContext = createOnboardingContext(onboarding);
+    const obj = onboarding.toObject();
+    const responsePayload = {
+      ...obj,
+      id: obj._id?.toString?.() ?? id,
+    };
 
-    return successResponse(200, "Onboarding data retrieved", {
-      onboardingContext,
+    return successResponse(200, "Onboarding retrieved", {
+      onboarding: responsePayload,
     });
   } catch (error) {
     return errorResponse(error);
@@ -157,158 +170,128 @@ export const GET = async (_req: NextRequest, { params }: { params: Promise<{ id:
 };
 
 /* -------------------------------------------------------------------------- */
-/* POST /api/v1/onboarding/[id]                                                 */
+/* PUT /api/v1/admin/onboardings/[id]                                         */
 /* -------------------------------------------------------------------------- */
 /**
- * Submit (or re-submit) the India onboarding form as an employee.
+/**
+/**
+ * HR: Update the full onboarding form data.
  *
- * Expected body (India only for now):
- * {
- *   "indiaFormData": { ...full IIndiaOnboardingFormData payload... },
- *   "locationAtSubmit": { ...IGeoLocation... },
- *   "turnstileToken": "string-from-client-widget"
- * }
- *
- * Behavior:
- *  - Requires a valid onboarding session cookie (invite+OTP).
- *  - Onboarding must be DIGITAL and belong to subsidiary INDIA.
- *  - Onboarding must be in an editable state:
- *      - InviteGenerated  -> first submission  -> status: Submitted
- *      - ModificationRequested -> re-submission -> status: Resubmitted
- *  - All TEMP S3 keys in the form are finalized under:
- *      submissions/onboardings/{onboardingId}/...
- *    with logical ES3Folder mapping (IDs, bank docs, employment certificates,
- *    declaration signature).
- *  - On success:
- *      - `indiaFormData` is saved on the onboarding document
- *      - `status`, `submittedAt`, and `locationAtSubmit` are updated
- *      - An audit log entry is recorded (SUBMITTED or RESUBMITTED)
- *      - Returns a sanitized `onboardingContext`.
- *
- *  - On failure:
- *      - Any finalized S3 objects created during this request are deleted
- *        best-effort.
+ * Rules:
+ * - Admins can edit in ANY status except Terminated.
+ * - Employee participation is optional; HR can fully complete the form alone.
+ * - If the form was never completed (isFormComplete = false) and HR saves:
+ *     - status is set to Submitted (both digital & manual),
+ *     - submittedAt is set to now.
+ * - If the form was already completed, HR edits do NOT change status or submittedAt.
+ * - This route sets `isFormComplete` but does NOT mark the onboarding
+ *   lifecycle as finished (`isCompleted` is controlled by approve/terminate flows).
+ * - Admin route does NOT touch locationAtSubmit (employee-only concern).
  */
-export const POST = async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
-  // Collector of finalized S3 keys to delete if something goes wrong
+
+export const PUT = async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   const movedFinalKeys: string[] = [];
   let saved = false;
+
   try {
     await connectDB();
+    const user = await guard();
 
     const { id: onboardingId } = await params;
 
-    // Validate session + base access (digital, invite valid, not approved/terminated)
-    const { onboarding } = await requireOnboardingSession(onboardingId);
-
-    // For now we only support India onboarding flow
-    if (onboarding.subsidiary !== ESubsidiary.INDIA) {
-      return errorResponse(400, "Only INDIA subsidiary onboarding is supported at this time");
+    const onboarding = await OnboardingModel.findById(onboardingId);
+    if (!onboarding) {
+      return errorResponse(404, "Onboarding not found");
     }
 
-    // Ensure employee is allowed to edit in current status
-    const prevStatus: EOnboardingStatus = onboarding.status;
-
-    if (prevStatus !== EOnboardingStatus.InviteGenerated && prevStatus !== EOnboardingStatus.ModificationRequested) {
-      return errorResponse(403, "Onboarding is not editable in the current state");
+    if (onboarding.status === EOnboardingStatus.Terminated) {
+      return errorResponse(400, "Cannot edit a terminated onboarding");
     }
 
-    // Parse body
-    const body = await parseJsonBody<SubmitIndiaFormBody>(req);
-
+    const body = await parseJsonBody<PutBody>(req);
     if (!body || typeof body !== "object") {
       return errorResponse(400, "Invalid request body");
     }
 
-    const { indiaFormData, locationAtSubmit, turnstileToken } = body;
-
-    // Basic shape checks
-    if (!indiaFormData) {
-      return errorResponse(400, "Missing indiaFormData in request body");
-    }
-
-    if (!locationAtSubmit || typeof locationAtSubmit !== "object") {
-      return errorResponse(400, "Missing locationAtSubmit in request body");
-    }
-
-    // Turnstile verification (bot protection)
-    if (!turnstileToken || typeof turnstileToken !== "string") {
-      return errorResponse(400, "Missing Turnstile token");
-    }
-
-    const turnstileResult = await verifyTurnstileToken(turnstileToken);
-
-    if (!turnstileResult.ok) {
-      const status = turnstileResult.error === "Missing TURNSTILE_SECRET_KEY" ? 500 : 400;
-      return errorResponse(status, `Turnstile verification failed: ${turnstileResult.error}`);
-    }
-
-    // Enforce canonical identity from onboarding doc
-    indiaFormData.personalInfo.firstName = onboarding.firstName;
-    indiaFormData.personalInfo.lastName = onboarding.lastName;
-    indiaFormData.personalInfo.email = onboarding.email;
-
-    // Validate indiaFormData
-    validateIndiaOnboardingForm(body.indiaFormData);
-
-    // Finalize S3 assets in the India form payload
-    const finalizedIndiaFormData = await finalizeIndiaOnboardingAssets(onboarding._id?.toString?.() ?? onboardingId, body.indiaFormData, movedFinalKeys);
-
-    // Transition status based on previous state
-    let nextStatus: EOnboardingStatus;
-    let auditAction: EOnboardingAuditAction;
-
-    if (prevStatus === EOnboardingStatus.InviteGenerated) {
-      nextStatus = EOnboardingStatus.Submitted;
-      auditAction = EOnboardingAuditAction.SUBMITTED;
-    } else {
-      // ModificationRequested -> Resubmitted
-      nextStatus = EOnboardingStatus.Resubmitted;
-      auditAction = EOnboardingAuditAction.RESUBMITTED;
-    }
+    const prevStatus: EOnboardingStatus = onboarding.status;
+    const prevFormComplete = !!onboarding.isFormComplete;
 
     const now = new Date();
 
-    // Mutate onboarding document
-    onboarding.indiaFormData = finalizedIndiaFormData;
-    onboarding.status = nextStatus;
-    onboarding.submittedAt = now;
+    /* ---------------------------- Subsidiary switch ---------------------------- */
 
-    // Form is now fully submitted by the employee
-    onboarding.isFormComplete = true;
+    if (onboarding.subsidiary === ESubsidiary.INDIA) {
+      if (!body.indiaFormData) {
+        return errorResponse(400, "indiaFormData is required for India onboardings");
+      }
 
-    // Leave isCompleted for when HR approves or terminates
-    onboarding.locationAtSubmit = locationAtSubmit;
+      // Validate structure & business rules
+      validateIndiaOnboardingForm(body.indiaFormData);
 
-    // Let Mongoose enforce schema-level validation (including pre-save hook
-    // that requires per-subsidiary formData when status is Submitted/Resubmitted)
+      // Finalize S3 assets (temp -> final) with rollback collector
+      const finalizedIndiaFormData = await finalizeIndiaOnboardingAssetsForAdmin(onboarding._id?.toString?.() ?? onboardingId, body.indiaFormData, movedFinalKeys);
+
+      onboarding.indiaFormData = finalizedIndiaFormData;
+    } else {
+      // For v1 we only support India in this endpoint to keep scope aligned
+      // with the current activated workflow.
+      return errorResponse(400, "Only INDIA subsidiary onboarding updates are supported at this time");
+    }
+
+    /* ----------------------- Completion & status semantics --------------------- */
+
+    let auditAction: EOnboardingAuditAction;
+
+    if (!prevFormComplete) {
+      // First time the form becomes complete (HR is effectively "submitting" it)
+      onboarding.isFormComplete = true;
+      onboarding.status = EOnboardingStatus.Submitted;
+      onboarding.submittedAt = now;
+
+      auditAction = EOnboardingAuditAction.SUBMITTED;
+    } else {
+      // Form was already complete; HR is just editing data.
+      // Do NOT change status or submittedAt.
+      auditAction = EOnboardingAuditAction.DATA_UPDATED;
+    }
+
+    onboarding.updatedAt = now;
+
+    // Let Mongoose enforce schema-level validation
     await onboarding.validate();
     await onboarding.save();
     saved = true;
 
-    // Build sanitized context for frontend
-    const onboardingContext = createOnboardingContext(onboarding);
+    const obj = onboarding.toObject();
+    const responsePayload = {
+      ...obj,
+      id: obj._id?.toString?.() ?? onboardingId,
+    };
 
-    // Fire-and-forget audit log (do not break request if it fails)
+    /* ------------------------------ Audit logging ------------------------------ */
+
     await createOnboardingAuditLogSafe({
       onboardingId: (onboarding as any)._id?.toString?.() ?? String(onboardingId),
       action: auditAction,
       actor: {
-        type: EOnboardingActor.EMPLOYEE,
-        // We don't have a stable employee ID yet
-        id: undefined,
-        name: `${onboarding.firstName} ${onboarding.lastName}`.trim(),
-        email: onboarding.email,
+        type: EOnboardingActor.HR,
+        id: user.id,
+        name: user.name,
+        email: user.email,
       },
       metadata: {
         previousStatus: prevStatus,
-        newStatus: nextStatus,
+        newStatus: onboarding.status,
+        previousFormComplete: prevFormComplete,
+        newFormComplete: !!onboarding.isFormComplete,
+        method: onboarding.method,
         subsidiary: onboarding.subsidiary,
+        source: "ADMIN_PUT",
       },
     });
 
-    return successResponse(200, "Onboarding form submitted", {
-      onboardingContext,
+    return successResponse(200, "Onboarding updated", {
+      onboarding: responsePayload,
     });
   } catch (error) {
     // Only roll back S3 if we *haven't* committed the onboarding yet
@@ -316,7 +299,7 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
       try {
         await deleteS3Objects(movedFinalKeys);
       } catch (cleanupError) {
-        console.warn("Failed to delete finalized onboarding S3 objects during cleanup:", movedFinalKeys, cleanupError);
+        console.warn("Failed to delete finalized onboarding S3 objects during admin PUT cleanup:", movedFinalKeys, cleanupError);
       }
     }
 

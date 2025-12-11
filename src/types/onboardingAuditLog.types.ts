@@ -25,6 +25,7 @@ export enum EOnboardingAuditAction {
   APPROVED = "APPROVED",
   TERMINATED = "TERMINATED",
   DELETED = "DELETED",
+  DATA_UPDATED = "DATA_UPDATED",
 }
 
 export type TOnboardingAuditActor = {
