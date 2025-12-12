@@ -78,58 +78,42 @@ export function buildOnboardingInvite(rawToken: string): IOnboardingInvite {
  * - approvedAt / terminatedAt (internal lifecycle timestamps)
  */
 export function createOnboardingContext(onboarding: TOnboarding): TOnboardingContext {
+  const o: any = (onboarding as any)?.toObject ? (onboarding as any).toObject({ virtuals: true, getters: true }) : onboarding;
+
   const base = {
-    id:
-      // Mongoose doc: _id is ObjectId
-      (onboarding as any)._id?.toString?.() ??
-      // Lean/plain object might already have `id`
-      (onboarding as any).id ??
-      "",
-    subsidiary: onboarding.subsidiary,
-    method: onboarding.method,
+    id: o._id?.toString?.() ?? o.id ?? "",
+    subsidiary: o.subsidiary,
+    method: o.method,
 
-    firstName: onboarding.firstName,
-    lastName: onboarding.lastName,
-    email: onboarding.email,
+    firstName: o.firstName,
+    lastName: o.lastName,
+    email: o.email,
 
-    status: onboarding.status,
+    status: o.status,
 
-    modificationRequestMessage: onboarding.modificationRequestMessage,
-    modificationRequestedAt: onboarding.modificationRequestedAt,
+    modificationRequestMessage: o.modificationRequestMessage,
+    modificationRequestedAt: o.modificationRequestedAt,
 
-    employeeNumber: onboarding.employeeNumber,
-    isFormComplete: onboarding.isFormComplete,
-    isCompleted: onboarding.isCompleted,
-    createdAt: onboarding.createdAt,
-    updatedAt: onboarding.updatedAt,
-    submittedAt: onboarding.submittedAt,
-    completedAt: onboarding.completedAt,
+    employeeNumber: o.employeeNumber,
+    isFormComplete: o.isFormComplete,
+    isCompleted: o.isCompleted,
+    createdAt: o.createdAt,
+    updatedAt: o.updatedAt,
+    submittedAt: o.submittedAt,
+    completedAt: o.completedAt,
   };
 
-  switch (onboarding.subsidiary) {
+  switch (o.subsidiary) {
     case ESubsidiary.INDIA:
-      return {
-        ...base,
-        subsidiary: ESubsidiary.INDIA,
-        indiaFormData: onboarding.indiaFormData,
-      };
+      return { ...base, subsidiary: ESubsidiary.INDIA, indiaFormData: o.indiaFormData };
 
     case ESubsidiary.CANADA:
-      return {
-        ...base,
-        subsidiary: ESubsidiary.CANADA,
-        canadaFormData: onboarding.canadaFormData,
-      };
+      return { ...base, subsidiary: ESubsidiary.CANADA, canadaFormData: o.canadaFormData };
 
     case ESubsidiary.USA:
-      return {
-        ...base,
-        subsidiary: ESubsidiary.USA,
-        usFormData: onboarding.usFormData,
-      };
+      return { ...base, subsidiary: ESubsidiary.USA, usFormData: o.usFormData };
 
     default:
-      // Should be unreachable if TOnboarding is in sync with ESubsidiary
       throw new AppError(500, "Unsupported subsidiary for onboarding context");
   }
 }

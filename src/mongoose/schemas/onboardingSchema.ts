@@ -102,8 +102,8 @@ export const onboardingSchema = new Schema<TOnboarding>(
   },
   {
     timestamps: { createdAt: "createdAt", updatedAt: "updatedAt" },
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
+    toJSON: { virtuals: true, getters: true },
+    toObject: { virtuals: true, getters: true },
   }
 );
 
