@@ -424,7 +424,7 @@ export const POST = async (req: NextRequest) => {
     }
 
     return successResponse(201, "Onboarding created", {
-      onboarding: onboarding.toObject(),
+      onboarding: onboarding.toObject({ virtuals: true, getters: true }),
     });
   } catch (error) {
     return errorResponse(error);

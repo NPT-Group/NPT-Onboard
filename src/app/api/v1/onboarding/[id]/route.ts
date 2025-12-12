@@ -146,7 +146,8 @@ export const GET = async (_req: NextRequest, { params }: { params: Promise<{ id:
     // Validates cookie, onboardingId, invite, status, etc.
     const { onboarding } = await requireOnboardingSession(id);
 
-    const onboardingContext = createOnboardingContext(onboarding);
+    const onboardingObj = onboarding.toObject({ virtuals: true, getters: true });
+    const onboardingContext = createOnboardingContext(onboardingObj);
 
     return successResponse(200, "Onboarding data retrieved", {
       onboardingContext,
@@ -287,7 +288,8 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
     saved = true;
 
     // Build sanitized context for frontend
-    const onboardingContext = createOnboardingContext(onboarding);
+    const onboardingObj = onboarding.toObject({ virtuals: true, getters: true });
+    const onboardingContext = createOnboardingContext(onboardingObj);
 
     // Fire-and-forget audit log (do not break request if it fails)
     await createOnboardingAuditLogSafe({

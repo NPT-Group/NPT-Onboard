@@ -7,7 +7,7 @@ import { parseJsonBody } from "@/lib/utils/reqParser";
 import { hashString } from "@/lib/utils/encryption";
 
 import { OnboardingModel } from "@/mongoose/models/Onboarding";
-import { EOnboardingMethod, EOnboardingStatus, type TOnboarding, type IOnboardingOtp } from "@/types/onboarding.types";
+import { EOnboardingMethod, EOnboardingStatus, type IOnboardingOtp } from "@/types/onboarding.types";
 
 import { issueOnboardingSessionCookie } from "@/lib/utils/auth/onboardingSession";
 import { attachCookies } from "@/lib/utils/auth/attachCookie";
@@ -87,10 +87,10 @@ export const POST = async (req: NextRequest) => {
     const now = new Date();
 
     // Look up the onboarding based on the invite token
-    const onboarding = (await OnboardingModel.findOne({
+    const onboarding = await OnboardingModel.findOne({
       method: EOnboardingMethod.DIGITAL,
       "invite.tokenHash": tokenHash,
-    })) as TOnboarding | null;
+    });
 
     if (!onboarding || !onboarding.invite) {
       return errorResponse(401, "Invite link is invalid or has expired", {
@@ -179,8 +179,9 @@ export const POST = async (req: NextRequest) => {
       token // raw invite token
     );
 
+    const onboardingObj = onboarding.toObject({ virtuals: true, getters: true });
     const res = successResponse(200, "Verification successful", {
-      onboardingContext: createOnboardingContext(onboarding),
+      onboardingContext: createOnboardingContext(onboardingObj),
     });
 
     return attachCookies(res, setCookie);

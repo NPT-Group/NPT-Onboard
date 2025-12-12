@@ -72,46 +72,57 @@ export function buildOnboardingInvite(rawToken: string): IOnboardingInvite {
 /**
  * Builds an employee-facing, sanitized onboarding context.
  *
- * Strips:
- * - invite / otp (token/OTP hashes, attempts, etc.)
- * - locationAtSubmit (precise geo)
- * - approvedAt / terminatedAt (internal lifecycle timestamps)
+ * IMPORTANT:
+ * - This function is a pure mapper.
+ * - Caller must pass a plain JS object (not a Mongoose document),
+ *   already serialized with { virtuals: true, getters: true }.
+ * - `id` must already be present on the object (string).
  */
 export function createOnboardingContext(onboarding: TOnboarding): TOnboardingContext {
-  const o: any = (onboarding as any)?.toObject ? (onboarding as any).toObject({ virtuals: true, getters: true }) : onboarding;
-
   const base = {
-    id: o._id?.toString?.() ?? o.id ?? "",
-    subsidiary: o.subsidiary,
-    method: o.method,
+    id: (onboarding as any).id ?? "", // caller should ensure this exists
+    subsidiary: onboarding.subsidiary,
+    method: onboarding.method,
 
-    firstName: o.firstName,
-    lastName: o.lastName,
-    email: o.email,
+    firstName: onboarding.firstName,
+    lastName: onboarding.lastName,
+    email: onboarding.email,
 
-    status: o.status,
+    status: onboarding.status,
 
-    modificationRequestMessage: o.modificationRequestMessage,
-    modificationRequestedAt: o.modificationRequestedAt,
+    modificationRequestMessage: onboarding.modificationRequestMessage,
+    modificationRequestedAt: onboarding.modificationRequestedAt,
 
-    employeeNumber: o.employeeNumber,
-    isFormComplete: o.isFormComplete,
-    isCompleted: o.isCompleted,
-    createdAt: o.createdAt,
-    updatedAt: o.updatedAt,
-    submittedAt: o.submittedAt,
-    completedAt: o.completedAt,
+    employeeNumber: onboarding.employeeNumber,
+    isFormComplete: onboarding.isFormComplete,
+    isCompleted: onboarding.isCompleted,
+    createdAt: onboarding.createdAt,
+    updatedAt: onboarding.updatedAt,
+    submittedAt: onboarding.submittedAt,
+    completedAt: onboarding.completedAt,
   };
 
-  switch (o.subsidiary) {
+  switch (onboarding.subsidiary) {
     case ESubsidiary.INDIA:
-      return { ...base, subsidiary: ESubsidiary.INDIA, indiaFormData: o.indiaFormData };
+      return {
+        ...base,
+        subsidiary: ESubsidiary.INDIA,
+        indiaFormData: onboarding.indiaFormData,
+      };
 
     case ESubsidiary.CANADA:
-      return { ...base, subsidiary: ESubsidiary.CANADA, canadaFormData: o.canadaFormData };
+      return {
+        ...base,
+        subsidiary: ESubsidiary.CANADA,
+        canadaFormData: onboarding.canadaFormData,
+      };
 
     case ESubsidiary.USA:
-      return { ...base, subsidiary: ESubsidiary.USA, usFormData: o.usFormData };
+      return {
+        ...base,
+        subsidiary: ESubsidiary.USA,
+        usFormData: onboarding.usFormData,
+      };
 
     default:
       throw new AppError(500, "Unsupported subsidiary for onboarding context");

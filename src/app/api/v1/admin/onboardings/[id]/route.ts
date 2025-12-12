@@ -154,7 +154,7 @@ export const GET = async (_req: NextRequest, { params }: { params: Promise<{ id:
       return errorResponse(404, "Onboarding not found");
     }
 
-    const obj = onboarding.toObject();
+    const obj = onboarding.toObject({ virtuals: true, getters: true });
     const responsePayload = {
       ...obj,
       id: obj._id?.toString?.() ?? id,
@@ -261,7 +261,7 @@ export const PUT = async (req: NextRequest, { params }: { params: Promise<{ id: 
     await onboarding.save();
     saved = true;
 
-    const obj = onboarding.toObject();
+    const obj = onboarding.toObject({ virtuals: true, getters: true });
     const responsePayload = {
       ...obj,
       id: obj._id?.toString?.() ?? onboardingId,

@@ -132,7 +132,7 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
     });
 
     return successResponse(200, "Onboarding approved", {
-      onboarding: onboarding.toObject(),
+      onboarding: onboarding.toObject({ virtuals: true, getters: true }),
     });
   } catch (error) {
     return errorResponse(error);
