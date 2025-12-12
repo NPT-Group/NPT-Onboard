@@ -260,7 +260,9 @@ export function IndiaOnboardingForm({
           }}
           aria-label="Employment history"
         >
-          {currentIndex >= 2 && <EmploymentSection isReadOnly={isReadOnly} />}
+          {currentIndex >= 2 && (
+            <EmploymentSection isReadOnly={isReadOnly} docId={onboarding.id} />
+          )}
         </section>
 
         <section

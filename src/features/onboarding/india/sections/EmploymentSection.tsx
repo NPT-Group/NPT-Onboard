@@ -14,12 +14,18 @@ import type {
 import { RHFTextInput } from "../../common/RHFTextInput";
 import { FormField } from "../../common/FormField";
 import { cn } from "@/lib/utils/cn";
+import { ES3Folder, ES3Namespace } from "@/types/aws.types";
+import { RHFFileUpload } from "../../common/RHFFileUpload";
 
 type EmploymentSectionProps = {
   isReadOnly?: boolean;
+  docId: string; // onboarding.id
 };
 
-export function EmploymentSection({ isReadOnly }: EmploymentSectionProps) {
+export function EmploymentSection({
+  isReadOnly,
+  docId,
+}: EmploymentSectionProps) {
   const {
     control,
     register,
@@ -235,10 +241,22 @@ export function EmploymentSection({ isReadOnly }: EmploymentSectionProps) {
                   />
                 </div>
 
-                <p className="mt-3 text-xs text-slate-500">
-                  You can optionally upload an experience certificate for this
-                  role in a later step.
-                </p>
+                <div className="mt-4">
+                  <RHFFileUpload<IndiaOnboardingFormValues>
+                    name={
+                      `${prefix}.experienceCertificateFile` as FieldPath<IndiaOnboardingFormValues>
+                    }
+                    label="Experience certificate (optional)"
+                    description="Upload a PDF experience certificate for this role (max 20MB)."
+                    namespace={ES3Namespace.ONBOARDINGS}
+                    folder={ES3Folder.EMPLOYMENT_CERTIFICATES}
+                    docId={docId}
+                    disabled={isReadOnly}
+                    dataField={`${prefix}.experienceCertificateFile`}
+                    placeholderLabel="Upload PDF experience certificate"
+                    maxSizeMB={20}
+                  />
+                </div>
               </div>
             );
           })}
