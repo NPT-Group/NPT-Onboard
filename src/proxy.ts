@@ -1,4 +1,4 @@
-// src/middleware.ts
+// src/proxy.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
@@ -78,7 +78,7 @@ async function resolveEmployeeOnboarding(req: NextRequest): Promise<string | nul
   }
 }
 
-/* ───────────────────────── middleware ───────────────────────── */
+/* ───────────────────────── proxy ───────────────────────── */
 
 /**
  * Global routing / auth behavior:
@@ -114,7 +114,7 @@ async function resolveEmployeeOnboarding(req: NextRequest): Promise<string | nul
  * - All other routes:
  *   - Pass through without modification
  */
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   /* ------------------------- 1. Root "/" ------------------------- */

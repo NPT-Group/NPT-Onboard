@@ -79,8 +79,15 @@ export function buildOnboardingInvite(rawToken: string): IOnboardingInvite {
  * - `id` must already be present on the object (string).
  */
 export function createOnboardingContext(onboarding: TOnboarding): TOnboardingContext {
+  // Ensure we always have a string id (Mongoose doc.id OR fallback to _id)
+  const id = (onboarding as any).id ?? ((onboarding as any)._id != null ? String((onboarding as any)._id) : undefined);
+
+  if (!id) {
+    throw new AppError(500, "Onboarding serialization error: missing id/_id");
+  }
+
   const base = {
-    id: (onboarding as any).id ?? "", // caller should ensure this exists
+    id,
     subsidiary: onboarding.subsidiary,
     method: onboarding.method,
 

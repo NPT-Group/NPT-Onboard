@@ -98,12 +98,37 @@ export async function sendEmployeeOnboardingInvitation(params: SendEmployeeOnboa
         Please find attached the employee onboarding form for
         <strong>NPT (${escapedSubsidiary})</strong>.
       </p>
+
+      <p style="margin:0 0 8px 0; font-weight:600;">How to complete</p>
       <ol style="margin:0 0 16px 24px; padding:0; font-size:14px; color:#374151;">
         <li style="margin-bottom:4px;">Download and open the attached PDF form.</li>
         <li style="margin-bottom:4px;">Fill in all applicable sections and sign where indicated.</li>
         <li style="margin-bottom:4px;">Scan the completed form and gather the requested supporting documents.</li>
         <li>Reply to this email with the completed form and documents attached.</li>
       </ol>
+
+      <div style="margin:16px 0 16px 0; padding:12px 14px; border:1px solid #e5e7eb; border-radius:12px; background:#f9fafb;">
+        <p style="margin:0 0 8px 0; font-weight:600;">Submission instructions</p>
+        <ul style="margin:0 0 0 18px; padding:0; font-size:14px; color:#374151;">
+          <li style="margin-bottom:6px;">Ensure all fields are filled clearly in <strong>BLOCK LETTERS</strong>.</li>
+          <li style="margin-bottom:6px;">Sign the declaration on the <strong>last page</strong>.</li>
+          <li style="margin-bottom:6px;">Scan <strong>all pages</strong> into <strong>one combined PDF</strong>.</li>
+          <li style="margin-bottom:6px;">
+            Prepare all required supporting documents in <strong>PDF format only</strong>
+            (Aadhaar, PAN, Passport, License, Experience Certificates, Void Cheque).
+          </li>
+          <li style="margin-bottom:6px;"><strong>Images (JPEG/PNG) will not be accepted.</strong></li>
+          <li style="margin-bottom:6px;">
+            Reply to this onboarding email and attach:
+            <ul style="margin:6px 0 0 18px; padding:0;">
+              <li style="margin-bottom:4px;">The completed form (PDF)</li>
+              <li>All supporting documents (PDF)</li>
+            </ul>
+          </li>
+          <li>Send the email to <strong>NPT HR</strong>.</li>
+        </ul>
+      </div>
+
       <p style="margin:0 0 4px 0;">Thank you,</p>
       <p style="margin:0 0 24px 0;">NPT HR</p>
     `;

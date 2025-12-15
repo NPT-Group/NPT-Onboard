@@ -375,7 +375,7 @@ export const POST = async (req: NextRequest) => {
         });
       } else {
         // MANUAL: attach blank India onboarding PDF
-        const pdfPath = `${process.cwd()}/src/lib/assets/pdfs/npt-india-onboarding-form.pdf`;
+        const pdfPath = `${process.cwd()}/src/lib/assets/pdfs/npt-india-application-form.pdf`;
         const pdfBuffer = await fs.readFile(pdfPath);
 
         const manualFormAttachment: GraphAttachment = {
