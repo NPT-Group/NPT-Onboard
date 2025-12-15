@@ -1,11 +1,9 @@
 "use client";
 
-import { useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   FormProvider,
   useForm,
-  type FieldPath,
-  type DeepPartial,
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -20,47 +18,58 @@ import { ONBOARDING_STEPS } from "@/config/onboardingSteps";
 
 import {
   PersonalInfoSection,
-  PERSONAL_INFO_FIELD_PATHS,
 } from "./sections/PersonalInfoSection";
 import {
+  GovernmentIdsSection,
+} from "./sections/GovernmentIdsSection";
+import {
   EducationSection,
-  EDUCATION_FIELD_PATHS,
 } from "./sections/EducationSection";
 import { EmploymentSection } from "./sections/EmploymentSection";
 import { BankDetailsSection } from "./sections/BankDetailsSection";
+import {
+  DeclarationSection,
+} from "./sections/DeclarationSection";
 
-import { getErrorAtPath } from "../common/getErrorAtPath";
+import { submitIndiaOnboarding } from "@/lib/api/onboarding";
+import { ApiError } from "@/lib/api/client";
+import type { IGeoLocation } from "@/types/shared.types";
+import type { RHFSignatureBoxHandle } from "../common/RHFSignatureBox";
+
+import { INDIA_STEPS, type IndiaStepId } from "./indiaSteps";
+import { buildIndiaDefaultValuesFromOnboarding } from "./indiaDefaults";
+import { normalizeIndiaFormDataForSubmit } from "./normalizeIndiaFormData";
+import { ensureGeoAtSubmit } from "../form-engine/geo";
+import { findFirstErrorAcrossSteps, findFirstErrorInStep } from "../form-engine/errors";
+import { scrollToField, scrollToSection } from "../form-engine/scrolling";
 
 type IndiaOnboardingFormProps = {
   onboarding: TOnboardingContext;
   isReadOnly: boolean;
   currentIndex: number;
   onStepChange: (index: number) => void;
+
+  /** so the page can refresh status/context after submit */
+  onSubmitted?: (ctx: TOnboardingContext) => void;
+
+  /** provided by page.tsx (prefetched on page load) */
+  geo: IGeoLocation;
+  geoDenied: boolean;
 };
 
-type StepId = (typeof ONBOARDING_STEPS)[number]["id"];
-
-const STEP_IDS = ONBOARDING_STEPS.map((s) => s.id) as StepId[];
-
-/**
- * Map of step id to the field paths belonging to that section.
- * For now only "personal" is populated; others will be filled as we implement them.
- */
-const STEP_FIELD_MAP: Record<StepId, FieldPath<IndiaOnboardingFormInput>[]> = {
-  personal: PERSONAL_INFO_FIELD_PATHS,
-  education: EDUCATION_FIELD_PATHS,
-  employment: ["hasPreviousEmployment", "employmentHistory"],
-  banking: ["bankDetails"],
-  declaration: [],
-  review: [],
-};
+const STEP_IDS = INDIA_STEPS.map((s) => s.id) as IndiaStepId[];
 
 export function IndiaOnboardingForm({
   onboarding,
   isReadOnly,
   currentIndex,
   onStepChange,
+  onSubmitted,
+  geo,
+  geoDenied,
 }: IndiaOnboardingFormProps) {
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
   const methods = useForm<
     IndiaOnboardingFormInput,
     unknown,
@@ -69,159 +78,188 @@ export function IndiaOnboardingForm({
     resolver: zodResolver(indiaOnboardingFormSchema),
     mode: "onChange",
     reValidateMode: "onChange",
-    defaultValues: buildDefaultValuesFromOnboarding(onboarding),
+    defaultValues: buildIndiaDefaultValuesFromOnboarding(onboarding, today),
+    shouldUnregister: false,
   });
 
   const {
     trigger,
-    formState: { errors },
+    getValues,
+    formState: { isSubmitting },
   } = methods;
 
-  // Section refs – used to scroll to the top of a section when navigating.
-  const sectionRefs = useRef<Record<StepId, HTMLElement | null>>({
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  // Turnstile token state (NOT in RHF)
+  const [turnstileToken, setTurnstileToken] = useState<string>("");
+
+  // signature upload-on-submit (DeclarationSection passes this into RHFSignatureBox)
+  const signatureRef = useRef<RHFSignatureBoxHandle | null>(null);
+
+  const sectionRefs = useRef<Record<IndiaStepId, HTMLElement | null>>({
     personal: null,
+    governmentIds: null,
     education: null,
     employment: null,
     banking: null,
     declaration: null,
-    review: null,
   });
 
-  function scrollToSection(stepId: StepId) {
-    const el = sectionRefs.current[stepId];
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }
+  const stepIndex = (id: IndiaStepId) => STEP_IDS.indexOf(id);
 
-  function scrollToField(path: string, fallbackStep: StepId) {
-    const el = document.querySelector<HTMLElement>(`[data-field="${path}"]`);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (el as any).focus?.();
-    } else {
-      scrollToSection(fallbackStep);
-    }
-  }
+  /**
+   * Scroll to a section by step ID.
+   * Uses smooth scrolling for better UX.
+   */
+  const scrollSection = (stepId: IndiaStepId) =>
+    scrollToSection(stepId, sectionRefs as any);
+  const scrollField = (path: string, fallback: IndiaStepId) =>
+    scrollToField(path, fallback, sectionRefs as any);
 
-  function findFirstEmploymentErrorPath(errs: typeof errors): string | null {
-    const arr = errs.employmentHistory;
-
-    // array-level error (rare) -> scroll to toggle / section
-    if (!arr) return null;
-
-    // RHF field array errors are usually: errors.employmentHistory[index].fieldName
-    if (Array.isArray(arr)) {
-      for (let i = 0; i < arr.length; i++) {
-        const row = arr[i] as any;
-        if (!row) continue;
-
-        const order = [
-          "organizationName",
-          "designation",
-          "startDate",
-          "endDate",
-          "reasonForLeaving",
-          "experienceCertificateFile",
-        ];
-
-        for (const key of order) {
-          if (row?.[key]?.message) {
-            return `employmentHistory.${i}.${key}`;
-          }
-        }
-      }
-    }
-
-    return null;
-  }
-
+  /**
+   * Handle Next button click - validates current section before proceeding.
+   * Gates navigation if validation fails and scrolls to first error.
+   */
   async function handleNext() {
-    const stepId = STEP_IDS[currentIndex];
+    const step = INDIA_STEPS[currentIndex];
+    const ok = await trigger(step.fieldPaths as any, { shouldFocus: false });
 
-    // Custom gating for Employment step (dynamic field array)
-    if (stepId === "employment") {
-      const ok = await trigger(
-        ["hasPreviousEmployment", "employmentHistory"] as any,
-        { shouldFocus: false }
-      );
-
-      if (!ok) {
-        // Scroll to the *first errored* employment field (not just the first field in the DOM)
-        const firstEmploymentErrorPath = findFirstEmploymentErrorPath(errors);
-
-        if (firstEmploymentErrorPath) {
-          scrollToField(firstEmploymentErrorPath, "employment");
-        } else {
-          // fallback
-          scrollToSection("employment");
-        }
-
-        return;
-      }
-
-      const nextIndex = Math.min(ONBOARDING_STEPS.length - 1, currentIndex + 1);
-      onStepChange(nextIndex);
-      scrollToSection(STEP_IDS[nextIndex]);
+    if (!ok) {
+      // RHF can update errors before React re-renders; schedule scroll on next tick
+      // to ensure we read the latest `formState.errors`.
+      setTimeout(() => {
+        const errs = methods.formState.errors;
+        const firstPath = findFirstErrorInStep(step as any, errs as any);
+        if (firstPath) scrollField(firstPath, step.id);
+        else scrollSection(step.id);
+      }, 0);
       return;
     }
 
-    // Generic path for other steps
-    const fieldPaths = STEP_FIELD_MAP[stepId] ?? [];
-
-    if (fieldPaths.length > 0) {
-      const ok = await trigger(fieldPaths as any, { shouldFocus: false });
-
-      if (!ok) {
-        const firstErroredPath = fieldPaths.find((p) =>
-          Boolean(getErrorAtPath(errors, p))
-        );
-        if (firstErroredPath) {
-          scrollToField(firstErroredPath, stepId);
-        } else {
-          scrollToSection(stepId);
-        }
-        return;
-      }
-    }
-
-    const nextIndex = Math.min(ONBOARDING_STEPS.length - 1, currentIndex + 1);
+    const nextIndex = Math.min(INDIA_STEPS.length - 1, currentIndex + 1);
     onStepChange(nextIndex);
-    scrollToSection(STEP_IDS[nextIndex]);
+    scrollSection(INDIA_STEPS[nextIndex].id);
   }
 
   function handlePrev() {
     const prevIndex = Math.max(0, currentIndex - 1);
     onStepChange(prevIndex);
-    scrollToSection(STEP_IDS[prevIndex]);
+    scrollSection(INDIA_STEPS[prevIndex].id);
   }
 
-  async function handleFinalSubmit(values: IndiaOnboardingFormValues) {
-    // Final whole-form validation is already enforced via resolver,
-    // but we explicitly trigger again to be safe and scroll to first error.
-    const ok = await trigger(undefined, { shouldFocus: false });
-    if (!ok) {
-      // Find the first step with an error.
-      for (const step of STEP_IDS) {
-        const paths = STEP_FIELD_MAP[step] ?? [];
-        const firstErroredPath =
-          paths.find((p) => Boolean(getErrorAtPath(errors, p))) ?? null;
+  /**
+   * Handle form submission with proper flow:
+   * 1. Validate entire form (signature must already be saved)
+   * 3. Scroll to first error if validation fails
+   * 4. Check Turnstile token
+   * 5. Get geolocation
+   * 6. Submit if all checks pass
+   */
+  async function handleSubmitWithUploads(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (isReadOnly || isSubmitting) return;
 
-        if (firstErroredPath) {
-          scrollToField(firstErroredPath, step);
-          return;
+    // Force error visibility in the last section (and signature box) for custom submit flow
+    setSubmitAttempted(true);
+    setSubmitError(null);
+
+    // Step 1: Validate entire form
+    // Signature is explicitly saved by the user in Declaration section.
+    const isValid = await trigger(undefined, { shouldFocus: false });
+
+    if (!isValid) {
+      // Find first error across all sections and scroll to it.
+      // Do this after the next render so we use the latest errors snapshot.
+      setTimeout(() => {
+        const errs = methods.formState.errors;
+        const firstError = findFirstErrorAcrossSteps(
+          INDIA_STEPS as any,
+          errs as any
+        );
+        if (firstError) {
+          const { stepId, errorPath } = firstError;
+          // IMPORTANT:
+          // Submit should NOT "gate" visibility like Next does. We intentionally do
+          // NOT call onStepChange(stepWithError) here, because step index controls
+          // conditional rendering (sections after the index become invisible).
+          //
+          // We only scroll to the first error so the user can fix it, while keeping
+          // the full form visible.
+          setTimeout(() => {
+            if (errorPath) scrollField(errorPath, stepId);
+            else scrollSection(stepId);
+          }, 150);
+        } else {
+          // Fallback: scroll to current section
+          scrollSection(INDIA_STEPS[currentIndex].id);
         }
-      }
-      // Fallback: scroll to top of current step.
-      scrollToSection(STEP_IDS[currentIndex]);
+      }, 0);
       return;
     }
 
-    // TODO: wire into submitIndiaOnboarding (backend POST) in a later step.
-    if (typeof window !== "undefined") {
-      // eslint-disable-next-line no-console
-      console.log("India onboarding form submitted (frontend only):", values);
+    // Step 3: Verify Turnstile token is present
+    if (!turnstileToken) {
+      setSubmitError("Please complete the verification to submit.");
+      // Ensure user is on the declaration step, then scroll to the widget itself
+      const declIndex = STEP_IDS.indexOf("declaration");
+      if (declIndex >= 0) onStepChange(declIndex);
+      setTimeout(() => {
+        scrollField("declaration.turnstile", "declaration");
+      }, 150);
+      return;
+    }
+
+    // Step 4: Ensure geolocation is available (REQUIRED for submission)
+    // Location should have been requested on page entry, but we verify/request again here
+    // This ensures we have location even if user changed settings or initial request failed
+    let locationAtSubmit: IGeoLocation;
+    try {
+      locationAtSubmit = await ensureGeoAtSubmit({ geo, geoDenied });
+      
+      // Double-check we have valid coordinates
+      if (
+        locationAtSubmit.latitude == null ||
+        locationAtSubmit.longitude == null
+      ) {
+        throw new Error(
+          "Location coordinates are missing. Please allow location access to submit."
+        );
+      }
+    } catch (err: any) {
+      // Location is REQUIRED - block submission with clear error message
+      setSubmitError(
+        err?.message ||
+          "Location access is required to submit. Please enable location access in your browser settings."
+      );
+      scrollSection("declaration");
+      return;
+    }
+
+    // Step 5: All validations passed - submit the form
+    const values = getValues() as IndiaOnboardingFormValues;
+
+    // Normalize payload to match backend expectations (no empty-string optionals,
+    // strict education shape, and bankDetails.voidCheque compatibility).
+    const normalizedIndiaFormData = normalizeIndiaFormDataForSubmit(values);
+
+    try {
+      const res = await submitIndiaOnboarding(onboarding.id, {
+        indiaFormData: normalizedIndiaFormData as any,
+        locationAtSubmit,
+        turnstileToken,
+      });
+
+      // Success - notify parent to update context
+      onSubmitted?.(res.onboardingContext);
+    } catch (err) {
+      // Handle submission errors
+      if (err instanceof ApiError) {
+        setSubmitError(err.message || "Submission failed.");
+      } else {
+        setSubmitError("Submission failed. Please try again.");
+      }
+      scrollSection("declaration");
     }
   }
 
@@ -230,9 +268,8 @@ export function IndiaOnboardingForm({
       <form
         className="space-y-10"
         autoComplete="off"
-        onSubmit={methods.handleSubmit(handleFinalSubmit)}
+        onSubmit={handleSubmitWithUploads}
       >
-        {/* Step 1: Personal information */}
         <section
           ref={(el) => {
             sectionRefs.current.personal = el;
@@ -245,14 +282,29 @@ export function IndiaOnboardingForm({
           />
         </section>
 
-        {/* Step 2: Education */}
+        <section
+          ref={(el) => {
+            sectionRefs.current.governmentIds = el;
+          }}
+          aria-label="Government identification"
+        >
+          {currentIndex >= stepIndex("governmentIds") && (
+            <GovernmentIdsSection
+              isReadOnly={isReadOnly}
+              docId={onboarding.id}
+            />
+          )}
+        </section>
+
         <section
           ref={(el) => {
             sectionRefs.current.education = el;
           }}
           aria-label="Education"
         >
-          {currentIndex >= 1 && <EducationSection isReadOnly={isReadOnly} />}
+          {currentIndex >= stepIndex("education") && (
+            <EducationSection isReadOnly={isReadOnly} />
+          )}
         </section>
 
         <section
@@ -261,7 +313,7 @@ export function IndiaOnboardingForm({
           }}
           aria-label="Employment history"
         >
-          {currentIndex >= 2 && (
+          {currentIndex >= stepIndex("employment") && (
             <EmploymentSection isReadOnly={isReadOnly} docId={onboarding.id} />
           )}
         </section>
@@ -272,7 +324,7 @@ export function IndiaOnboardingForm({
           }}
           aria-label="Bank & payment details"
         >
-          {currentIndex >= 3 && (
+          {currentIndex >= stepIndex("banking") && (
             <BankDetailsSection isReadOnly={isReadOnly} docId={onboarding.id} />
           )}
         </section>
@@ -283,28 +335,19 @@ export function IndiaOnboardingForm({
           }}
           aria-label="Declaration"
         >
-          {currentIndex >= 4 && (
-            <PlaceholderSection title="Declaration">
-              Declaration section will be implemented next.
-            </PlaceholderSection>
+          {currentIndex >= stepIndex("declaration") && (
+            <DeclarationSection
+              isReadOnly={isReadOnly}
+              docId={onboarding.id}
+              turnstileToken={turnstileToken}
+              onTurnstileToken={setTurnstileToken}
+              submitError={submitError}
+              signatureRef={signatureRef}
+              showErrors={submitAttempted}
+            />
           )}
         </section>
 
-        <section
-          ref={(el) => {
-            sectionRefs.current.review = el;
-          }}
-          aria-label="Review & submit"
-        >
-          {currentIndex >= 5 && (
-            <PlaceholderSection title="Review & submit">
-              Review & submit step will be wired into the backend submission
-              route.
-            </PlaceholderSection>
-          )}
-        </section>
-
-        {/* Navigation controls */}
         <div className="mt-4 flex items-center justify-between gap-3 text-sm">
           <button
             type="button"
@@ -329,72 +372,14 @@ export function IndiaOnboardingForm({
               <button
                 type="submit"
                 className="rounded-full bg-emerald-600 px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
-                disabled={isReadOnly}
+                disabled={isReadOnly || isSubmitting}
               >
-                Submit onboarding
+                {isSubmitting ? "Submitting..." : "Submit onboarding"}
               </button>
             )}
           </div>
         </div>
       </form>
     </FormProvider>
-  );
-}
-
-/**
- * Default values for the form, seeded from onboarding context.
- * We use DeepPartial so we only need to provide the subset we care about.
- */
-// src/features/onboarding/india/IndiaOnboardingForm.tsx
-
-function buildDefaultValuesFromOnboarding(
-  onboarding: TOnboardingContext
-): DeepPartial<IndiaOnboardingFormValues> {
-  return {
-    personalInfo: {
-      firstName: onboarding.firstName ?? "",
-      lastName: onboarding.lastName ?? "",
-      email: onboarding.email ?? "",
-      gender: "" as any, // will be set to EGender.MALE/FEMALE
-      dateOfBirth: "",
-      canProvideProofOfAge: false,
-      residentialAddress: {
-        addressLine1: "",
-        city: "",
-        state: "",
-        postalCode: "",
-        fromDate: "",
-        toDate: "",
-      },
-      phoneHome: "",
-      phoneMobile: "",
-      emergencyContactName: "",
-      emergencyContactNumber: "",
-    },
-    education: [],
-    employmentHistory: [],
-    bankDetails: {
-      bankName: "",
-      branchName: "",
-      accountHolderName: "",
-      accountNumber: "",
-      ifscCode: "",
-      upiId: "",
-      voidCheque: undefined,
-    },
-  };
-}
-
-function PlaceholderSection(props: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-6 text-sm text-slate-600 sm:px-6">
-      <h2 className="mb-2 text-sm font-semibold text-slate-900">
-        {props.title}
-      </h2>
-      <p>{props.children}</p>
-    </div>
   );
 }

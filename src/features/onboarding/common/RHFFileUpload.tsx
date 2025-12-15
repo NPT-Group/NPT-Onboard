@@ -49,6 +49,9 @@ export function RHFFileUpload<TForm extends FieldValues>({
   dataField,
   placeholderLabel = "Upload PDF (recommended: scanner app)",
 }: RHFFileUploadProps<TForm>) {
+  // Important: useFormContext should be on the INPUT type in the parent form.
+  // We keep this component generic, but now it will infer TForm automatically
+  // when you pass a typed FieldPath from the calling component.
   const { control } = useFormContext<TForm>();
 
   const [status, setStatus] = React.useState<
@@ -94,7 +97,7 @@ export function RHFFileUpload<TForm extends FieldValues>({
               maxSizeMB,
             });
 
-            const asset: IFileAsset = {
+            const nextAsset: IFileAsset = {
               s3Key: uploaded.s3Key,
               url: uploaded.url,
               mimeType: uploaded.mimeType as any,
@@ -102,8 +105,7 @@ export function RHFFileUpload<TForm extends FieldValues>({
               originalName: uploaded.originalName,
             };
 
-            field.onChange(asset as any);
-
+            field.onChange(nextAsset as any);
             setStatus("idle");
             setMessage("Upload successful.");
           } catch (err: any) {

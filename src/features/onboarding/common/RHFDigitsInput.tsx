@@ -1,42 +1,50 @@
 "use client";
 
 import * as React from "react";
-import { Controller, useFormContext, type FieldPath } from "react-hook-form";
+import {
+  Controller,
+  useFormContext,
+  type FieldPath,
+  type FieldValues,
+} from "react-hook-form";
+
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils/cn";
-import type { IndiaOnboardingFormInput } from "../india/indiaFormSchema";
 import { FormField } from "./FormField";
 
-type RHFPhoneInputProps = {
-  name: FieldPath<IndiaOnboardingFormInput>;
+type RHFDigitsInputProps<TForm extends FieldValues> = {
+  name: FieldPath<TForm>;
   label: string;
-  countryCodePrefix?: string;
-  maxDigits?: number;
-  formatDigits?: (digits: string) => string;
+  /** Max digits to store (e.g. Aadhaar = 12) */
+  maxDigits: number;
+  disabled?: boolean;
   placeholder?: string;
   containerClassName?: string;
-  disabled?: boolean;
+
+  /**
+   * Optional formatter for display only.
+   * Stored value remains digits-only.
+   */
+  formatDigits?: (digits: string) => string;
+
+  /**
+   * Optional: if you want to show a prefix/addon (rare for digits),
+   * pass a ReactNode (e.g. a badge). If not provided, input is full width.
+   */
+  leftAddon?: React.ReactNode;
 };
 
-function defaultFormatDigits(digits: string): string {
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
-  if (digits.length <= 10)
-    return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
-  return digits;
-}
-
-export function RHFPhoneInput({
+export function RHFDigitsInput<TForm extends FieldValues>({
   name,
   label,
-  countryCodePrefix = "+91",
-  maxDigits = 10,
-  formatDigits = defaultFormatDigits,
+  maxDigits,
+  disabled,
   placeholder,
   containerClassName,
-  disabled,
-}: RHFPhoneInputProps) {
-  const { control } = useFormContext<IndiaOnboardingFormInput>();
+  formatDigits,
+  leftAddon,
+}: RHFDigitsInputProps<TForm>) {
+  const { control } = useFormContext<TForm>();
 
   return (
     <Controller
@@ -47,29 +55,29 @@ export function RHFPhoneInput({
         const hasError = Boolean(errorMessage);
 
         const rawValue = (field.value as string | undefined) ?? "";
-        const clampedDigits = rawValue.slice(0, maxDigits);
-        const displayValue = formatDigits(clampedDigits);
+        const digitsOnly = rawValue.replace(/\D/g, "").slice(0, maxDigits);
+        const displayValue = formatDigits
+          ? formatDigits(digitsOnly)
+          : digitsOnly;
 
         const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
           const digits = e.target.value.replace(/\D/g, "").slice(0, maxDigits);
-          field.onChange(digits);
+          field.onChange(digits); // store digits only
         };
 
         return (
           <FormField
             label={label}
-            htmlFor={name}
+            htmlFor={String(name)}
             error={errorMessage}
             className={containerClassName}
           >
-            <div className="flex gap-2">
-              <div className="mt-1 flex items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-600">
-                {countryCodePrefix}
-              </div>
+            <div className={cn("flex gap-2", leftAddon ? "items-start" : "")}>
+              {leftAddon}
 
               <Input
-                id={name}
-                data-field={name}
+                id={String(name)}
+                data-field={String(name)}
                 name={field.name}
                 ref={field.ref}
                 aria-invalid={hasError || undefined}
@@ -80,7 +88,8 @@ export function RHFPhoneInput({
                 inputMode="numeric"
                 placeholder={placeholder}
                 className={cn(
-                  "mt-1 flex-1 text-sm",
+                  "mt-1 text-sm",
+                  Boolean(leftAddon) && "flex-1",
                   hasError &&
                     "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-200",
                   disabled &&

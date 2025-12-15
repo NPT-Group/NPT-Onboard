@@ -3,10 +3,7 @@
 import * as React from "react";
 import { useFormContext, useController, type FieldPath } from "react-hook-form";
 
-import type {
-  IndiaOnboardingFormValues,
-  IndiaOnboardingFormInput,
-} from "../india/indiaFormSchema";
+import type { IndiaOnboardingFormInput } from "../india/indiaFormSchema";
 import { getErrorAtPath } from "./getErrorAtPath";
 
 type RHFCheckboxProps = Omit<
@@ -26,7 +23,7 @@ export function RHFCheckbox({
   const {
     control,
     formState: { errors },
-  } = useFormContext<IndiaOnboardingFormValues>();
+  } = useFormContext<IndiaOnboardingFormInput>();
 
   const { field } = useController({
     name,

@@ -4,10 +4,7 @@ import * as React from "react";
 import { Controller, useFormContext, type FieldPath } from "react-hook-form";
 import { cn } from "@/lib/utils/cn";
 
-import type {
-  IndiaOnboardingFormValues,
-  IndiaOnboardingFormInput,
-} from "../india/indiaFormSchema";
+import type { IndiaOnboardingFormInput } from "../india/indiaFormSchema";
 import { FormField } from "./FormField";
 
 type Option = {
@@ -35,7 +32,7 @@ export function RHFSelect({
   disabled,
   errorMessageOverride,
 }: RHFSelectProps) {
-  const { control } = useFormContext<IndiaOnboardingFormValues>();
+  const { control } = useFormContext<IndiaOnboardingFormInput>();
 
   return (
     <Controller

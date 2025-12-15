@@ -27,10 +27,11 @@ import {
   EOnboardingStatus,
   type TOnboardingContext,
 } from "@/types/onboarding.types";
-import { ESubsidiary } from "@/types/shared.types";
+import { ESubsidiary, type IGeoLocation } from "@/types/shared.types";
 import { EEApiErrorType } from "@/types/api.types";
 
 import { IndiaOnboardingForm } from "@/features/onboarding/india/IndiaOnboardingForm";
+import { reverseGeocodeBestEffort } from "@/features/onboarding/form-engine/geo";
 
 export default function OnboardingFormPage() {
   // ==================================================================
@@ -47,6 +48,63 @@ export default function OnboardingFormPage() {
   const [onboarding, setOnboarding] = useState<TOnboardingContext | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // ==================================================================
+  // Geo (request IMMEDIATELY on page entry - required for submission)
+  // ==================================================================
+
+  const [geo, setGeo] = useState<IGeoLocation>({});
+  const [geoDenied, setGeoDenied] = useState(false);
+
+  useEffect(() => {
+    // Always set timezone best-effort (no permission needed)
+    const timezone =
+      Intl?.DateTimeFormat?.().resolvedOptions?.().timeZone || undefined;
+
+    setGeo((g) => ({ ...g, timezone }));
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (!navigator?.geolocation) {
+      setGeoDenied(true);
+      return;
+    }
+
+    // Request location permission IMMEDIATELY on page entry
+    // This ensures we have location data ready for submission
+    // If user denies, we'll ask again at submit time (required for submission)
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const latitude = pos.coords.latitude;
+        const longitude = pos.coords.longitude;
+
+        // Best-effort reverse geocode so geo has {country, region, city}
+        // early (submit will also verify/enrich again).
+        const enrich = await reverseGeocodeBestEffort(latitude, longitude);
+
+        setGeo((g) => ({
+          ...g,
+          latitude,
+          longitude,
+          ...enrich,
+        }));
+        setGeoDenied(false);
+      },
+      (error) => {
+        // User denied or unavailable - we'll ask again at submit time
+        // Location is REQUIRED for submission, so we'll request again then
+        setGeoDenied(true);
+        console.warn("Location permission denied or unavailable:", error);
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 10000, // Increased timeout for better success rate
+        maximumAge: 0, // Always get fresh location, don't use cached
+      }
+    );
+  }, []);
 
   // ==================================================================
   // Wizard UI state
@@ -210,7 +268,6 @@ export default function OnboardingFormPage() {
       );
     }
 
-    // Normal editable state: no banner
     return null;
   }
 
@@ -238,10 +295,8 @@ export default function OnboardingFormPage() {
 
       <main className="mx-auto max-w-4xl px-4 pb-16 pt-6 sm:px-6 lg:px-8">
         <div className="rounded-2xl bg-white p-6 shadow-sm sm:p-8">
-          {/* Optional status banner (errors / locked states) */}
           {statusBanner && <div className="mb-6">{statusBanner}</div>}
 
-          {/* Title + subtitle */}
           <header className="mb-6 text-center">
             <h1 className="text-xl font-semibold tracking-tight text-slate-900">
               Employee Onboarding Form
@@ -252,7 +307,6 @@ export default function OnboardingFormPage() {
             </p>
           </header>
 
-          {/* Full Form Wizard - observed for scroll detection */}
           <div ref={wizardRef} className="mb-6 flex justify-center">
             <FormWizard
               steps={ONBOARDING_STEPS}
@@ -261,7 +315,6 @@ export default function OnboardingFormPage() {
             />
           </div>
 
-          {/* Form content: India onboarding form shell */}
           {!isLoading &&
             !loadError &&
             onboarding &&
@@ -271,6 +324,9 @@ export default function OnboardingFormPage() {
                 isReadOnly={isReadOnly}
                 currentIndex={currentIndex}
                 onStepChange={setCurrentIndex}
+                onSubmitted={(ctx) => setOnboarding(ctx)}
+                geo={geo}
+                geoDenied={geoDenied}
               />
             )}
         </div>

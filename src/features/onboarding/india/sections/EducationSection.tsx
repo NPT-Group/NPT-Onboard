@@ -6,11 +6,9 @@ import {
   Controller,
   type FieldPath,
 } from "react-hook-form";
+import { useEffect, useRef } from "react";
 import { EEducationLevel } from "@/types/onboarding.types";
-import type {
-  IndiaOnboardingFormValues,
-  IndiaOnboardingFormInput,
-} from "../indiaFormSchema";
+import type { IndiaOnboardingFormInput } from "../indiaFormSchema";
 
 import { RHFSelect } from "../../common/RHFSelect";
 import { RHFTextInput } from "../../common/RHFTextInput";
@@ -58,6 +56,7 @@ type NumberFieldProps = {
   max?: number;
   placeholder?: string;
 };
+
 function NumberField({
   name,
   label,
@@ -66,18 +65,16 @@ function NumberField({
   max,
   placeholder,
 }: NumberFieldProps) {
-  const { control } = useFormContext<IndiaOnboardingFormValues>();
+  const { control } = useFormContext<IndiaOnboardingFormInput>();
 
   return (
     <Controller
       name={name}
       control={control}
-      render={(renderProps) => {
-        const { field, fieldState } = renderProps;
+      render={({ field, fieldState }) => {
         const errorMessage = fieldState.error?.message?.toString();
         const hasError = Boolean(errorMessage);
 
-        // Coerce value for <input type="number">
         const inputValue =
           field.value === undefined || field.value === null
             ? ""
@@ -87,18 +84,12 @@ function NumberField({
           const raw = e.target.value;
 
           if (raw === "") {
-            // Empty → undefined so Zod "optional" works,
-            // and superRefine can decide if it's required.
             field.onChange(undefined);
             return;
           }
 
           const num = Number(raw);
-          if (Number.isNaN(num)) {
-            field.onChange(undefined);
-          } else {
-            field.onChange(num);
-          }
+          field.onChange(Number.isNaN(num) ? undefined : num);
         };
 
         return (
@@ -136,12 +127,68 @@ function NumberField({
 }
 
 export function EducationSection({ isReadOnly }: EducationSectionProps) {
-  const { control } = useFormContext<IndiaOnboardingFormValues>();
+  const { control, setValue } = useFormContext<IndiaOnboardingFormInput>();
 
   const highestLevel = useWatch({
     control,
     name: "education.0.highestLevel",
   }) as EEducationLevel | undefined;
+
+  // Production safety: keep form payload aligned with backend strict validation.
+  // When the education level changes, clear fields that are no longer applicable,
+  // so we don't submit stale values that backend rejects.
+  const prevLevelRef = useRef<EEducationLevel | undefined>(undefined);
+
+  useEffect(() => {
+    const level = highestLevel;
+    const prev = prevLevelRef.current;
+    if (!level || level === prev) return;
+    prevLevelRef.current = level;
+
+    const clear = (path: FieldPath<IndiaOnboardingFormInput>) => {
+      setValue(path as any, undefined as any, { shouldDirty: true, shouldValidate: false });
+    };
+
+    if (level === EEducationLevel.PRIMARY_SCHOOL) {
+      // Clear high school + diploma/bachelor+ fields
+      clear("education.0.highSchoolInstitutionName");
+      clear("education.0.highSchoolBoard");
+      clear("education.0.highSchoolStream");
+      clear("education.0.highSchoolYearCompleted");
+      clear("education.0.highSchoolGradeOrPercentage");
+
+      clear("education.0.institutionName");
+      clear("education.0.universityOrBoard");
+      clear("education.0.fieldOfStudy");
+      clear("education.0.startYear");
+      clear("education.0.endYear");
+      clear("education.0.gradeOrCgpa");
+    } else if (level === EEducationLevel.HIGH_SCHOOL) {
+      // Clear primary + diploma/bachelor+ fields
+      clear("education.0.schoolName");
+      clear("education.0.schoolLocation");
+      clear("education.0.primaryYearCompleted");
+
+      clear("education.0.institutionName");
+      clear("education.0.universityOrBoard");
+      clear("education.0.fieldOfStudy");
+      clear("education.0.startYear");
+      clear("education.0.endYear");
+      clear("education.0.gradeOrCgpa");
+    } else {
+      // Diploma / Bachelor / Masters / Doctorate / Other
+      // Clear primary + high school fields
+      clear("education.0.schoolName");
+      clear("education.0.schoolLocation");
+      clear("education.0.primaryYearCompleted");
+
+      clear("education.0.highSchoolInstitutionName");
+      clear("education.0.highSchoolBoard");
+      clear("education.0.highSchoolStream");
+      clear("education.0.highSchoolYearCompleted");
+      clear("education.0.highSchoolGradeOrPercentage");
+    }
+  }, [highestLevel, setValue]);
 
   return (
     <div className="rounded-2xl px-4 py-6 shadow-sm sm:px-6 sm:py-7">
@@ -155,7 +202,6 @@ export function EducationSection({ isReadOnly }: EducationSectionProps) {
       </header>
 
       <div className="space-y-6">
-        {/* Highest level selector */}
         <RHFSelect
           name="education.0.highestLevel"
           label="Highest level of education completed"
@@ -168,7 +214,6 @@ export function EducationSection({ isReadOnly }: EducationSectionProps) {
           errorMessageOverride="Please select your highest level of education."
         />
 
-        {/* Conditional fields for each level */}
         {highestLevel === EEducationLevel.PRIMARY_SCHOOL && (
           <div className="grid gap-4 sm:grid-cols-2">
             <RHFTextInput

@@ -6,6 +6,26 @@ import {
 } from "@/types/onboarding.types";
 
 /**
+ * Backend treats many fields as optional-but-non-empty when provided.
+ * In RHF we often hold empty string ("") for untouched inputs, so we normalize
+ * optional strings: "" / whitespace -> undefined.
+ */
+const emptyToUndefined = (v: unknown) =>
+  typeof v === "string" && v.trim().length === 0 ? undefined : v;
+
+const optionalTrimmedString = () =>
+  z.preprocess(emptyToUndefined, z.string().optional());
+
+const requiredTrimmedString = (message: string) => z.string().trim().min(1, message);
+
+const requiredDateString = (requiredMessage: string, invalidMessage: string) =>
+  z
+    .string()
+    .trim()
+    .min(1, requiredMessage)
+    .refine((v) => !Number.isNaN(new Date(v).valueOf()), { message: invalidMessage });
+
+/**
  * Minimal file-asset schema for uploaded docs.
  * Mirrors IFileAsset from shared.types in a validation-friendly way.
  */
@@ -17,58 +37,86 @@ const fileAssetSchema = z.object({
   sizeBytes: z.number().int().nonnegative().optional(),
 });
 
+/**
+ * Wraps fileAssetSchema with a friendly "required upload" message,
+ * instead of Zod's default "expected object, received undefined".
+ */
+const requiredFileAsset = (message: string) =>
+  z
+    .any()
+    .refine((v) => v != null && typeof v === "object", { message })
+    .pipe(fileAssetSchema);
+
 /* ------------------------------------------------------------------ */
 /* Personal Info (IPersonalInfo)                                      */
 /* ------------------------------------------------------------------ */
 
 const personalInfoSchema = z.object({
-  firstName: z.string().min(1, "First name is required."),
-  lastName: z.string().min(1, "Last name is required."),
+  // Backend rejects whitespace-only strings; enforce trim here so UI can't pass invalid payloads.
+  firstName: requiredTrimmedString("First name is required."),
+  lastName: requiredTrimmedString("Last name is required."),
   email: z
     .string()
+    .trim()
     .min(1, "Email is required.")
     .email("Enter a valid email address."),
   gender: z
     .string()
     .refine(
       (val): val is EGender => val === EGender.MALE || val === EGender.FEMALE,
-      {
-        message: "Gender is required.",
-      }
+      { message: "Gender is required." }
     ),
 
-  dateOfBirth: z.string().min(1, "Date of birth is required."),
+  dateOfBirth: requiredDateString(
+    "Date of birth is required.",
+    "Enter a valid date of birth."
+  ),
   canProvideProofOfAge: z.boolean().refine((v) => v === true, {
     message: "You must confirm that you can provide proof of age.",
   }),
-  residentialAddress: z.object({
-    addressLine1: z.string().min(1, "Address line 1 is required."),
-    city: z.string().min(1, "City is required."),
-    state: z.string().min(1, "State / Province is required."),
-    postalCode: z.string().min(1, "Postal code is required."),
-    fromDate: z.string().min(1, "From date is required."),
-    toDate: z.string().min(1, "Until date is required."),
-  }),
-  phoneHome: z
-    .string()
-    .optional()
-    .refine(
-      (val) => !val || /^\d{10}$/.test(val),
-      "Enter a valid 10-digit phone number."
-    ),
+  residentialAddress: z
+    .object({
+    addressLine1: requiredTrimmedString("Address line 1 is required."),
+    // Frontend requirement (product): require full address details
+    city: requiredTrimmedString("City is required."),
+    state: requiredTrimmedString("State / Province is required."),
+    postalCode: requiredTrimmedString("Postal code is required."),
+    fromDate: requiredDateString("From date is required.", "Enter a valid from date."),
+    toDate: requiredDateString("Until date is required.", "Enter a valid until date."),
+  })
+    .superRefine((addr, ctx) => {
+      // Industry-standard: prevent inverted ranges (backend doesn't enforce, but improves UX)
+      const from = new Date(addr.fromDate).valueOf();
+      const to = new Date(addr.toDate).valueOf();
+      if (!Number.isNaN(from) && !Number.isNaN(to) && to < from) {
+        ctx.addIssue({
+          path: ["toDate"],
+          code: z.ZodIssueCode.custom,
+          message: "Until date must be on or after the from date.",
+        });
+      }
+    }),
+  phoneHome: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .regex(/^\d{10}$/, { message: "Enter a valid 10-digit phone number." })
+      .optional()
+  ),
 
   phoneMobile: z
     .string()
+    .trim()
     .min(1, "Mobile number is required.")
-    .regex(/^\d{10}$/, {
-      message: "Enter a valid 10-digit mobile number.",
-    }),
+    .regex(/^\d{10}$/, { message: "Enter a valid 10-digit mobile number." }),
 
   emergencyContactName: z
     .string()
+    .trim()
     .min(1, "Emergency contact name is required."),
   emergencyContactNumber: z
     .string()
+    .trim()
     .min(1, "Emergency contact number is required.")
     .regex(/^\d{10}$/, {
       message: "Enter a valid 10-digit emergency contact number.",
@@ -83,17 +131,17 @@ const indiaAadhaarSchema = z.object({
   aadhaarNumber: z
     .string()
     .min(1, "Aadhaar number is required.")
-    .max(32, "Aadhaar number is too long."),
-  file: fileAssetSchema,
+    .regex(/^\d{12}$/, { message: "Enter a valid 12-digit Aadhaar number." }),
+  file: requiredFileAsset("Please upload your Aadhaar PDF."),
 });
 
 const indiaPanSchema = z.object({
-  file: fileAssetSchema,
+  file: requiredFileAsset("Please upload your PAN PDF."),
 });
 
 const indiaPassportSchema = z.object({
-  frontFile: fileAssetSchema,
-  backFile: fileAssetSchema,
+  frontFile: requiredFileAsset("Please upload your passport front PDF."),
+  backFile: requiredFileAsset("Please upload your passport back PDF."),
 });
 
 const indiaDriversLicenseSchema = z
@@ -133,50 +181,27 @@ const indiaGovernmentIdsSchema = z.object({
 const educationEntrySchemaBase = z.object({
   highestLevel: z
     .nativeEnum(EEducationLevel)
-    .or(z.literal("")) // allow empty string from <select>
+    .or(z.literal(""))
     .refine((val) => Object.values(EEducationLevel).includes(val as any), {
       message: "Please select your highest level of education.",
     }),
 
-  // Primary
-  schoolName: z.string().optional(),
-  schoolLocation: z.string().optional(),
-  primaryYearCompleted: z
-    .number()
-    .int()
-    .min(1900, "Enter a valid 4-digit year.")
-    .max(2100, "Enter a valid 4-digit year.")
-    .optional(),
+  schoolName: optionalTrimmedString(),
+  schoolLocation: optionalTrimmedString(),
+  primaryYearCompleted: z.number().int().min(1900).max(2100).optional(),
 
-  // High school
-  highSchoolInstitutionName: z.string().optional(),
-  highSchoolBoard: z.string().optional(),
-  highSchoolStream: z.string().optional(),
-  highSchoolYearCompleted: z
-    .number()
-    .int()
-    .min(1900, "Enter a valid 4-digit year.")
-    .max(2100, "Enter a valid 4-digit year.")
-    .optional(),
-  highSchoolGradeOrPercentage: z.string().optional(),
+  highSchoolInstitutionName: optionalTrimmedString(),
+  highSchoolBoard: optionalTrimmedString(),
+  highSchoolStream: optionalTrimmedString(),
+  highSchoolYearCompleted: z.number().int().min(1900).max(2100).optional(),
+  highSchoolGradeOrPercentage: optionalTrimmedString(),
 
-  // Diploma / Bachelor / Master / PhD / Other
-  institutionName: z.string().optional(),
-  universityOrBoard: z.string().optional(),
-  fieldOfStudy: z.string().optional(),
-  startYear: z
-    .number()
-    .int()
-    .min(1900, "Enter a valid 4-digit year.")
-    .max(2100, "Enter a valid 4-digit year.")
-    .optional(),
-  endYear: z
-    .number()
-    .int()
-    .min(1900, "Enter a valid 4-digit year.")
-    .max(2100, "Enter a valid 4-digit year.")
-    .optional(),
-  gradeOrCgpa: z.string().optional(),
+  institutionName: optionalTrimmedString(),
+  universityOrBoard: optionalTrimmedString(),
+  fieldOfStudy: optionalTrimmedString(),
+  startYear: z.number().int().min(1900).max(2100).optional(),
+  endYear: z.number().int().min(1900).max(2100).optional(),
+  gradeOrCgpa: optionalTrimmedString(),
 });
 
 const educationEntrySchema = educationEntrySchemaBase.superRefine(
@@ -214,7 +239,6 @@ const educationEntrySchema = educationEntrySchemaBase.superRefine(
         });
       }
     } else {
-      // Diploma / Bachelors / Masters / Doctorate / Other
       if (!entry.institutionName) {
         ctx.addIssue({
           path: ["institutionName"],
@@ -237,6 +261,57 @@ const educationEntrySchema = educationEntrySchemaBase.superRefine(
         });
       }
     }
+
+    // Mirror backend strictness: disallow fields not applicable to selected level.
+    const disallow = (value: unknown, path: string) => {
+      if (value != null) {
+        ctx.addIssue({
+          path: [path],
+          code: z.ZodIssueCode.custom,
+          message: "This field must be empty for the selected education level.",
+        });
+      }
+    };
+
+    if (level === EEducationLevel.PRIMARY_SCHOOL) {
+      // Disallow high-school + diploma/bachelor+ fields
+      disallow(entry.highSchoolInstitutionName, "highSchoolInstitutionName");
+      disallow(entry.highSchoolBoard, "highSchoolBoard");
+      disallow(entry.highSchoolStream, "highSchoolStream");
+      disallow(entry.highSchoolYearCompleted, "highSchoolYearCompleted");
+      disallow(entry.highSchoolGradeOrPercentage, "highSchoolGradeOrPercentage");
+
+      disallow(entry.institutionName, "institutionName");
+      disallow(entry.universityOrBoard, "universityOrBoard");
+      disallow(entry.fieldOfStudy, "fieldOfStudy");
+      disallow(entry.startYear, "startYear");
+      disallow(entry.endYear, "endYear");
+      disallow(entry.gradeOrCgpa, "gradeOrCgpa");
+    } else if (level === EEducationLevel.HIGH_SCHOOL) {
+      // Disallow primary + diploma/bachelor+ fields
+      disallow(entry.schoolName, "schoolName");
+      disallow(entry.schoolLocation, "schoolLocation");
+      disallow(entry.primaryYearCompleted, "primaryYearCompleted");
+
+      disallow(entry.institutionName, "institutionName");
+      disallow(entry.universityOrBoard, "universityOrBoard");
+      disallow(entry.fieldOfStudy, "fieldOfStudy");
+      disallow(entry.startYear, "startYear");
+      disallow(entry.endYear, "endYear");
+      disallow(entry.gradeOrCgpa, "gradeOrCgpa");
+    } else {
+      // Diploma / Bachelor / Masters / Doctorate / Other
+      // Disallow primary + high-school fields
+      disallow(entry.schoolName, "schoolName");
+      disallow(entry.schoolLocation, "schoolLocation");
+      disallow(entry.primaryYearCompleted, "primaryYearCompleted");
+
+      disallow(entry.highSchoolInstitutionName, "highSchoolInstitutionName");
+      disallow(entry.highSchoolBoard, "highSchoolBoard");
+      disallow(entry.highSchoolStream, "highSchoolStream");
+      disallow(entry.highSchoolYearCompleted, "highSchoolYearCompleted");
+      disallow(entry.highSchoolGradeOrPercentage, "highSchoolGradeOrPercentage");
+    }
   }
 );
 
@@ -249,14 +324,27 @@ const educationArraySchema = z
 /* Employment (IEmploymentHistoryEntry[])                             */
 /* ------------------------------------------------------------------ */
 
-const employmentHistoryEntrySchema = z.object({
-  organizationName: z.string().min(1, "Organization name is required."),
-  designation: z.string().min(1, "Designation is required."),
-  startDate: z.string().min(1, "Start date is required."),
-  endDate: z.string().min(1, "End date is required."),
-  reasonForLeaving: z.string().min(1, "Reason for leaving is required."),
-  experienceCertificateFile: fileAssetSchema.nullable().optional(),
-});
+const employmentHistoryEntrySchema = z
+  .object({
+    organizationName: requiredTrimmedString("Organization name is required."),
+    designation: requiredTrimmedString("Designation is required."),
+    startDate: requiredDateString("Start date is required.", "Enter a valid start date."),
+    endDate: requiredDateString("End date is required.", "Enter a valid end date."),
+    reasonForLeaving: requiredTrimmedString("Reason for leaving is required."),
+    experienceCertificateFile: fileAssetSchema.nullable().optional(),
+  })
+  .superRefine((entry, ctx) => {
+    // Industry-standard UX: prevent inverted ranges (backend doesn't enforce)
+    const start = new Date(entry.startDate).valueOf();
+    const end = new Date(entry.endDate).valueOf();
+    if (!Number.isNaN(start) && !Number.isNaN(end) && end < start) {
+      ctx.addIssue({
+        path: ["endDate"],
+        code: z.ZodIssueCode.custom,
+        message: "End date must be on or after the start date.",
+      });
+    }
+  });
 
 const employmentHistoryArraySchema = z
   .array(employmentHistoryEntrySchema)
@@ -267,28 +355,33 @@ const employmentHistoryArraySchema = z
 /* ------------------------------------------------------------------ */
 
 const indiaBankDetailsSchema = z.object({
-  bankName: z.string().min(1, "Bank name is required."),
-  branchName: z.string().min(1, "Branch name is required."),
-  accountHolderName: z.string().min(1, "Account holder name is required."),
+  bankName: requiredTrimmedString("Bank name is required."),
+  branchName: requiredTrimmedString("Branch name is required."),
+  accountHolderName: requiredTrimmedString("Account holder name is required."),
   accountNumber: z
     .string()
+    .trim()
     .min(1, "Account number is required.")
     .regex(/^\d{6,18}$/, { message: "Enter a valid account number." }),
   ifscCode: z
     .string()
+    .trim()
     .min(1, "IFSC code is required.")
     .regex(/^[A-Z]{4}0[A-Z0-9]{6}$/i, {
       message: "Enter a valid IFSC code (e.g. HDFC0001234).",
     })
     .transform((v) => v.toUpperCase()),
-  upiId: z
-    .string()
-    .optional()
-    .refine((v) => !v || /^[a-z0-9.\-_]{2,256}@[a-z0-9.\-_]{2,64}$/i.test(v), {
-      message: "Enter a valid UPI ID (e.g. name@bank).",
-    }),
+  upiId: z.preprocess(
+    emptyToUndefined,
+    z
+      .string()
+      .refine(
+        (v) => /^[a-z0-9.\-_]{2,256}@[a-z0-9.\-_]{2,64}$/i.test(v),
+        { message: "Enter a valid UPI ID (e.g. name@bank)." }
+      )
+      .optional()
+  ),
 
-  // optional, no errors when empty
   voidCheque: fileAssetSchema.optional(),
 });
 
@@ -300,10 +393,24 @@ const declarationSchema = z
   .object({
     hasAcceptedDeclaration: z.boolean(),
     signature: z.object({
-      file: fileAssetSchema,
-      signedAt: z.string().min(1, "Signature date is required."),
+      file: requiredFileAsset("Please provide your signature.").refine(
+        (file) => {
+          // Backend requires image file for signature (vImageFile)
+          if (!file || typeof file !== "object") return false;
+          const mimeType = (file as any).mimeType || "";
+          return typeof mimeType === "string" && mimeType.toLowerCase().startsWith("image/");
+        },
+        { message: "Signature must be an image file." }
+      ),
+      signedAt: requiredDateString(
+        "Signature date is required.",
+        "Enter a valid signature date."
+      ),
     }),
-    declarationDate: z.string().min(1, "Declaration date is required."),
+    declarationDate: requiredDateString(
+      "Declaration date is required.",
+      "Enter a valid declaration date."
+    ),
   })
   .superRefine((value, ctx) => {
     if (!value.hasAcceptedDeclaration) {
@@ -342,8 +449,6 @@ export const indiaOnboardingFormSchema = z
     declaration: declarationSchema,
   })
   .superRefine((data, ctx) => {
-    // We cannot detect "unset" after transform because it becomes false,
-    // so we validate earlier via raw field state in UI.
     if (data.hasPreviousEmployment && data.employmentHistory.length === 0) {
       ctx.addIssue({
         path: ["employmentHistory"],
@@ -354,16 +459,10 @@ export const indiaOnboardingFormSchema = z
     }
   });
 
-/**
- * Strongly-typed form values used in React Hook Form.
- * Shape is intentionally aligned with IIndiaOnboardingFormData.
- */
 export type IndiaOnboardingFormInput = z.input<
   typeof indiaOnboardingFormSchema
 >;
 export type IndiaOnboardingFormValues = z.output<
   typeof indiaOnboardingFormSchema
 >;
-
-// Explicit alias to highlight alignment with backend type
 export type IndiaFormDataT = IIndiaOnboardingFormData;

@@ -7,10 +7,7 @@ import {
   type FieldPath,
 } from "react-hook-form";
 
-import type {
-  IndiaOnboardingFormValues,
-  IndiaOnboardingFormInput,
-} from "../indiaFormSchema";
+import type { IndiaOnboardingFormInput } from "../indiaFormSchema";
 import { RHFTextInput } from "../../common/RHFTextInput";
 import { FormField } from "../../common/FormField";
 import { cn } from "@/lib/utils/cn";
@@ -31,7 +28,7 @@ export function EmploymentSection({
     register,
     setValue,
     formState: { errors },
-  } = useFormContext<IndiaOnboardingFormValues>();
+  } = useFormContext<IndiaOnboardingFormInput>();
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -66,22 +63,17 @@ export function EmploymentSection({
 
   const clearAllEntries = () => {
     if (fields.length === 0) return;
-    for (let i = fields.length - 1; i >= 0; i--) {
-      remove(i);
-    }
+    for (let i = fields.length - 1; i >= 0; i--) remove(i);
   };
 
   const handleTogglePreviousEmployment = (value: boolean) => {
-    setValue("hasPreviousEmployment", value, {
+    setValue("hasPreviousEmployment", value as any, {
       shouldValidate: true,
       shouldDirty: true,
     });
 
-    if (value) {
-      ensureOneEntry();
-    } else {
-      clearAllEntries();
-    }
+    if (value) ensureOneEntry();
+    else clearAllEntries();
   };
 
   const showEntries = hasPreviousEmployment === true;
@@ -98,14 +90,12 @@ export function EmploymentSection({
         </p>
       </header>
 
-      {/* Register the boolean field (value controlled via setValue) */}
       <input
         type="hidden"
         data-field="hasPreviousEmployment"
-        {...register("hasPreviousEmployment")}
+        {...register("hasPreviousEmployment" as any)}
       />
 
-      {/* Has previous employment toggle */}
       <div className="mb-5">
         <FormField
           label="Do you have any previous employment?"
@@ -151,7 +141,6 @@ export function EmploymentSection({
           </div>
         </FormField>
 
-        {/* Top-level array error (when Yes but no entries, etc.) */}
         {employmentArrayError && (
           <p className="mt-1 text-xs text-red-600 text-center">
             {employmentArrayError}
@@ -159,7 +148,6 @@ export function EmploymentSection({
         )}
       </div>
 
-      {/* Info banner ONLY when user explicitly chose "No" */}
       {hasPreviousEmployment === false && (
         <div className="mb-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-4 text-xs text-slate-600">
           You indicated that you don&apos;t have previous employment. You can
@@ -167,7 +155,6 @@ export function EmploymentSection({
         </div>
       )}
 
-      {/* Employment entries */}
       {showEntries && (
         <div className="space-y-5">
           {fields.map((field, index) => {
@@ -242,9 +229,9 @@ export function EmploymentSection({
                 </div>
 
                 <div className="mt-4">
-                  <RHFFileUpload<IndiaOnboardingFormValues>
+                  <RHFFileUpload<IndiaOnboardingFormInput>
                     name={
-                      `${prefix}.experienceCertificateFile` as FieldPath<IndiaOnboardingFormValues>
+                      `${prefix}.experienceCertificateFile` as FieldPath<IndiaOnboardingFormInput>
                     }
                     label="Experience certificate (optional)"
                     description="Upload a PDF experience certificate for this role (max 20MB)."
@@ -261,7 +248,6 @@ export function EmploymentSection({
             );
           })}
 
-          {/* Add another entry – centered button */}
           <div className="pt-2 flex justify-center">
             <button
               type="button"

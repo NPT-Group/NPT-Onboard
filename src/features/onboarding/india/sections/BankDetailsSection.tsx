@@ -1,7 +1,7 @@
 "use client";
 
 import type { FieldPath } from "react-hook-form";
-import type { IndiaOnboardingFormValues } from "../indiaFormSchema";
+import type { IndiaOnboardingFormInput } from "../indiaFormSchema";
 import { RHFTextInput } from "../../common/RHFTextInput";
 import { RHFFileUpload } from "../../common/RHFFileUpload";
 import { ES3Folder, ES3Namespace } from "@/types/aws.types";
@@ -31,41 +31,41 @@ export function BankDetailsSection({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <RHFTextInput
-          name={`${base}.bankName` as FieldPath<IndiaOnboardingFormValues>}
+          name={`${base}.bankName` as FieldPath<IndiaOnboardingFormInput>}
           label="Bank name"
           disabled={isReadOnly}
         />
 
         <RHFTextInput
-          name={`${base}.branchName` as FieldPath<IndiaOnboardingFormValues>}
+          name={`${base}.branchName` as FieldPath<IndiaOnboardingFormInput>}
           label="Branch name"
           disabled={isReadOnly}
         />
 
         <RHFTextInput
           name={
-            `${base}.accountHolderName` as FieldPath<IndiaOnboardingFormValues>
+            `${base}.accountHolderName` as FieldPath<IndiaOnboardingFormInput>
           }
           label="Account holder name"
           disabled={isReadOnly}
         />
 
         <RHFTextInput
-          name={`${base}.accountNumber` as FieldPath<IndiaOnboardingFormValues>}
+          name={`${base}.accountNumber` as FieldPath<IndiaOnboardingFormInput>}
           label="Account number"
           inputMode="numeric"
           disabled={isReadOnly}
         />
 
         <RHFTextInput
-          name={`${base}.ifscCode` as FieldPath<IndiaOnboardingFormValues>}
+          name={`${base}.ifscCode` as FieldPath<IndiaOnboardingFormInput>}
           label="IFSC code"
           placeholder="HDFC0001234"
           disabled={isReadOnly}
         />
 
         <RHFTextInput
-          name={`${base}.upiId` as FieldPath<IndiaOnboardingFormValues>}
+          name={`${base}.upiId` as FieldPath<IndiaOnboardingFormInput>}
           label="UPI ID (optional)"
           placeholder="name@bank"
           disabled={isReadOnly}
@@ -73,8 +73,8 @@ export function BankDetailsSection({
       </div>
 
       <div className="mt-5">
-        <RHFFileUpload<IndiaOnboardingFormValues>
-          name={`${base}.voidCheque` as FieldPath<IndiaOnboardingFormValues>}
+        <RHFFileUpload<IndiaOnboardingFormInput>
+          name={`${base}.voidCheque` as FieldPath<IndiaOnboardingFormInput>}
           label="Void cheque (PDF) (optional)"
           description="Upload a clear PDF scan. Recommended: scanner app."
           namespace={ES3Namespace.ONBOARDINGS}

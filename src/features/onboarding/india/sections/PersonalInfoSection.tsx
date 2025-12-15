@@ -3,10 +3,7 @@
 import { useEffect, useState } from "react";
 import { useFormContext, type FieldPath } from "react-hook-form";
 
-import type {
-  IndiaOnboardingFormValues,
-  IndiaOnboardingFormInput,
-} from "../indiaFormSchema";
+import type { IndiaOnboardingFormInput } from "../indiaFormSchema";
 import type { TOnboardingContext } from "@/types/onboarding.types";
 import { EGender } from "@/types/onboarding.types";
 
@@ -53,7 +50,7 @@ export function PersonalInfoSection({
     setValue,
     watch,
     formState: { errors },
-  } = useFormContext<IndiaOnboardingFormValues>();
+  } = useFormContext<IndiaOnboardingFormInput>();
 
   // Sync firstName/lastName/email from onboarding meta so they always match.
   useEffect(() => {
@@ -159,14 +156,13 @@ export function PersonalInfoSection({
           label="Gender"
           error={personalErrors.gender?.message?.toString()}
         >
-          {/* Hidden input registered with RHF so validation + scroll-to-error work */}
           <input
             type="hidden"
-            data-field="personalInfo.gender"
             {...register("personalInfo.gender")}
           />
 
           <div
+            data-field="personalInfo.gender"
             className={cn(
               "mt-1 inline-flex w-full overflow-hidden rounded-full border",
               "border-slate-300"
@@ -176,10 +172,7 @@ export function PersonalInfoSection({
               const isSelected = localGender === option;
 
               const handleClick = () => {
-                // Update local UI state
                 setLocalGender(option);
-
-                // Map local option -> backend enum
                 const backendValue =
                   option === "male" ? EGender.MALE : EGender.FEMALE;
 
@@ -197,7 +190,7 @@ export function PersonalInfoSection({
                   onClick={handleClick}
                   className={cn(
                     "w-full px-4 py-2 text-sm font-medium transition-all",
-                    idx > 0 && "border-l border-slate-300", // straight divider
+                    idx > 0 && "border-l border-slate-300",
                     isSelected
                       ? "bg-slate-900 text-white"
                       : "bg-white text-slate-800 hover:bg-slate-50",
@@ -222,7 +215,6 @@ export function PersonalInfoSection({
           disabled={isReadOnly}
         />
 
-        {/* Align checkbox with its pair on desktop */}
         <div className="flex items-center md:pt-6">
           <RHFCheckbox
             name="personalInfo.canProvideProofOfAge"
@@ -238,7 +230,6 @@ export function PersonalInfoSection({
           Residential address
         </h2>
 
-        {/* Address + City – 2 per row */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <RHFTextInput
             name="personalInfo.residentialAddress.addressLine1"
@@ -252,7 +243,6 @@ export function PersonalInfoSection({
           />
         </div>
 
-        {/* State / Province + Postal code – 2 per row */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <RHFTextInput
             name="personalInfo.residentialAddress.state"
@@ -266,7 +256,6 @@ export function PersonalInfoSection({
           />
         </div>
 
-        {/* From date + Until date – 2 per row */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <RHFTextInput
             name="personalInfo.residentialAddress.fromDate"
@@ -298,7 +287,6 @@ export function PersonalInfoSection({
           />
         </div>
 
-        {/* Emergency contact name + phone */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <RHFTextInput
             name="personalInfo.emergencyContactName"
