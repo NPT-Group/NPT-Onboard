@@ -18,12 +18,23 @@ import { buildNptIndiaApplicationFormPayload, applyNptIndiaApplicationFormPayloa
 import { ENptIndiaApplicationFormFields as F } from "@/lib/pdf/application-form/mappers/npt-india-application-form.types";
 
 /**
- * GET /api/v1/admin/onboardings/[id]/filled-pdf/application-form?subsidiary=INDIA
+ * GET /api/v1/admin/onboardings/[id]/filled-pdf/application-form
  *
- * Admin-only: generates a filled Application Form PDF from onboarding formData.
- * Allowed iff onboarding.isFormComplete === true (onboarding lifecycle may be incomplete).
+ * Generates a filled Hiring Application PDF for an onboarding record.
  *
- * NOTE: For now, only INDIA is supported. If subsidiary query param is not INDIA, fail.
+ * Access:
+ *  - Admin only
+ *
+ * Requirements:
+ *  - `subsidiary` query param is required
+ *  - Currently supported subsidiary: INDIA only
+ *  - `subsidiary` must match `onboarding.subsidiary`
+ *  - `onboarding.isFormComplete === true`
+ *  - `onboarding.indiaFormData` must be present
+ *
+ * Output:
+ *  - application/pdf (inline)
+ *  - Filled and flattened NPT India Hiring Application form
  */
 export const GET = async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   try {
@@ -33,33 +44,33 @@ export const GET = async (req: NextRequest, { params }: { params: Promise<{ id: 
     const { id: onboardingId } = await params;
     if (!isValidObjectId(onboardingId)) return errorResponse(400, "Not a valid onboarding ID");
 
-    // Require subsidiary param
     const subsidiaryRaw = req.nextUrl.searchParams.get("subsidiary");
     if (!subsidiaryRaw) return errorResponse(400, "subsidiary is required");
 
-    // Validate subsidiary enum
     if (!Object.values(ESubsidiary).includes(subsidiaryRaw as ESubsidiary)) {
       return errorResponse(400, "Invalid subsidiary");
     }
     const subsidiary = subsidiaryRaw as ESubsidiary;
 
-    // For now: only INDIA supported
     if (subsidiary !== ESubsidiary.INDIA) {
       return errorResponse(400, "Filled application form PDF is only supported for INDIA subsidiary");
     }
 
-    const onboarding = await OnboardingModel.findById(onboardingId).lean();
-    if (!onboarding) return errorResponse(404, "Onboarding not found");
+    // IMPORTANT: do NOT use .lean() here, we need getters/virtuals (decryption getters).
+    const onboardingDoc = await OnboardingModel.findById(onboardingId);
+    if (!onboardingDoc) return errorResponse(404, "Onboarding not found");
 
-    // Ensure caller-provided subsidiary matches onboarding record
-    if (onboarding.subsidiary !== subsidiary) {
+    // Ensure caller-provided subsidiary matches record
+    if (onboardingDoc.subsidiary !== subsidiary) {
       return errorResponse(400, "subsidiary does not match onboarding.subsidiary");
     }
 
-    // Business rule: form must be complete
-    if (!onboarding.isFormComplete) {
+    if (!onboardingDoc.isFormComplete) {
       return errorResponse(400, "Cannot generate filled PDF: form is not marked complete (isFormComplete=false)");
     }
+
+    // Convert using schema getters/virtuals so encryptedStringField getters run
+    const onboarding = onboardingDoc.toObject({ getters: true, virtuals: true }) as any;
 
     const formData = onboarding.indiaFormData;
     if (!formData) return errorResponse(400, "indiaFormData is missing");
@@ -71,7 +82,7 @@ export const GET = async (req: NextRequest, { params }: { params: Promise<{ id: 
 
     const pdfDoc = await PDFDocument.load(pdfBytes);
     const form = pdfDoc.getForm();
-    const pages = pdfDoc.getPages(); // page[0]=Personal, page[1]=Employment, page[2]=Education/Banking/Declaration
+    const pages = pdfDoc.getPages();
 
     /* ----------------------------- Fill fields --------------------------- */
 
@@ -79,7 +90,6 @@ export const GET = async (req: NextRequest, { params }: { params: Promise<{ id: 
     applyNptIndiaApplicationFormPayloadToForm(form, payload);
 
     /* ---------------------------- Draw signature ------------------------- */
-    // Declaration signature is on the 3rd page (index 2)
     try {
       const sigAsset = formData.declaration?.signature?.file;
       const sigBytes = await loadImageBytesFromAsset(sigAsset);
@@ -87,7 +97,7 @@ export const GET = async (req: NextRequest, { params }: { params: Promise<{ id: 
       await drawPdfImage({
         pdfDoc,
         form,
-        page: pages[2],
+        page: pages[2], // declaration page
         fieldName: F.DECLARATION_SIGNATURE,
         imageBytes: sigBytes,
         width: 140,
