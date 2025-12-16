@@ -313,7 +313,7 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
     onboarding.indiaFormData = finalizedIndiaFormData;
     onboarding.status = nextStatus;
     onboarding.submittedAt = now;
-    onboarding.isCompleted = true; // completed meaning "form fully filled out"
+    onboarding.isFormComplete = true; // form data is now complete
     onboarding.locationAtSubmit = serverLocationAtSubmit;
 
     // Let Mongoose enforce schema-level validation (including pre-save hook
