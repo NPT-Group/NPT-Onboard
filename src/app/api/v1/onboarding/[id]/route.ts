@@ -5,7 +5,7 @@ import connectDB from "@/lib/utils/connectDB";
 import { errorResponse, successResponse } from "@/lib/utils/apiResponse";
 import { parseJsonBody } from "@/lib/utils/reqParser";
 
-import { requireOnboardingSession } from "@/lib/utils/auth/onboardingSession";
+import { clearOnboardingCookieHeader, requireOnboardingSession } from "@/lib/utils/auth/onboardingSession";
 import { createOnboardingContext, createOnboardingAuditLogSafe } from "@/lib/utils/onboardingUtils";
 
 import { makeEntityFinalPrefix, finalizeAssetWithCache, deleteS3Objects } from "@/lib/utils/s3Helper";
@@ -17,6 +17,7 @@ import { EOnboardingActor, EOnboardingAuditAction } from "@/types/onboardingAudi
 import { validateIndiaOnboardingForm } from "@/lib/validation/onboardingFormValidation";
 import { verifyTurnstileToken } from "@/lib/security/verifyTurnstile";
 import { reverseGeocodeStrict } from "@/lib/utils/reverseGeocode.server";
+import { attachCookies } from "@/lib/utils/auth/attachCookie";
 
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
@@ -345,9 +346,14 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
       },
     });
 
-    return successResponse(200, "Onboarding form submitted", {
+    const res = successResponse(200, "Onboarding form submitted", {
       onboardingContext,
     });
+
+    // employee session ends immediately after submission
+    attachCookies(res, clearOnboardingCookieHeader());
+
+    return res;
   } catch (error) {
     // Only roll back S3 if we *haven't* committed the onboarding yet
     if (!saved && movedFinalKeys.length) {
