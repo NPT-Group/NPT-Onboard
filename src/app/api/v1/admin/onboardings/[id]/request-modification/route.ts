@@ -1,19 +1,19 @@
+// src/app/api/v1/admin/onboardings/[id]/request-modification/route.ts
 import { NextRequest } from "next/server";
 import crypto from "crypto";
 
 import connectDB from "@/lib/utils/connectDB";
 import { errorResponse, successResponse } from "@/lib/utils/apiResponse";
 import { guard } from "@/lib/utils/auth/authUtils";
+import { hashString } from "@/lib/utils/encryption";
+import { buildOnboardingInvite, createOnboardingAuditLogSafe } from "@/lib/utils/onboardingUtils";
+import { parseJsonBody } from "@/lib/utils/reqParser";
 
 import { OnboardingModel } from "@/mongoose/models/Onboarding";
 
 import { EOnboardingMethod, EOnboardingStatus } from "@/types/onboarding.types";
 import { EOnboardingActor, EOnboardingAuditAction } from "@/types/onboardingAuditLog.types";
-import { buildOnboardingInvite, createOnboardingAuditLogSafe } from "@/lib/utils/onboardingUtils";
-import { hashString } from "@/lib/utils/encryption";
-import { parseJsonBody } from "@/lib/utils/reqParser";
 
-// You’ll need to implement this mailer.
 import { sendEmployeeOnboardingModificationRequest } from "@/lib/mail/employee/sendEmployeeOnboardingModificationRequest";
 
 type RequestModificationBody = {
@@ -30,7 +30,7 @@ type RequestModificationBody = {
  * - method must be DIGITAL.
  * - status must NOT be Approved or Terminated.
  * - isFormComplete must be true (there is something to modify).
- * - Typically used from Submitted / Resubmitted.
+ * - Allowed only from Submitted / Resubmitted.
  * - Generates a new 48h invite and sets status = ModificationRequested.
  */
 export const POST = async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
@@ -42,9 +42,7 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
     const baseUrl = req.nextUrl.origin;
 
     const onboarding = await OnboardingModel.findById(id);
-    if (!onboarding) {
-      return errorResponse(404, "Onboarding not found");
-    }
+    if (!onboarding) return errorResponse(404, "Onboarding not found");
 
     if (onboarding.method !== EOnboardingMethod.DIGITAL) {
       return errorResponse(400, "Modification requests are only allowed for digital onboardings");
@@ -58,16 +56,19 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
       return errorResponse(400, "Cannot request modification until the onboarding form is fully completed");
     }
 
-    // (Optional stricter rule: only allow from Submitted/Resubmitted)
-    if (onboarding.status !== EOnboardingStatus.Submitted && onboarding.status !== EOnboardingStatus.Resubmitted) {
-      return errorResponse(400, "Modification can only be requested on submitted digital onboardings");
+    // Standard behavior: only allow from Submitted / Resubmitted
+    const allowed = onboarding.status === EOnboardingStatus.Submitted || onboarding.status === EOnboardingStatus.Resubmitted;
+
+    if (!allowed) {
+      return errorResponse(400, "Modification can only be requested on submitted digital onboardings", {
+        reason: "STATUS_NOT_SUBMITTED_OR_RESUBMITTED",
+        status: onboarding.status,
+      });
     }
 
     const body = await parseJsonBody<RequestModificationBody>(req);
     const message = body?.message?.trim();
-    if (!message) {
-      return errorResponse(400, "Modification message is required");
-    }
+    if (!message) return errorResponse(400, "Modification message is required");
 
     const prevStatus = onboarding.status;
     const now = new Date();

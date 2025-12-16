@@ -17,14 +17,11 @@ import { EOnboardingActor, EOnboardingAuditAction } from "@/types/onboardingAudi
 // -----------------------------------------------------------------------------
 // POST /api/v1/admin/onboardings/[id]/resend-invite
 //
-// Re-sends a digital onboarding invitation to an employee.
+// Re-sends the INITIAL digital onboarding invitation to an employee.
 //
 // Behavior:
 // - Allowed only for DIGITAL onboardings.
-// - Allowed only when status is:
-//     - InviteGenerated
-//     - ModificationRequested
-//   (Employees only have a session in these states.)
+// - Allowed only when status is InviteGenerated.
 // - Generates a new secure invite token and replaces the previous one
 //   (old links are immediately invalidated).
 // - Clears any existing OTP.
@@ -43,20 +40,16 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
     const baseUrl = req.nextUrl.origin;
 
     const onboarding = await OnboardingModel.findById(id);
-
-    if (!onboarding) {
-      return errorResponse(404, "Onboarding not found");
-    }
+    if (!onboarding) return errorResponse(404, "Onboarding not found");
 
     if (onboarding.method !== EOnboardingMethod.DIGITAL) {
       return errorResponse(400, "Resend invite is only allowed for digital onboardings");
     }
 
-    const isResendAllowed = onboarding.status === EOnboardingStatus.InviteGenerated || onboarding.status === EOnboardingStatus.ModificationRequested;
-
-    if (!isResendAllowed) {
+    // Standard behavior: resend-invite is ONLY for the initial invite state.
+    if (onboarding.status !== EOnboardingStatus.InviteGenerated) {
       return errorResponse(400, "Cannot resend invite in the current onboarding state", {
-        reason: "STATUS_NOT_SESSION_ELIGIBLE",
+        reason: "STATUS_NOT_INVITE_GENERATED",
         status: onboarding.status,
       });
     }
@@ -66,7 +59,7 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
     const invite = buildOnboardingInvite(rawInviteToken);
     invite.tokenHash = hashString(rawInviteToken)!;
 
-    // Replace the old invite with the new one (old links become invalid)
+    // Replace old invite (old links become invalid)
     onboarding.invite = invite;
 
     // Clear any existing OTP (fresh invite should require fresh OTP flow)
@@ -74,7 +67,7 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
 
     await onboarding.save();
 
-    // Send the new invite email with the fresh token
+    // Send email with the fresh token
     await sendEmployeeOnboardingInvitation({
       to: onboarding.email,
       firstName: onboarding.firstName,
