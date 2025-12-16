@@ -86,7 +86,6 @@ function validatePersonalInfo(personalInfo: any) {
   const addr = personalInfo.residentialAddress;
   vAssert(isObj(addr), "personalInfo.residentialAddress is required");
   vString(addr.addressLine1, "personalInfo.residentialAddress.addressLine1");
-  vOptionalString(addr.addressLine2, "personalInfo.residentialAddress.addressLine2");
   vOptionalString(addr.city, "personalInfo.residentialAddress.city");
   vOptionalString(addr.state, "personalInfo.residentialAddress.state");
   vOptionalString(addr.postalCode, "personalInfo.residentialAddress.postalCode");

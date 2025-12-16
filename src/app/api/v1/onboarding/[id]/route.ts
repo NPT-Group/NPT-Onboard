@@ -16,6 +16,7 @@ import { ESubsidiary, type IFileAsset, type IGeoLocation } from "@/types/shared.
 import { EOnboardingActor, EOnboardingAuditAction } from "@/types/onboardingAuditLog.types";
 import { validateIndiaOnboardingForm } from "@/lib/validation/onboardingFormValidation";
 import { verifyTurnstileToken } from "@/lib/security/verifyTurnstile";
+import { reverseGeocodeStrict } from "@/lib/utils/reverseGeocode.server";
 
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
@@ -244,6 +245,9 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
     if (!locationAtSubmit || typeof locationAtSubmit !== "object") {
       return errorResponse(400, "Missing locationAtSubmit in request body");
     }
+    if (typeof (locationAtSubmit as any).latitude !== "number" || typeof (locationAtSubmit as any).longitude !== "number") {
+      return errorResponse(400, "locationAtSubmit.latitude and longitude are required");
+    }
 
     // Turnstile verification (bot protection)
     if (!turnstileToken || typeof turnstileToken !== "string") {
@@ -283,16 +287,34 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
 
     const now = new Date();
 
+    // Server-trusted location:
+    // We do NOT trust client-provided city/region/country. We derive them from
+    // lat/lng on the server using reverse geocoding for consistency across IN/US/CA.
+    // If we cannot derive these reliably, we fail submission (requirement: always
+    // have true location data).
+    let serverLocationAtSubmit: IGeoLocation;
+    try {
+      const latitude = (locationAtSubmit as any).latitude as number;
+      const longitude = (locationAtSubmit as any).longitude as number;
+      const derived = await reverseGeocodeStrict({ latitude, longitude });
+      serverLocationAtSubmit = {
+        ...locationAtSubmit,
+        latitude,
+        longitude,
+        country: derived.country,
+        region: derived.region,
+        city: derived.city,
+      };
+    } catch (e: any) {
+      return errorResponse(502, e?.message || "Unable to determine your city/state/country from GPS. Please try again.");
+    }
+
     // Mutate onboarding document
     onboarding.indiaFormData = finalizedIndiaFormData;
     onboarding.status = nextStatus;
     onboarding.submittedAt = now;
-
-    // Form is now fully submitted by the employee
-    onboarding.isFormComplete = true;
-
-    // Leave isCompleted for when HR approves or terminates
-    onboarding.locationAtSubmit = locationAtSubmit;
+    onboarding.isCompleted = true; // completed meaning "form fully filled out"
+    onboarding.locationAtSubmit = serverLocationAtSubmit;
 
     // Let Mongoose enforce schema-level validation (including pre-save hook
     // that requires per-subsidiary formData when status is Submitted/Resubmitted)

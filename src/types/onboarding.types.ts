@@ -1,7 +1,11 @@
 // src/types/onboarding.types.ts
 
-import { HydratedDocument } from "mongoose";
-import type { IFileAsset, IGeoLocation, IResidentialAddress } from "./shared.types";
+import type { HydratedDocument } from "mongoose";
+import type {
+  IFileAsset,
+  IGeoLocation,
+  IResidentialAddress,
+} from "./shared.types";
 import { ESubsidiary } from "./shared.types";
 
 /**
@@ -371,7 +375,10 @@ export interface IUsOnboardingFormData {
 /**
  * Convenience union for form data; use along with subsidiary discrimination.
  */
-export type TOnboardingFormData = IIndiaOnboardingFormData | ICanadaOnboardingFormData | IUsOnboardingFormData;
+export type TOnboardingFormData =
+  | IIndiaOnboardingFormData
+  | ICanadaOnboardingFormData
+  | IUsOnboardingFormData;
 
 /* ------------------------------------------------------------------ */
 /* Root Onboarding entity                                             */
@@ -501,4 +508,7 @@ export interface IUsOnboardingContext extends IOnboardingContextBase {
 /**
  * Union of all employee-facing onboarding contexts.
  */
-export type TOnboardingContext = IIndiaOnboardingContext | ICanadaOnboardingContext | IUsOnboardingContext;
+export type TOnboardingContext =
+  | IIndiaOnboardingContext
+  | ICanadaOnboardingContext
+  | IUsOnboardingContext;
