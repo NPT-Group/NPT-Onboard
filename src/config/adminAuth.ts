@@ -5,7 +5,7 @@
  * Everything (NextAuth, authUtils, middleware) should import from here.
  */
 
-export const ADMIN_EMAILS: string[] = ["ridoy@sspgroup.com", "atanda.faruq@sspgroup.com"];
+export const ADMIN_EMAILS: string[] = ["ridoy@sspgroup.com", "faruq.atanda@sspgroup.com"];
 
 const ADMIN_EMAIL_SET = new Set(ADMIN_EMAILS.map((e) => e.toLowerCase()));
 

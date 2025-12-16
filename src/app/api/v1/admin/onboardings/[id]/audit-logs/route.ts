@@ -51,7 +51,7 @@ function mapAuditLogToItem(log: any): AuditLogListItem {
  *
  * Query params:
  * - page (default 1)
- * - pageSize (default 25, max 100)
+ * - pageSize (default 20, max 100)
  * - from (ISO date string, inclusive; filters createdAt >= from)
  * - to   (ISO date string, inclusive end-of-day; filters createdAt <= end-of-day(to))
  * - sortBy (createdAt) [currently only createdAt is allowed]
