@@ -39,7 +39,7 @@ type OtpVerifyBody = {
  *       - method MUST be DIGITAL
  *       - invite.tokenHash MUST match HMAC of the raw token
  *       - invite.expiresAt MUST be in the future
- *       - onboarding.status MUST NOT be Approved / Terminated
+ *       - onboarding.status MUST be InviteGenerated OR ModificationRequested
  *
  *  3. Validate OTP:
  *       - onboarding.otp MUST exist
@@ -105,9 +105,12 @@ export const POST = async (req: NextRequest) => {
       });
     }
 
-    if (onboarding.status === EOnboardingStatus.Approved || onboarding.status === EOnboardingStatus.Terminated) {
-      return errorResponse(401, "Onboarding is no longer accessible", {
-        reason: onboarding.status === EOnboardingStatus.Approved ? "APPROVED" : "TERMINATED",
+    const isEmployeeSessionAllowed = onboarding.status === EOnboardingStatus.InviteGenerated || onboarding.status === EOnboardingStatus.ModificationRequested;
+
+    if (!isEmployeeSessionAllowed) {
+      return errorResponse(401, "Onboarding is not accessible", {
+        reason: "STATUS_NOT_SESSION_ELIGIBLE",
+        status: onboarding.status,
       });
     }
 

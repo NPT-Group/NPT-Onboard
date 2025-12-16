@@ -21,9 +21,13 @@ import { EOnboardingActor, EOnboardingAuditAction } from "@/types/onboardingAudi
 //
 // Behavior:
 // - Allowed only for DIGITAL onboardings.
-// - Not allowed once onboarding is Approved or Terminated.
+// - Allowed only when status is:
+//     - InviteGenerated
+//     - ModificationRequested
+//   (Employees only have a session in these states.)
 // - Generates a new secure invite token and replaces the previous one
 //   (old links are immediately invalidated).
+// - Clears any existing OTP.
 // - Resets invite expiry and sends a fresh onboarding email to the employee.
 // - Records an INVITE_RESENT audit log entry attributed to the HR actor.
 //
@@ -48,8 +52,13 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
       return errorResponse(400, "Resend invite is only allowed for digital onboardings");
     }
 
-    if (onboarding.status === EOnboardingStatus.Approved || onboarding.status === EOnboardingStatus.Terminated) {
-      return errorResponse(400, "Cannot resend invite for completed or terminated onboardings");
+    const isResendAllowed = onboarding.status === EOnboardingStatus.InviteGenerated || onboarding.status === EOnboardingStatus.ModificationRequested;
+
+    if (!isResendAllowed) {
+      return errorResponse(400, "Cannot resend invite in the current onboarding state", {
+        reason: "STATUS_NOT_SESSION_ELIGIBLE",
+        status: onboarding.status,
+      });
     }
 
     // Generate a new raw invite token and build a fresh invite payload
@@ -57,8 +66,11 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
     const invite = buildOnboardingInvite(rawInviteToken);
     invite.tokenHash = hashString(rawInviteToken)!;
 
-    // Replace the old invite with the new one
+    // Replace the old invite with the new one (old links become invalid)
     onboarding.invite = invite;
+
+    // Clear any existing OTP (fresh invite should require fresh OTP flow)
+    (onboarding as any).otp = undefined;
 
     await onboarding.save();
 
@@ -85,6 +97,7 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
       },
       message: `Onboarding invitation re-sent by ${user.name}; a new onboarding link was emailed to the employee.`,
       metadata: {
+        previousStatus: onboarding.status,
         status: onboarding.status,
         method: onboarding.method,
         subsidiary: onboarding.subsidiary,

@@ -8,7 +8,6 @@ import { OnboardingModel } from "@/mongoose/models/Onboarding";
 import { EOnboardingMethod, EOnboardingStatus, TOnboardingDoc, type TOnboarding } from "@/types/onboarding.types";
 import { AppError, EEApiErrorType } from "@/types/api.types";
 import { ONBOARDING_SESSION_COOKIE_NAME } from "@/config/env";
-// Adjust this import to whatever you actually use for hashing invite tokens.
 import { hashString } from "@/lib/utils/encryption";
 
 /**
@@ -65,17 +64,6 @@ export async function issueOnboardingSessionCookie(onboarding: TOnboarding, rawI
 }
 
 /**
- * Options for requireOnboardingSession.
- *
- * - allowSubmittedReadOnly:
- *    If true (default), Submitted/Resubmitted onboardings are allowed but
- *    the frontend should treat them as read-only.
- */
-type RequireOptions = {
-  allowSubmittedReadOnly?: boolean;
-};
-
-/**
  * Core guard for employee-facing APIs and pages under `/onboarding/[id]`.
  *
  * Behavior:
@@ -84,8 +72,7 @@ type RequireOptions = {
  *  - Enforces:
  *      - valid invite (not expired)
  *      - method = DIGITAL
- *      - status is not Approved / Terminated
- *  - Optionally allows Submitted/Resubmitted as read-only.
+ *      - status must be InviteGenerated OR ModificationRequested (only states where employees have a session)
  *
  * Failures:
  *  - Throws AppError with:
@@ -96,10 +83,11 @@ type RequireOptions = {
  * Success:
  *  - Returns { onboarding } – caller decides how to use it.
  */
-export async function requireOnboardingSession(onboardingId: string, opts: RequireOptions = { allowSubmittedReadOnly: true }): Promise<{ onboarding: TOnboardingDoc }> {
+export async function requireOnboardingSession(onboardingId: string): Promise<{ onboarding: TOnboardingDoc }> {
   await connectDB();
 
   if (!ONBOARDING_SESSION_COOKIE_NAME) throw new AppError(500, "ONBOARDING_SESSION_COOKIE_NAME is not configured");
+
   const jar = await cookies();
   const rawToken = jar.get(ONBOARDING_SESSION_COOKIE_NAME)?.value;
 
@@ -136,6 +124,7 @@ export async function requireOnboardingSession(onboardingId: string, opts: Requi
       clearCookieHeader: clearCookie,
     });
   }
+
   // Basic invite validity (aligned with spec: cookie should die when invite expires).
   if (!onboarding.invite || !onboarding.invite.expiresAt) {
     throw new AppError(401, "invite no longer valid", EEApiErrorType.SESSION_REQUIRED, {
@@ -151,25 +140,20 @@ export async function requireOnboardingSession(onboardingId: string, opts: Requi
     });
   }
 
-  // After approval or termination, employee must not be able to access. :contentReference[oaicite:1]{index=1}
-  if (onboarding.status === EOnboardingStatus.Approved || onboarding.status === EOnboardingStatus.Terminated) {
-    throw new AppError(401, "onboarding no longer accessible", EEApiErrorType.UNAUTHORIZED, {
-      reason: onboarding.status === EOnboardingStatus.Approved ? "APPROVED" : "TERMINATED",
+  // Employees only have a session in these states.
+  const isEmployeeSessionAllowed = onboarding.status === EOnboardingStatus.InviteGenerated || onboarding.status === EOnboardingStatus.ModificationRequested;
+
+  if (!isEmployeeSessionAllowed) {
+    // Includes: Submitted, Resubmitted, Approved, Terminated, ManualPDFSent, etc.
+    // Clear cookie to avoid the client repeatedly presenting a now-irrelevant token.
+    throw new AppError(401, "onboarding no longer accessible", EEApiErrorType.SESSION_REQUIRED, {
+      reason: "STATUS_NOT_SESSION_ELIGIBLE",
+      status: onboarding.status,
       clearCookieHeader: clearCookie,
     });
-  }
-  // Optionally enforce that Submitted/Resubmitted are read-only only.
-  if (!opts.allowSubmittedReadOnly) {
-    if (onboarding.status === EOnboardingStatus.Submitted || onboarding.status === EOnboardingStatus.Resubmitted) {
-      throw new AppError(403, "onboarding is read-only", EEApiErrorType.FORBIDDEN, {
-        reason: "READ_ONLY_STATE",
-        clearCookieHeader: clearCookie,
-      });
-    }
   }
 
   // No sliding window here – cookie naturally expires with the invite.
   // If HR resends or requests modification, a new invite + OTP flow issues a new cookie.
-
   return { onboarding };
 }

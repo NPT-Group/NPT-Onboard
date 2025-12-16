@@ -37,7 +37,7 @@ type InviteVerifyBody = {
  *       - method MUST be DIGITAL
  *       - invite.tokenHash MUST match
  *       - invite.expiresAt MUST be in the future
- *       - onboarding.status MUST NOT be Approved / Terminated
+ *       - onboarding.status MUST be InviteGenerated or ModificationRequested
  *
  *  3. Enforce security around OTP:
  *       - If an OTP exists and is currently locked (too many bad attempts), block
@@ -109,9 +109,12 @@ export const POST = async (req: NextRequest) => {
       });
     }
 
-    if (onboarding.status === EOnboardingStatus.Approved || onboarding.status === EOnboardingStatus.Terminated) {
-      return errorResponse(401, "Onboarding is no longer accessible", {
-        reason: onboarding.status === EOnboardingStatus.Approved ? "APPROVED" : "TERMINATED",
+    const isEmployeeSessionAllowed = onboarding.status === EOnboardingStatus.InviteGenerated || onboarding.status === EOnboardingStatus.ModificationRequested;
+
+    if (!isEmployeeSessionAllowed) {
+      return errorResponse(401, "Onboarding is not accessible", {
+        reason: "STATUS_NOT_SESSION_ELIGIBLE",
+        status: onboarding.status,
       });
     }
 

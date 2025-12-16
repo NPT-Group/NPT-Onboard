@@ -59,7 +59,7 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     // (Optional stricter rule: only allow from Submitted/Resubmitted)
-    if (onboarding.status !== EOnboardingStatus.Submitted && onboarding.status !== EOnboardingStatus.Resubmitted && onboarding.status !== EOnboardingStatus.ModificationRequested) {
+    if (onboarding.status !== EOnboardingStatus.Submitted && onboarding.status !== EOnboardingStatus.Resubmitted) {
       return errorResponse(400, "Modification can only be requested on submitted digital onboardings");
     }
 

@@ -140,8 +140,11 @@ async function finalizeIndiaOnboardingAssets(onboardingId: string, payload: IInd
 // - Requires a valid onboarding session cookie (raw invite token).
 // - Cookie token must hash-match `invite.tokenHash` for the SAME onboarding [id].
 // - Enforces: method = DIGITAL, invite exists + not expired.
-// - Denies access if onboarding is Approved or Terminated.
-// - Submitted/Resubmitted are allowed (read-only on the frontend by status).
+// - Employee session is only valid when onboarding.status is:
+//     - InviteGenerated
+//     - ModificationRequested
+//   (Any other status => no session; employee cannot access this route.)
+
 //
 // Response:
 // - Returns `onboardingContext` (derived from `createOnboardingContext`), not the
@@ -209,7 +212,7 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
 
     const { id: onboardingId } = await params;
 
-    // Validate session + base access (digital, invite valid, not approved/terminated)
+    // Validate session + base access (digital, invite valid, status session-eligible)
     const { onboarding } = await requireOnboardingSession(onboardingId);
 
     // For now we only support India onboarding flow

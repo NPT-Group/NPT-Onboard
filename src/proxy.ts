@@ -46,13 +46,21 @@ async function resolveAdmin(req: NextRequest): Promise<{ isAdmin: boolean; hasIn
 
 /**
  * Ask the internal guard route which onboarding (if any) this cookie belongs to.
- * Returns onboardingId or null.
+ * Returns onboardingId or null, plus whether middleware should clear the onboarding cookie.
+ *
+ * Note: the resolve API may set Set-Cookie to clear the cookie, but middleware fetch()
+ * does NOT forward Set-Cookie to the browser. So we explicitly delete the cookie on
+ * the middleware response when we get a logical "no session" outcome.
  */
-async function resolveEmployeeOnboarding(req: NextRequest): Promise<string | null> {
-  if (!ONBOARDING_SESSION_COOKIE_NAME) return null;
+async function resolveEmployeeOnboarding(req: NextRequest): Promise<{ onboardingId: string | null; shouldClearOnboardingCookie: boolean }> {
+  if (!ONBOARDING_SESSION_COOKIE_NAME) {
+    return { onboardingId: null, shouldClearOnboardingCookie: false };
+  }
 
   const hasCookie = !!req.cookies.get(ONBOARDING_SESSION_COOKIE_NAME)?.value;
-  if (!hasCookie) return null;
+  if (!hasCookie) {
+    return { onboardingId: null, shouldClearOnboardingCookie: false };
+  }
 
   try {
     const origin = req.nextUrl.origin;
@@ -63,18 +71,23 @@ async function resolveEmployeeOnboarding(req: NextRequest): Promise<string | nul
       },
     });
 
-    if (!res.ok) return null;
+    // If the resolve endpoint errored, don't clear cookie here (avoid nuking on transient 5xx).
+    if (!res.ok) {
+      return { onboardingId: null, shouldClearOnboardingCookie: false };
+    }
 
     const json = await res.json();
     const data = json?.data;
 
     if (data?.hasSession && typeof data.onboardingId === "string") {
-      return data.onboardingId;
+      return { onboardingId: data.onboardingId, shouldClearOnboardingCookie: false };
     }
 
-    return null;
+    // Logical "no session": cookie is stale/invalid/not eligible -> clear it in middleware response.
+    return { onboardingId: null, shouldClearOnboardingCookie: true };
   } catch {
-    return null;
+    // Network/runtime failure: don't clear cookie.
+    return { onboardingId: null, shouldClearOnboardingCookie: false };
   }
 }
 
@@ -125,9 +138,9 @@ export async function proxy(req: NextRequest) {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
 
-    const onboardingId = await resolveEmployeeOnboarding(req);
-    let res: NextResponse;
+    const { onboardingId, shouldClearOnboardingCookie } = await resolveEmployeeOnboarding(req);
 
+    let res: NextResponse;
     if (onboardingId) {
       res = NextResponse.redirect(new URL(`/onboarding/${onboardingId}`, req.url));
     } else {
@@ -136,6 +149,9 @@ export async function proxy(req: NextRequest) {
 
     if (hasInvalidAuthCookie) {
       res.cookies.delete(AUTH_COOKIE_NAME);
+    }
+    if (shouldClearOnboardingCookie) {
+      res.cookies.delete(ONBOARDING_SESSION_COOKIE_NAME);
     }
 
     return res;
@@ -148,12 +164,15 @@ export async function proxy(req: NextRequest) {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
 
-    const onboardingId = await resolveEmployeeOnboarding(req);
+    const { onboardingId, shouldClearOnboardingCookie } = await resolveEmployeeOnboarding(req);
 
     const res = onboardingId ? NextResponse.redirect(new URL(`/onboarding/${onboardingId}`, req.url)) : NextResponse.next();
 
     if (hasInvalidAuthCookie) {
       res.cookies.delete(AUTH_COOKIE_NAME);
+    }
+    if (shouldClearOnboardingCookie) {
+      res.cookies.delete(ONBOARDING_SESSION_COOKIE_NAME);
     }
 
     return res;
@@ -187,6 +206,7 @@ export async function proxy(req: NextRequest) {
   if (pathname.startsWith("/onboarding")) {
     const segments = pathname.split("/").filter(Boolean);
 
+    // /onboarding (invite + OTP entry page) is always public
     if (segments.length === 1) {
       return NextResponse.next();
     }
@@ -202,6 +222,7 @@ export async function proxy(req: NextRequest) {
       return res;
     }
 
+    // Only enforce session guard for /onboarding/[objectId]
     const looksLikeObjectId = /^[a-f\d]{24}$/i.test(onboardingIdInPath);
     if (!looksLikeObjectId) {
       const res = NextResponse.next();
@@ -211,12 +232,15 @@ export async function proxy(req: NextRequest) {
       return res;
     }
 
-    const onboardingIdFromSession = await resolveEmployeeOnboarding(req);
+    const { onboardingId: onboardingIdFromSession, shouldClearOnboardingCookie } = await resolveEmployeeOnboarding(req);
 
     if (!onboardingIdFromSession) {
       const res = NextResponse.redirect(new URL("/onboarding", req.url));
       if (hasInvalidAuthCookie) {
         res.cookies.delete(AUTH_COOKIE_NAME);
+      }
+      if (shouldClearOnboardingCookie) {
+        res.cookies.delete(ONBOARDING_SESSION_COOKIE_NAME);
       }
       return res;
     }
@@ -226,12 +250,18 @@ export async function proxy(req: NextRequest) {
       if (hasInvalidAuthCookie) {
         res.cookies.delete(AUTH_COOKIE_NAME);
       }
+      if (shouldClearOnboardingCookie) {
+        res.cookies.delete(ONBOARDING_SESSION_COOKIE_NAME);
+      }
       return res;
     }
 
     const res = NextResponse.next();
     if (hasInvalidAuthCookie) {
       res.cookies.delete(AUTH_COOKIE_NAME);
+    }
+    if (shouldClearOnboardingCookie) {
+      res.cookies.delete(ONBOARDING_SESSION_COOKIE_NAME);
     }
     return res;
   }
