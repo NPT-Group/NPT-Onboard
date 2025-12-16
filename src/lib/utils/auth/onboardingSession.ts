@@ -55,6 +55,10 @@ export function clearOnboardingCookieHeader(): string {
  *   res.headers.set("Set-Cookie", setCookie);
  */
 export async function issueOnboardingSessionCookie(onboarding: TOnboarding, rawInviteToken: string): Promise<{ setCookie: string; maxAgeSeconds: number }> {
+  if (!ONBOARDING_SESSION_COOKIE_NAME) {
+    throw new AppError(500, "ONBOARDING_SESSION_COOKIE_NAME is not configured", EEApiErrorType.INTERNAL);
+  }
+
   if (onboarding.method !== EOnboardingMethod.DIGITAL) {
     throw new AppError(400, "cannot issue session cookie for non-digital onboarding", EEApiErrorType.INTERNAL);
   }
@@ -123,6 +127,13 @@ export async function requireOnboardingSession(onboardingId: string): Promise<{ 
 
   const now = new Date();
   const tokenHash = hashString(rawToken);
+
+  if (!tokenHash) {
+    throw new AppError(401, "session expired, new invite required", EEApiErrorType.SESSION_REQUIRED, {
+      reason: "MISSING_OR_INVALID_COOKIE",
+      clearCookieHeader: clearCookie,
+    });
+  }
 
   // Enforce: same onboarding id, digital method, matching invite hash.
   const onboarding = await OnboardingModel.findOne({

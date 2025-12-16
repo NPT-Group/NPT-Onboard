@@ -51,7 +51,7 @@ function mapAuditLogToItem(log: any): AuditLogListItem {
  *
  * Query params:
  * - page (default 1)
- * - pageSize (default 25, max 100)
+ * - pageSize (default 20, max 100)
  * - from (ISO date string, inclusive; filters createdAt >= from)
  * - to   (ISO date string, inclusive end-of-day; filters createdAt <= end-of-day(to))
  * - sortBy (createdAt) [currently only createdAt is allowed]
@@ -81,9 +81,11 @@ export const GET = async (req: NextRequest, { params }: { params: Promise<{ id: 
     const toRaw = sp.get("to");
     const fromDate = parseIsoDate(fromRaw);
 
-    // If `to` is provided, treat it as inclusive end-of-day.
-    // If it’s missing, we leave `toDate` undefined and don’t apply an upper bound.
-    const toDate = toRaw ? inclusiveEndOfDay(parseIsoDate(toRaw) ?? new Date(), toRaw) : undefined;
+    const toParsed = parseIsoDate(toRaw);
+    if (toRaw && !toParsed) {
+      return errorResponse(400, "Invalid 'to' date. Expected ISO format like 2025-12-17 or full ISO datetime.");
+    }
+    const toDate = toParsed ? inclusiveEndOfDay(toParsed, toRaw) : undefined;
 
     // Pagination
     const { page, limit, skip } = parsePagination(sp.get("page"), sp.get("pageSize"), 100);

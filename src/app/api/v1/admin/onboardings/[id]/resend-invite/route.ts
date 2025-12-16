@@ -28,8 +28,9 @@ import { EOnboardingActor, EOnboardingAuditAction } from "@/types/onboardingAudi
 // - Resets invite expiry and sends a fresh onboarding email to the employee.
 // - Records an INVITE_RESENT audit log entry attributed to the HR actor.
 //
-// Access:
-// - HR admin only (guarded).
+// Reliability:
+// - If email sending fails, we attempt to roll back the onboarding record to its
+//   previous invite/otp state (best-effort) so the employee is not stranded.
 // -----------------------------------------------------------------------------
 export const POST = async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   try {
@@ -54,29 +55,50 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
       });
     }
 
+    const prevStatus = onboarding.status;
+    const prevInvite = onboarding.invite;
+    const prevOtp = (onboarding as any).otp;
+    const prevUpdatedAt = onboarding.updatedAt;
+
     // Generate a new raw invite token and build a fresh invite payload
     const rawInviteToken = crypto.randomBytes(32).toString("hex");
     const invite = buildOnboardingInvite(rawInviteToken);
     invite.tokenHash = hashString(rawInviteToken)!;
 
-    // Replace old invite (old links become invalid)
-    onboarding.invite = invite;
+    // Mutate onboarding (pre-email)
+    onboarding.invite = invite; // old links become invalid
+    (onboarding as any).otp = undefined; // force fresh OTP flow
+    onboarding.updatedAt = new Date();
 
-    // Clear any existing OTP (fresh invite should require fresh OTP flow)
-    (onboarding as any).otp = undefined;
-
+    await onboarding.validate();
     await onboarding.save();
 
-    // Send email with the fresh token
-    await sendEmployeeOnboardingInvitation({
-      to: onboarding.email,
-      firstName: onboarding.firstName,
-      lastName: onboarding.lastName,
-      method: onboarding.method,
-      subsidiary: onboarding.subsidiary,
-      baseUrl,
-      inviteToken: rawInviteToken,
-    });
+    try {
+      // Send email with the fresh token
+      await sendEmployeeOnboardingInvitation({
+        to: onboarding.email,
+        firstName: onboarding.firstName,
+        lastName: onboarding.lastName,
+        method: onboarding.method,
+        subsidiary: onboarding.subsidiary,
+        baseUrl,
+        inviteToken: rawInviteToken,
+      });
+    } catch (emailError) {
+      // Best-effort rollback so employee isn't stranded with an undispatched link
+      try {
+        onboarding.status = prevStatus; // status doesn't change in this route, but keep it safe
+        onboarding.invite = prevInvite;
+        (onboarding as any).otp = prevOtp;
+        onboarding.updatedAt = prevUpdatedAt;
+
+        await onboarding.save();
+      } catch (rollbackErr) {
+        console.error("Failed to rollback onboarding after resend-invite email error", rollbackErr);
+      }
+
+      throw emailError;
+    }
 
     // Audit: invite resent
     await createOnboardingAuditLogSafe({
@@ -90,10 +112,11 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
       },
       message: `Onboarding invitation re-sent by ${user.name}; a new onboarding link was emailed to the employee.`,
       metadata: {
-        previousStatus: onboarding.status,
+        previousStatus: prevStatus,
         status: onboarding.status,
         method: onboarding.method,
         subsidiary: onboarding.subsidiary,
+        source: "ADMIN_RESEND_INVITE",
       },
     });
 

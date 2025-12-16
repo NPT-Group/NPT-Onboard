@@ -55,10 +55,24 @@ export function parsePagination(pageRaw: string | null, limitRaw: string | null,
 
 /** Generic sort key picker using a map of allowed keys (readonly-safe) */
 export function parseSort<SORT_KEY extends string>(sortByRaw: string | null, sortDirRaw: string | null, allowedKeys: readonly SORT_KEY[], defaultKey: SORT_KEY): { sortBy: SORT_KEY; sortDir: 1 | -1 } {
-  const sortBy = (allowedKeys as readonly string[]).includes(sortByRaw ?? "") ? (sortByRaw as SORT_KEY) : defaultKey;
+  // sortBy: strict if provided, otherwise default
+  let sortBy = defaultKey;
+  if (sortByRaw != null) {
+    if (!(allowedKeys as readonly string[]).includes(sortByRaw)) {
+      throw new Error(`Invalid sortBy. Allowed: ${allowedKeys.join(", ")}`);
+    }
+    sortBy = sortByRaw as SORT_KEY;
+  }
 
-  // lock to literal union so callers don't see `number`
-  const sortDir = ((sortDirRaw || "desc").toLowerCase() === "asc" ? 1 : -1) as 1 | -1;
+  // sortDir: strict if provided, otherwise default "desc"
+  let sortDir: 1 | -1 = -1;
+  if (sortDirRaw != null) {
+    const dir = sortDirRaw.toLowerCase();
+    if (dir !== "asc" && dir !== "desc") {
+      throw new Error(`Invalid sortDir. Allowed: asc, desc`);
+    }
+    sortDir = dir === "asc" ? 1 : -1;
+  }
 
   return { sortBy, sortDir };
 }

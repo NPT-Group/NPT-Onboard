@@ -124,9 +124,17 @@ export const POST = async (req: NextRequest) => {
     if (otpMeta.lockedAt) {
       const lockedAt = new Date(otpMeta.lockedAt);
       const lockAgeMs = now.getTime() - lockedAt.getTime();
+
       if (lockAgeMs < OTP_LOCK_DURATION_MS) {
         return errorResponse(429, "Too many invalid verification attempts. Please try again later.", { reason: "OTP_LOCKED" });
       }
+
+      // Lock window elapsed -> clear lock flag (and optionally reset attempts)
+      otpMeta.lockedAt = undefined;
+      otpMeta.attempts = 0;
+
+      (onboarding as any).otp = otpMeta;
+      await (onboarding as any).save();
     }
 
     // Expiry check

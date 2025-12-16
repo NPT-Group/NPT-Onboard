@@ -125,9 +125,14 @@ export const POST = async (req: NextRequest) => {
     if (existingOtp?.lockedAt) {
       const lockedAt = new Date(existingOtp.lockedAt);
       const lockAgeMs = now.getTime() - lockedAt.getTime();
+
       if (lockAgeMs < OTP_LOCK_DURATION_MS) {
         return errorResponse(429, "Too many invalid OTP attempts. Please try again later.", { reason: "OTP_LOCKED" });
       }
+
+      // Lock window elapsed -> clear lock state (and attempts) to avoid sticky lock metadata
+      existingOtp.lockedAt = undefined;
+      existingOtp.attempts = 0;
     }
 
     // Enforce 1 OTP email per minute per onboarding

@@ -2,16 +2,11 @@ import { NextRequest } from "next/server";
 import connectDB from "@/lib/utils/connectDB";
 import { errorResponse, successResponse } from "@/lib/utils/apiResponse";
 import { guard } from "@/lib/utils/auth/authUtils";
-
 import { OnboardingModel } from "@/mongoose/models/Onboarding";
-
 import { EOnboardingMethod, EOnboardingStatus } from "@/types/onboarding.types";
 import { EOnboardingActor, EOnboardingAuditAction } from "@/types/onboardingAuditLog.types";
 import { createOnboardingAuditLogSafe } from "@/lib/utils/onboardingUtils";
-
 import { parseJsonBody } from "@/lib/utils/reqParser";
-
-// You’ll need to implement these mailers similarly to the invite/OTP ones.
 import { sendEmployeeOnboardingApproved } from "@/lib/mail/employee/sendEmployeeOnboardingApproved";
 
 type ApproveBody = {

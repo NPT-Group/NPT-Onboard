@@ -67,6 +67,12 @@ export async function GET(_req: NextRequest) {
     }
 
     const tokenHash = hashString(rawToken);
+    if (!tokenHash) {
+      const res = successResponse(200, "OK", { hasSession: false });
+      res.headers.set("Set-Cookie", clearOnboardingCookieHeader());
+      return res;
+    }
+
     const now = new Date();
 
     const onboarding = await OnboardingModel.findOne({

@@ -7,7 +7,7 @@ import connectDB from "@/lib/utils/connectDB";
 import { errorResponse, successResponse } from "@/lib/utils/apiResponse";
 import { guard } from "@/lib/utils/auth/authUtils";
 import { parseJsonBody } from "@/lib/utils/reqParser";
-import { hashString } from "@/lib/utils/encryption";
+import { decryptString, hashString } from "@/lib/utils/encryption";
 import { buildOnboardingInvite, createOnboardingAuditLogSafe } from "@/lib/utils/onboardingUtils";
 import { sendEmployeeOnboardingInvitation } from "@/lib/mail/employee/sendEmployeeOnboardingInvitation";
 
@@ -18,8 +18,7 @@ import { ESubsidiary } from "@/types/shared.types";
 import type { GraphAttachment } from "@/lib/mail/mailer";
 import { EOnboardingActor, EOnboardingAuditAction } from "@/types/onboardingAuditLog.types";
 
-import { parseBool, parseIsoDate, inclusiveEndOfDay, parseEnumParam, parsePagination, parseSort, buildMeta } from "@/lib/utils/queryUtils";
-import { decryptString } from "@/lib/utils/encryption";
+import { parseBool, parseIsoDate, inclusiveEndOfDay, parseEnumParam, parsePagination, parseSort, buildMeta, rx } from "@/lib/utils/queryUtils";
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                      */
@@ -120,76 +119,77 @@ function mapOnboardingToListItem(o: TOnboarding, baseUrl: string): OnboardingLis
 /* GET /api/v1/admin/onboardings                                              */
 /*                                                                            */
 /* HR/Admin-only endpoint to list onboardings for a single subsidiary with     */
-/* rich search, filtering, sorting, and pagination.                            */
+/* search, filtering, sorting, and pagination.                                 */
 /*                                                                            */
-/* IMPORTANT:                                                                  */
+/* Scoping rules:                                                             */
 /*  - Results are ALWAYS scoped to exactly one subsidiary (no cross-mixing).   */
-/*  - By default, TERMINATED onboardings are excluded from results.            */
-/*    To include them, explicitly request them via:                            */
-/*      - status=Terminated (or a list including Terminated), OR               */
+/*  - By default, TERMINATED onboardings are excluded unless explicitly        */
+/*    requested via:                                                          */
+/*      - status includes "Terminated", OR                                     */
 /*      - statusGroup=terminated                                               */
 /*                                                                            */
 /* Query params:                                                               */
 /*  - subsidiary (required): IN|CA|US                                          */
-/*  - q (optional): free-text search across firstName/lastName/email/          */
-/*    employeeNumber (case-insensitive regex)                                 */
-/*  - method (optional): digital|manual                                       */
-/*  - status (optional): comma-separated statuses (e.g. Submitted,Approved)    */
-/*  - statusGroup (optional): dashboard chip shortcut (ignored if status set)  */
-/*      pending | modificationRequested | pendingReview | approved | manual    */
-/*      terminated                                                            */
+/*  - q (optional): case-insensitive regex search across:                      */
+/*      firstName, lastName, email, employeeNumber                             */
+/*  - method (optional): digital|manual (invalid -> 400)                       */
+/*  - status (optional): comma-separated list of statuses                       */
+/*      (each must be a valid EOnboardingStatus; invalid -> 400)               */
+/*  - statusGroup (optional): dashboard shortcut (ignored if status is set;    */
+/*      still validated if provided; invalid -> 400)                           */
+/*      allowed: pending | modificationRequested | pendingReview | approved |  */
+/*               manual | terminated                                           */
 /*  - hasEmployeeNumber (optional): true|false                                 */
+/*      true  -> employeeNumber exists and is a non-empty string               */
+/*      false -> employeeNumber missing/null/empty                             */
 /*  - isCompleted (optional): true|false                                       */
 /*  - dateField (optional): created|submitted|approved|terminated|updated       */
-/*      (defaults to "created")                                                */
-/*  - from (optional): ISO date (inclusive lower bound), e.g. 2025-01-01       */
-/*  - to (optional): ISO date (inclusive upper bound), e.g. 2025-12-31         */
-/*      Note: "to" is treated as end-of-day (23:59:59.999) in server timezone. */
-/*  - sortBy (optional): one of                                                */
+/*      (defaults to "created"; invalid -> 400)                                */
+/*  - from (optional): date lower bound (inclusive). Must be parseable by      */
+/*      parseIsoDate; invalid -> 400                                           */
+/*  - to (optional): date upper bound (inclusive). Must be parseable by        */
+/*      parseIsoDate; invalid -> 400                                           */
+/*      Note: if "to" is provided as YYYY-MM-DD, it is treated as end-of-day   */
+/*      (23:59:59.999) in server timezone.                                     */
+/*  - sortBy (optional):                                                      */
 /*      createdAt|updatedAt|submittedAt|approvedAt|terminatedAt|firstName|      */
 /*      lastName|email|status|employeeNumber                                   */
-/*      (defaults to createdAt)                                                */
-/*  - sortDir (optional): asc|desc (defaults to desc or as implemented by      */
-/*    parseSort)                                                               */
+/*      (defaults to createdAt; invalid -> 400)                                */
+/*  - sortDir (optional): asc|desc (defaults to desc; invalid -> 400)          */
 /*  - page (optional): 1-based page number (default 1)                         */
-/*  - pageSize (optional): items per page (bounded by parsePagination max)     */
+/*  - pageSize (optional): items per page (default 20; max 100)                */
 /*                                                                            */
-/* Example (uses all params):                                                  */
-/*  GET /api/v1/admin/onboardings                                              */
-/*    ?subsidiary=IN                                                           */
-/*    &q=arjun                                                                 */
-/*    &method=digital                                                          */
-/*    &status=Submitted,Resubmitted,Approved                                   */
-/*    &hasEmployeeNumber=true                                                  */
-/*    &isCompleted=true                                                        */
-/*    &dateField=submitted                                                     */
-/*    &from=2025-01-01                                                         */
-/*    &to=2025-12-31                                                           */
-/*    &sortBy=updatedAt                                                        */
-/*    &sortDir=desc                                                            */
-/*    &page=1                                                                  */
-/*    &pageSize=25                                                             */
+/* Examples:                                                                   */
+/*  - Basic:                                                                   */
+/*      GET /api/v1/admin/onboardings?subsidiary=IN                             */
+/*  - With filters:                                                           */
+/*      GET /api/v1/admin/onboardings                                          */
+/*        ?subsidiary=IN                                                       */
+/*        &q=arjun                                                             */
+/*        &method=digital                                                      */
+/*        &status=Submitted,Resubmitted,Approved                               */
+/*        &hasEmployeeNumber=true                                              */
+/*        &isCompleted=true                                                    */
+/*        &dateField=submitted                                                 */
+/*        &from=2025-01-01                                                     */
+/*        &to=2025-12-31                                                       */
+/*        &sortBy=updatedAt                                                    */
+/*        &sortDir=desc                                                        */
+/*        &page=1                                                              */
+/*        &pageSize=25                                                         */
 /*                                                                            */
 /* Response (200):                                                             */
 /*  {                                                                          */
-/*    items: Array<{                                                           */
-/*      id: string; subsidiary; method; firstName; lastName; email; status;    */
-/*      employeeNumber?: string; isFormComplete: boolean; isCompleted: boolean;*/
-/*      modificationRequestedAt?: string|Date; terminationType?: string;       */
-/*      createdAt: string|Date; updatedAt: string|Date;                        */
-/*      submittedAt?: string|Date; approvedAt?: string|Date; terminatedAt?:    */
-/*      string|Date;                                                           */
-/*    }>,                                                                      */
+/*    items: OnboardingListItem[],                                             */
 /*    meta: {                                                                  */
-/*      page: number; pageSize: number; total: number; pages: number;          */
-/*      sortBy: string; sortDir: "asc"|"desc";                                 */
-/*      filters: { ...echoed filters... }                                      */
+/*      page, pageSize, total, totalPages, hasPrev, hasNext,                   */
+/*      sortBy, sortDir, filters                                               */
 /*    }                                                                        */
 /*  }                                                                          */
 /*                                                                            */
 /* Error cases:                                                                */
-/*  - 400 if subsidiary is missing/invalid or query params invalid             */
-/*  - 401/403 if not authorized                                                */
+/*  - 400: missing/invalid subsidiary, or invalid query params                 */
+/*  - 401/403: not authorized                                                  */
 /* -------------------------------------------------------------------------- */
 
 export const GET = async (req: NextRequest) => {
@@ -200,6 +200,12 @@ export const GET = async (req: NextRequest) => {
     const url = new URL(req.url);
     const sp = url.searchParams;
     const baseUrl = url.origin;
+    const statusGroupRaw = sp.get("statusGroup");
+
+    if (statusGroupRaw != null) {
+      const allowedStatusGroups = ["pending", "modificationRequested", "pendingReview", "approved", "manual", "terminated"] as const;
+      parseEnumParam(statusGroupRaw, allowedStatusGroups, "statusGroup");
+    }
 
     // ── Required: subsidiary context (no cross-mixing between IN/CA/US) :contentReference[oaicite:0]{index=0}
     const subsidiary = parseEnumParam(sp.get("subsidiary"), Object.values(ESubsidiary) as readonly ESubsidiary[], "subsidiary");
@@ -231,7 +237,7 @@ export const GET = async (req: NextRequest) => {
       });
     } else {
       // Optional status groups to match the dashboard chips :contentReference[oaicite:1]{index=1}
-      const statusGroup = sp.get("statusGroup");
+
       const groupMap: Record<string, EOnboardingStatus[]> = {
         pending: [EOnboardingStatus.InviteGenerated],
         modificationRequested: [EOnboardingStatus.ModificationRequested],
@@ -240,8 +246,9 @@ export const GET = async (req: NextRequest) => {
         manual: [EOnboardingStatus.ManualPDFSent],
         terminated: [EOnboardingStatus.Terminated],
       };
-      if (statusGroup && groupMap[statusGroup]) {
-        statuses = groupMap[statusGroup];
+
+      if (statusGroupRaw) {
+        statuses = groupMap[statusGroupRaw];
       }
     }
 
@@ -249,10 +256,10 @@ export const GET = async (req: NextRequest) => {
     const hasEmployeeNumber = parseBool(sp.get("hasEmployeeNumber"));
     const isCompleted = parseBool(sp.get("isCompleted"));
 
-    // Date filtering (Created / Submitted / Approved / Terminated / Updated) :contentReference[oaicite:2]{index=2}
+    // Date filtering (Created / Submitted / Approved / Terminated / Updated)
     const allowedDateFields = ["created", "submitted", "approved", "terminated", "updated"] as const;
-    const dateFieldRaw = sp.get("dateField") as (typeof allowedDateFields)[number] | null;
-    const dateField: (typeof allowedDateFields)[number] = allowedDateFields.includes(dateFieldRaw ?? "created") ? (dateFieldRaw as any) || "created" : "created";
+
+    const dateField = parseEnumParam(sp.get("dateField"), allowedDateFields, "dateField") ?? "created";
 
     const dateFieldMap: Record<(typeof allowedDateFields)[number], keyof TOnboarding> = {
       created: "createdAt",
@@ -264,8 +271,18 @@ export const GET = async (req: NextRequest) => {
 
     const fromRaw = sp.get("from");
     const toRaw = sp.get("to");
+
     const fromDate = parseIsoDate(fromRaw);
-    const toDate = inclusiveEndOfDay(parseIsoDate(toRaw) ?? new Date(), toRaw ?? null);
+    if (fromRaw && !fromDate) {
+      return errorResponse(400, "Invalid 'from' date. Expected ISO format like 2025-12-12 or full ISO datetime.");
+    }
+
+    const toParsed = parseIsoDate(toRaw);
+    if (toRaw && !toParsed) {
+      return errorResponse(400, "Invalid 'to' date. Expected ISO format like 2025-12-17 or full ISO datetime.");
+    }
+
+    const toDate = toParsed ? inclusiveEndOfDay(toParsed, toRaw) : null;
 
     // Pagination & sorting
     const { page, limit, skip } = parsePagination(sp.get("page"), sp.get("pageSize"), 100);
@@ -278,15 +295,27 @@ export const GET = async (req: NextRequest) => {
       subsidiary, // always scoped to one subsidiary
     };
 
-    // Default: ignore terminated onboardings unless explicitly requested
-    const includeTerminated = (statuses?.includes(EOnboardingStatus.Terminated) ?? false) || sp.get("statusGroup") === "terminated";
-
-    if (!includeTerminated) {
-      filter.status = { $ne: EOnboardingStatus.Terminated };
+    // Apply method filter (you were parsing it but not using it)
+    if (method) {
+      filter.method = method;
     }
+
+    // Apply q filter (you were parsing it but not using it)
+    if (q && q.trim()) {
+      const r = rx(q.trim());
+      const qOr = {
+        $or: [{ firstName: r }, { lastName: r }, { email: r }, { employeeNumber: r }],
+      };
+      filter.$and = filter.$and ? [...filter.$and, qOr] : [qOr];
+    }
+
+    // Default: ignore terminated onboardings unless explicitly requested
+    const includeTerminated = (statuses?.includes(EOnboardingStatus.Terminated) ?? false) || statusGroupRaw === "terminated";
 
     if (statuses && statuses.length > 0) {
       filter.status = { $in: statuses };
+    } else if (!includeTerminated) {
+      filter.status = { $ne: EOnboardingStatus.Terminated };
     }
 
     if (hasEmployeeNumber !== null) {
@@ -298,12 +327,7 @@ export const GET = async (req: NextRequest) => {
         const missingEmployeeNumberOr = {
           $or: [{ employeeNumber: { $exists: false } }, { employeeNumber: null }, { employeeNumber: "" }],
         };
-
-        if (filter.$and) {
-          filter.$and.push(missingEmployeeNumberOr);
-        } else {
-          filter.$and = [missingEmployeeNumberOr];
-        }
+        filter.$and = filter.$and ? [...filter.$and, missingEmployeeNumberOr] : [missingEmployeeNumberOr];
       }
     }
 
@@ -311,11 +335,11 @@ export const GET = async (req: NextRequest) => {
       filter.isCompleted = isCompleted;
     }
 
-    if (fromDate || toRaw) {
+    if (fromDate || toDate) {
       const field = dateFieldMap[dateField];
       filter[field] = {
         ...(fromDate ? { $gte: fromDate } : {}),
-        ...(toRaw ? { $lte: toDate } : {}),
+        ...(toDate ? { $lte: toDate } : {}),
       };
     }
 
