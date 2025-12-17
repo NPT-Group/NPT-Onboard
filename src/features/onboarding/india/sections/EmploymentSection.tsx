@@ -93,12 +93,14 @@ export function EmploymentSection({
       <input
         type="hidden"
         data-field="hasPreviousEmployment"
+        id="hasPreviousEmployment"
         {...register("hasPreviousEmployment" as any)}
       />
 
       <div className="mb-5">
         <FormField
           label="Do you have any previous employment?"
+          htmlFor="hasPreviousEmployment"
           labelClassName="w-full text-center"
           error={hasPreviousEmploymentError ?? undefined}
           errorClassName="w-full text-center"
@@ -229,11 +231,11 @@ export function EmploymentSection({
                 </div>
 
                 <div className="mt-4">
-                  <RHFFileUpload<IndiaOnboardingFormInput>
+                  <RHFFileUpload
                     name={
                       `${prefix}.experienceCertificateFile` as FieldPath<IndiaOnboardingFormInput>
                     }
-                    label="Experience certificate (optional)"
+                    label="Experience certificate"
                     description="Upload a PDF experience certificate for this role (max 20MB)."
                     namespace={ES3Namespace.ONBOARDINGS}
                     folder={ES3Folder.EMPLOYMENT_CERTIFICATES}

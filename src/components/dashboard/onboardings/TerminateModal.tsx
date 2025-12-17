@@ -141,7 +141,7 @@ export function TerminateModal({
 
       <div className="mt-5 space-y-1">
         <label className="text-xs font-semibold text-[var(--dash-muted)]">
-          Reason (optional)
+          Reason
         </label>
         <textarea
           value={reason}

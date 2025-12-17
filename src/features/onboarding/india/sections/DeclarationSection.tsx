@@ -11,6 +11,7 @@ import {
 } from "../../common/RHFSignatureBox";
 import { FormField } from "../../common/FormField";
 import { cn } from "@/lib/utils/cn";
+import { useRequiredField } from "../../common/requiredFieldContext";
 
 import { ES3Folder, ES3Namespace } from "@/types/aws.types";
 
@@ -139,6 +140,7 @@ export function DeclarationSection({
   showErrors,
 }: Props) {
   const { control, watch, setValue } = useFormContext<IndiaOnboardingFormInput>();
+  const acceptRequired = useRequiredField("declaration.hasAcceptedDeclaration");
 
   const declarationDate = watch("declaration.declarationDate");
 
@@ -211,7 +213,7 @@ export function DeclarationSection({
           onBlur={() => setDateInteracted(true)}
         />
 
-        <RHFSignatureBox<IndiaOnboardingFormInput>
+        <RHFSignatureBox
           ref={signatureRef}
           name={
             "declaration.signature.file" as FieldPath<IndiaOnboardingFormInput>
@@ -220,7 +222,6 @@ export function DeclarationSection({
             "declaration.signature.signedAt" as FieldPath<IndiaOnboardingFormInput>
           }
           label="Digital signature"
-          description="Draw your signature in the box or upload an image of your signature."
           namespace={ES3Namespace.ONBOARDINGS}
           folder={ES3Folder.DECLARATION_SIGNATURE}
           docId={docId}
@@ -290,6 +291,14 @@ export function DeclarationSection({
                   <span className="text-sm text-slate-800 max-w-[38rem]">
                     I accept the declaration and confirm my information is true
                     and complete.
+                    {acceptRequired && (
+                      <>
+                        <span className="ml-1 text-red-600" aria-hidden="true">
+                          *
+                        </span>
+                        <span className="sr-only"> (required)</span>
+                      </>
+                    )}
                   </span>
                 </label>
               </FormField>

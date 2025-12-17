@@ -94,11 +94,13 @@ export function PersonalInfoSection({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <FormField
           label="First name"
+          htmlFor="personalInfo.firstName"
           error={personalErrors.firstName?.message?.toString()}
         >
           <input
             type="text"
             data-field="personalInfo.firstName"
+            id="personalInfo.firstName"
             readOnly
             aria-readonly="true"
             {...register("personalInfo.firstName")}
@@ -113,11 +115,13 @@ export function PersonalInfoSection({
 
         <FormField
           label="Last name"
+          htmlFor="personalInfo.lastName"
           error={personalErrors.lastName?.message?.toString()}
         >
           <input
             type="text"
             data-field="personalInfo.lastName"
+            id="personalInfo.lastName"
             readOnly
             aria-readonly="true"
             {...register("personalInfo.lastName")}
@@ -135,11 +139,13 @@ export function PersonalInfoSection({
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
         <FormField
           label="Email address"
+          htmlFor="personalInfo.email"
           error={personalErrors.email?.message?.toString()}
         >
           <input
             type="email"
             data-field="personalInfo.email"
+            id="personalInfo.email"
             readOnly
             aria-readonly="true"
             {...register("personalInfo.email")}
@@ -154,6 +160,7 @@ export function PersonalInfoSection({
 
         <FormField
           label="Gender"
+          htmlFor="personalInfo.gender"
           error={personalErrors.gender?.message?.toString()}
         >
           <input
@@ -277,7 +284,7 @@ export function PersonalInfoSection({
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <RHFPhoneInput
             name="personalInfo.phoneHome"
-            label="Phone (home – optional)"
+            label="Phone (home)"
             disabled={isReadOnly}
           />
           <RHFPhoneInput

@@ -1,19 +1,15 @@
 "use client";
 
 import * as React from "react";
-import {
-  Controller,
-  useFormContext,
-  type FieldPath,
-  type FieldValues,
-} from "react-hook-form";
+import { Controller, useFormContext, type FieldPath } from "react-hook-form";
 
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils/cn";
 import { FormField } from "./FormField";
+import type { IndiaOnboardingFormInput } from "../india/indiaFormSchema";
 
-type RHFDigitsInputProps<TForm extends FieldValues> = {
-  name: FieldPath<TForm>;
+type RHFDigitsInputProps = {
+  name: FieldPath<IndiaOnboardingFormInput>;
   label: string;
   /** Max digits to store (e.g. Aadhaar = 12) */
   maxDigits: number;
@@ -34,7 +30,7 @@ type RHFDigitsInputProps<TForm extends FieldValues> = {
   leftAddon?: React.ReactNode;
 };
 
-export function RHFDigitsInput<TForm extends FieldValues>({
+export function RHFDigitsInput({
   name,
   label,
   maxDigits,
@@ -43,12 +39,12 @@ export function RHFDigitsInput<TForm extends FieldValues>({
   containerClassName,
   formatDigits,
   leftAddon,
-}: RHFDigitsInputProps<TForm>) {
-  const { control } = useFormContext<TForm>();
+}: RHFDigitsInputProps) {
+  const { control } = useFormContext<IndiaOnboardingFormInput>();
 
   return (
     <Controller
-      name={name}
+      name={name as any}
       control={control}
       render={({ field, fieldState }) => {
         const errorMessage = fieldState.error?.message?.toString();

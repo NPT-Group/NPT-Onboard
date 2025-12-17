@@ -2,17 +2,13 @@
 
 import * as React from "react";
 import dynamic from "next/dynamic";
-import {
-  Controller,
-  useFormContext,
-  type FieldPath,
-  type FieldValues,
-} from "react-hook-form";
+import { Controller, useFormContext, type FieldPath } from "react-hook-form";
 import type ReactSignatureCanvas from "react-signature-canvas";
 import { Check, X } from "lucide-react";
 
 import { cn } from "@/lib/utils/cn";
 import { FormField } from "./FormField";
+import type { IndiaOnboardingFormInput } from "../india/indiaFormSchema";
 
 import { ES3Folder, ES3Namespace } from "@/types/aws.types";
 import { EFileMimeType, type IFileAsset } from "@/types/shared.types";
@@ -38,8 +34,8 @@ export type RHFSignatureBoxHandle = {
   hasSignature: () => boolean;
 };
 
-type RHFSignatureBoxProps<TForm extends FieldValues> = {
-  name: FieldPath<TForm>;
+type RHFSignatureBoxProps = {
+  name: FieldPath<IndiaOnboardingFormInput>;
   label: string;
 
   namespace: ES3Namespace;
@@ -47,7 +43,7 @@ type RHFSignatureBoxProps<TForm extends FieldValues> = {
   docId?: string;
 
   disabled?: boolean;
-  signedAtName?: FieldPath<TForm>;
+  signedAtName?: FieldPath<IndiaOnboardingFormInput>;
 
   description?: string;
   dataField?: string;
@@ -120,9 +116,7 @@ async function uploadFileToS3(params: {
   };
 }
 
-export const RHFSignatureBox = React.forwardRef(function RHFSignatureBox<
-  TForm extends FieldValues
->(
+export const RHFSignatureBox = React.forwardRef(function RHFSignatureBox(
   {
     name,
     label,
@@ -138,14 +132,14 @@ export const RHFSignatureBox = React.forwardRef(function RHFSignatureBox<
     requireExplicitSave = false,
     showTouchedErrors = false,
     onInteraction,
-  }: RHFSignatureBoxProps<TForm>,
+  }: RHFSignatureBoxProps,
   ref: React.ForwardedRef<RHFSignatureBoxHandle>
 ) {
   const {
     control,
     setValue,
     formState: { touchedFields },
-  } = useFormContext<TForm>();
+  } = useFormContext<IndiaOnboardingFormInput>();
 
   const canvasRef = React.useRef<ReactSignatureCanvas | null>(null);
   const wrapperRef = React.useRef<HTMLDivElement | null>(null);
@@ -773,8 +767,4 @@ export const RHFSignatureBox = React.forwardRef(function RHFSignatureBox<
       }}
     />
   );
-}) as <TForm extends FieldValues>(
-  props: RHFSignatureBoxProps<TForm> & {
-    ref?: React.Ref<RHFSignatureBoxHandle>;
-  }
-) => React.ReactElement;
+});

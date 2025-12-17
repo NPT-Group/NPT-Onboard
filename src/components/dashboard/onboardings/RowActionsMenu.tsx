@@ -14,10 +14,6 @@ export type RowAction = {
   disabled?: boolean;
 };
 
-function clamp(n: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, n));
-}
-
 export function RowActionsMenu({
   actions,
   ariaLabel = "Row actions",
@@ -28,27 +24,11 @@ export function RowActionsMenu({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
-  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
   const enabledActions = useMemo(
     () => actions.filter((a) => a && typeof a.onSelect === "function"),
     [actions]
   );
-
-  function compute() {
-    const btn = buttonRef.current;
-    if (!btn) return;
-    const rect = btn.getBoundingClientRect();
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const margin = 12;
-    const desiredWidth = clamp(220, 180, 260);
-
-    // Align right edge to button's right edge.
-    const left = clamp(rect.right - desiredWidth, margin, vw - desiredWidth - margin);
-    const top = clamp(rect.bottom + 8, margin, vh - margin);
-    setPos({ top, left, width: desiredWidth });
-  }
 
   useEffect(() => {
     function onDown(e: MouseEvent) {
@@ -60,38 +40,30 @@ export function RowActionsMenu({
       if (e.key === "Escape") setOpen(false);
     }
     if (open) {
-      compute();
       document.addEventListener("mousedown", onDown);
       document.addEventListener("keydown", onKey);
-      window.addEventListener("resize", compute);
-      window.addEventListener("scroll", compute, true);
     }
     return () => {
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
-      window.removeEventListener("resize", compute);
-      window.removeEventListener("scroll", compute, true);
     };
   }, [open]);
 
   if (enabledActions.length === 0) return null;
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className="relative inline-flex items-center justify-end">
       <button
         ref={buttonRef}
         type="button"
         onClick={() => {
-          setOpen((v) => {
-            const next = !v;
-            if (next) window.requestAnimationFrame(() => compute());
-            return next;
-          });
+          setOpen((v) => !v);
         }}
         className={cn(
           "inline-flex items-center justify-center rounded-full border p-2 transition cursor-pointer",
           "border-[var(--dash-border)] bg-[var(--dash-surface)] text-[var(--dash-muted)]",
           "hover:bg-[var(--dash-surface-2)] hover:text-[var(--dash-text)]",
+          open && "bg-[var(--dash-surface-2)] text-[var(--dash-text)]",
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dash-red-soft)]"
         )}
         aria-label={ariaLabel}
@@ -102,45 +74,48 @@ export function RowActionsMenu({
       </button>
 
       <AnimatePresence>
-        {open && pos && (
+        {open && (
           <motion.div
             role="menu"
             className={cn(
-              "fixed z-[70] overflow-hidden rounded-2xl border shadow-[var(--dash-shadow)]",
-              "border-[var(--dash-border)] bg-[var(--dash-surface)]"
+              // Inline "drawer" anchored to the row; absolute so it never changes row height.
+              "absolute z-[70] overflow-hidden rounded-2xl border shadow-[var(--dash-shadow)]",
+              "border-[var(--dash-border)] bg-[var(--dash-surface)]",
+              // Sit just to the left of the trigger button.
+              "right-10 top-1/2 -translate-y-1/2"
             )}
-            style={{ top: pos.top, left: pos.left, width: pos.width }}
-            initial={{ opacity: 0, y: -6, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.98 }}
-            transition={{ duration: 0.14, ease: "easeOut" }}
+            style={{ width: 240 }}
+            initial={{ opacity: 0, x: 14 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 14 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
           >
-            <div className="py-2">
+            <div className="flex items-center gap-2 p-2">
               {enabledActions.map((a) => {
                 const Icon = a.Icon;
                 const disabled = Boolean(a.disabled);
                 return (
-                <button
-                  key={a.key}
-                  type="button"
-                  role="menuitem"
-                  disabled={disabled}
-                  onClick={() => {
-                    if (disabled) return;
-                    setOpen(false);
-                    a.onSelect();
-                  }}
-                  className={cn(
-                    "flex w-full items-center gap-3 px-4 py-2.5 text-sm transition",
-                    "text-left",
-                    a.destructive ? "text-[var(--dash-red)]" : "text-[var(--dash-text)]",
-                    "hover:bg-[var(--dash-surface-2)]",
-                    "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dash-red-soft)]",
-                    disabled
-                      ? "opacity-60 cursor-not-allowed hover:bg-[var(--dash-surface)]"
-                      : "cursor-pointer"
-                  )}
-                >
+                  <button
+                    key={a.key}
+                    type="button"
+                    role="menuitem"
+                    disabled={disabled}
+                    onClick={() => {
+                      if (disabled) return;
+                      setOpen(false);
+                      a.onSelect();
+                    }}
+                    className={cn(
+                      // Drawer-style buttons (not list items)
+                      "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition",
+                      "whitespace-nowrap",
+                      a.destructive
+                        ? "border-[var(--dash-red-soft)] bg-[var(--dash-red-soft)] text-[var(--dash-red)] hover:brightness-[0.98]"
+                        : "border-[var(--dash-border)] bg-[var(--dash-surface)] text-[var(--dash-text)] hover:bg-[var(--dash-surface-2)]",
+                      "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dash-red-soft)]",
+                      disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer active:scale-[0.98]"
+                    )}
+                  >
                     {Icon ? (
                       <Icon
                         className={cn(
@@ -148,10 +123,8 @@ export function RowActionsMenu({
                           a.destructive ? "text-[var(--dash-red)]" : "text-[var(--dash-muted)]"
                         )}
                       />
-                    ) : (
-                      <span className="h-4 w-4" aria-hidden="true" />
-                    )}
-                    <span className="flex-1">{a.label}</span>
+                    ) : null}
+                    <span>{a.label}</span>
                   </button>
                 );
               })}

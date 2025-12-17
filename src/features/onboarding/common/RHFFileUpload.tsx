@@ -2,12 +2,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  Controller,
-  useFormContext,
-  type FieldPath,
-  type FieldValues,
-} from "react-hook-form";
+import { Controller, useFormContext, type FieldPath } from "react-hook-form";
 import { X } from "lucide-react";
 
 import UploadPicker from "@/components/media/UploadPicker";
@@ -22,8 +17,10 @@ import {
   uploadToS3Presigned,
 } from "@/lib/utils/s3Upload.client";
 
-type RHFFileUploadProps<TForm extends FieldValues> = {
-  name: FieldPath<TForm>;
+import type { IndiaOnboardingFormInput } from "../india/indiaFormSchema";
+
+type RHFFileUploadProps = {
+  name: FieldPath<IndiaOnboardingFormInput>;
   label: string;
   namespace: ES3Namespace;
   folder: ES3Folder;
@@ -36,7 +33,7 @@ type RHFFileUploadProps<TForm extends FieldValues> = {
   placeholderLabel?: string;
 };
 
-export function RHFFileUpload<TForm extends FieldValues>({
+export function RHFFileUpload({
   name,
   label,
   namespace,
@@ -48,11 +45,8 @@ export function RHFFileUpload<TForm extends FieldValues>({
   maxSizeMB = 20,
   dataField,
   placeholderLabel = "Upload PDF (recommended: scanner app)",
-}: RHFFileUploadProps<TForm>) {
-  // Important: useFormContext should be on the INPUT type in the parent form.
-  // We keep this component generic, but now it will infer TForm automatically
-  // when you pass a typed FieldPath from the calling component.
-  const { control } = useFormContext<TForm>();
+}: RHFFileUploadProps) {
+  const { control } = useFormContext<IndiaOnboardingFormInput>();
 
   const [status, setStatus] = React.useState<
     "idle" | "uploading" | "deleting" | "error"
@@ -61,7 +55,7 @@ export function RHFFileUpload<TForm extends FieldValues>({
 
   return (
     <Controller
-      name={name}
+      name={name as any}
       control={control}
       render={({ field, fieldState }) => {
         const errorMessage = fieldState.error?.message?.toString();

@@ -66,16 +66,16 @@ export function BankDetailsSection({
 
         <RHFTextInput
           name={`${base}.upiId` as FieldPath<IndiaOnboardingFormInput>}
-          label="UPI ID (optional)"
+          label="UPI ID"
           placeholder="name@bank"
           disabled={isReadOnly}
         />
       </div>
 
       <div className="mt-5">
-        <RHFFileUpload<IndiaOnboardingFormInput>
+        <RHFFileUpload
           name={`${base}.voidCheque` as FieldPath<IndiaOnboardingFormInput>}
-          label="Void cheque (PDF) (optional)"
+          label="Void cheque (PDF)"
           description="Upload a clear PDF scan. Recommended: scanner app."
           namespace={ES3Namespace.ONBOARDINGS}
           folder={ES3Folder.BANK_VOID_CHEQUE}

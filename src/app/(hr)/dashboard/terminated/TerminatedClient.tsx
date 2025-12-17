@@ -90,7 +90,6 @@ export function TerminatedClient() {
     if (!subsidiary) return;
     if (subsidiaryFromUrl) return;
     updateQuery({ subsidiary });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subsidiary, subsidiaryFromUrl]);
 
   // Keep draft in sync when URL changes externally (back/forward)

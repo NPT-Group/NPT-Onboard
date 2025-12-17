@@ -43,6 +43,10 @@ import { ensureGeoAtSubmit } from "../form-engine/geo";
 import { findFirstErrorAcrossSteps, findFirstErrorInStep } from "../form-engine/errors";
 import { scrollToField, scrollToSection } from "../form-engine/scrolling";
 import { EOnboardingStatus } from "@/types/onboarding.types";
+import { RequiredFieldProvider } from "../common/requiredFieldContext";
+import { isIndiaRequiredField } from "./requiredFields";
+import { useWatch } from "react-hook-form";
+import { EEducationLevel } from "@/types/onboarding.types";
 
 type IndiaOnboardingFormProps = {
   onboarding: TOnboardingContext;
@@ -88,6 +92,40 @@ export function IndiaOnboardingForm({
     getValues,
     formState: { isSubmitting },
   } = methods;
+
+  // NOTE:
+  // Our submit flow is custom (we don't use RHF's handleSubmit), so RHF's `isSubmitting`
+  // does not reliably reflect in-flight submission. Track a local flag for button UX.
+  const [submitting, setSubmitting] = useState(false);
+
+  // Conditional requiredness (schema contains superRefine-based requirements)
+  // We only watch the minimal driver fields needed for required indicators.
+  const highestEducationLevel = useWatch({
+    control: methods.control,
+    name: "education.0.highestLevel",
+  }) as EEducationLevel | "" | undefined;
+
+  const isRequired = (path: string): boolean => {
+    const p = String(path).replace(/\.\d+(?=\.|$)/g, ".*");
+
+    // Education conditional requirements (superRefine):
+    if (p === "education.*.schoolName") return highestEducationLevel === EEducationLevel.PRIMARY_SCHOOL;
+    if (p === "education.*.primaryYearCompleted") return highestEducationLevel === EEducationLevel.PRIMARY_SCHOOL;
+    if (p === "education.*.highSchoolInstitutionName") return highestEducationLevel === EEducationLevel.HIGH_SCHOOL;
+    if (p === "education.*.highSchoolYearCompleted") return highestEducationLevel === EEducationLevel.HIGH_SCHOOL;
+
+    // For diploma/bachelor/masters/doctorate/other
+    const isHigherEd =
+      highestEducationLevel != null &&
+      highestEducationLevel !== "" &&
+      highestEducationLevel !== EEducationLevel.PRIMARY_SCHOOL &&
+      highestEducationLevel !== EEducationLevel.HIGH_SCHOOL;
+    if (p === "education.*.institutionName") return Boolean(isHigherEd);
+    if (p === "education.*.fieldOfStudy") return Boolean(isHigherEd);
+    if (p === "education.*.endYear") return Boolean(isHigherEd);
+
+    return isIndiaRequiredField(path);
+  };
 
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitAttempted, setSubmitAttempted] = useState(false);
@@ -159,129 +197,136 @@ export function IndiaOnboardingForm({
    */
   async function handleSubmitWithUploads(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (isReadOnly || isSubmitting) return;
+    if (isReadOnly || submitting) return;
 
-    // Force error visibility in the last section (and signature box) for custom submit flow
-    setSubmitAttempted(true);
-    setSubmitError(null);
+    setSubmitting(true);
+    try {
 
-    // Step 1: Validate entire form
-    // Signature is explicitly saved by the user in Declaration section.
-    const isValid = await trigger(undefined, { shouldFocus: false });
+      // Force error visibility in the last section (and signature box) for custom submit flow
+      setSubmitAttempted(true);
+      setSubmitError(null);
 
-    if (!isValid) {
-      // Find first error across all sections and scroll to it.
-      // Do this after the next render so we use the latest errors snapshot.
-      setTimeout(() => {
-        const errs = methods.formState.errors;
-        const firstError = findFirstErrorAcrossSteps(
-          INDIA_STEPS as any,
-          errs as any
-        );
-        if (firstError) {
-          const { stepId, errorPath } = firstError;
-          // IMPORTANT:
-          // Submit should NOT "gate" visibility like Next does. We intentionally do
-          // NOT call onStepChange(stepWithError) here, because step index controls
-          // conditional rendering (sections after the index become invisible).
-          //
-          // We only scroll to the first error so the user can fix it, while keeping
-          // the full form visible.
-          setTimeout(() => {
-            if (errorPath) scrollField(errorPath, stepId);
-            else scrollSection(stepId);
-          }, 150);
-        } else {
-          // Fallback: scroll to current section
-          scrollSection(INDIA_STEPS[currentIndex].id);
+      // Step 1: Validate entire form
+      // Signature is explicitly saved by the user in Declaration section.
+      const isValid = await trigger(undefined, { shouldFocus: false });
+
+      if (!isValid) {
+        // Find first error across all sections and scroll to it.
+        // Do this after the next render so we use the latest errors snapshot.
+        setTimeout(() => {
+          const errs = methods.formState.errors;
+          const firstError = findFirstErrorAcrossSteps(
+            INDIA_STEPS as any,
+            errs as any
+          );
+          if (firstError) {
+            const { stepId, errorPath } = firstError;
+            // IMPORTANT:
+            // Submit should NOT "gate" visibility like Next does. We intentionally do
+            // NOT call onStepChange(stepWithError) here, because step index controls
+            // conditional rendering (sections after the index become invisible).
+            //
+            // We only scroll to the first error so the user can fix it, while keeping
+            // the full form visible.
+            setTimeout(() => {
+              if (errorPath) scrollField(errorPath, stepId);
+              else scrollSection(stepId);
+            }, 150);
+          } else {
+            // Fallback: scroll to current section
+            scrollSection(INDIA_STEPS[currentIndex].id);
+          }
+        }, 0);
+        return;
+      }
+
+      // Step 3: Verify Turnstile token is present
+      if (!turnstileToken) {
+        setSubmitError("Please complete the verification to submit.");
+        // Ensure user is on the declaration step, then scroll to the widget itself
+        const declIndex = STEP_IDS.indexOf("declaration");
+        if (declIndex >= 0) onStepChange(declIndex);
+        setTimeout(() => {
+          scrollField("declaration.turnstile", "declaration");
+        }, 150);
+        return;
+      }
+
+      // Step 4: Ensure geolocation is available (REQUIRED for submission)
+      // Location should have been requested on page entry, but we verify/request again here
+      // This ensures we have location even if user changed settings or initial request failed
+      let locationAtSubmit: IGeoLocation;
+      try {
+        locationAtSubmit = await ensureGeoAtSubmit({ geo, geoDenied });
+
+        // Double-check we have valid coordinates
+        if (
+          locationAtSubmit.latitude == null ||
+          locationAtSubmit.longitude == null
+        ) {
+          throw new Error(
+            "Location coordinates are missing. Please allow location access to submit."
+          );
         }
-      }, 0);
-      return;
-    }
-
-    // Step 3: Verify Turnstile token is present
-    if (!turnstileToken) {
-      setSubmitError("Please complete the verification to submit.");
-      // Ensure user is on the declaration step, then scroll to the widget itself
-      const declIndex = STEP_IDS.indexOf("declaration");
-      if (declIndex >= 0) onStepChange(declIndex);
-      setTimeout(() => {
-        scrollField("declaration.turnstile", "declaration");
-      }, 150);
-      return;
-    }
-
-    // Step 4: Ensure geolocation is available (REQUIRED for submission)
-    // Location should have been requested on page entry, but we verify/request again here
-    // This ensures we have location even if user changed settings or initial request failed
-    let locationAtSubmit: IGeoLocation;
-    try {
-      locationAtSubmit = await ensureGeoAtSubmit({ geo, geoDenied });
-      
-      // Double-check we have valid coordinates
-      if (
-        locationAtSubmit.latitude == null ||
-        locationAtSubmit.longitude == null
-      ) {
-        throw new Error(
-          "Location coordinates are missing. Please allow location access to submit."
+      } catch (err: any) {
+        // Location is REQUIRED - block submission with clear error message
+        setSubmitError(
+          err?.message ||
+            "Location access is required to submit. Please enable location access in your browser settings."
         );
+        scrollSection("declaration");
+        return;
       }
-    } catch (err: any) {
-      // Location is REQUIRED - block submission with clear error message
-      setSubmitError(
-        err?.message ||
-          "Location access is required to submit. Please enable location access in your browser settings."
-      );
-      scrollSection("declaration");
-      return;
-    }
 
-    // Step 5: All validations passed - submit the form
-    const values = getValues() as IndiaOnboardingFormValues;
+      // Step 5: All validations passed - submit the form
+      const values = getValues() as IndiaOnboardingFormValues;
 
-    // Normalize payload to match backend expectations (no empty-string optionals,
-    // strict education shape, and bankDetails.voidCheque compatibility).
-    const normalizedIndiaFormData = normalizeIndiaFormDataForSubmit(values);
+      // Normalize payload to match backend expectations (no empty-string optionals,
+      // strict education shape, and bankDetails.voidCheque compatibility).
+      const normalizedIndiaFormData = normalizeIndiaFormDataForSubmit(values);
 
-    try {
-      const res = await submitIndiaOnboarding(onboarding.id, {
-        indiaFormData: normalizedIndiaFormData as any,
-        locationAtSubmit,
-        turnstileToken,
-      });
+      try {
+        const res = await submitIndiaOnboarding(onboarding.id, {
+          indiaFormData: normalizedIndiaFormData as any,
+          locationAtSubmit,
+          turnstileToken,
+        });
 
-      // Success - notify parent to update context
-      onSubmitted?.(res.onboardingContext);
-    } catch (err) {
-      // Handle submission errors
-      if (err instanceof ApiError) {
-        setSubmitError(err.message || "Submission failed.");
-      } else {
-        setSubmitError("Submission failed. Please try again.");
+        // Success - notify parent to update context
+        onSubmitted?.(res.onboardingContext);
+      } catch (err) {
+        // Handle submission errors
+        if (err instanceof ApiError) {
+          setSubmitError(err.message || "Submission failed.");
+        } else {
+          setSubmitError("Submission failed. Please try again.");
+        }
+        scrollSection("declaration");
       }
-      scrollSection("declaration");
+    } finally {
+      setSubmitting(false);
     }
   }
 
   return (
     <FormProvider {...methods}>
-      <form
-        className="space-y-10"
-        autoComplete="off"
-        onSubmit={handleSubmitWithUploads}
-      >
-        <section
-          ref={(el) => {
-            sectionRefs.current.personal = el;
-          }}
-          aria-label="Personal information"
+      <RequiredFieldProvider isRequired={isRequired}>
+        <form
+          className="space-y-10"
+          autoComplete="off"
+          onSubmit={handleSubmitWithUploads}
         >
-          <PersonalInfoSection
-            onboarding={onboarding}
-            isReadOnly={isReadOnly}
-          />
-        </section>
+          <section
+            ref={(el) => {
+              sectionRefs.current.personal = el;
+            }}
+            aria-label="Personal information"
+          >
+            <PersonalInfoSection
+              onboarding={onboarding}
+              isReadOnly={isReadOnly}
+            />
+          </section>
 
         <section
           ref={(el) => {
@@ -373,9 +418,9 @@ export function IndiaOnboardingForm({
               <button
                 type="submit"
                 className="cursor-pointer rounded-full bg-slate-900 px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
-                disabled={isReadOnly || isSubmitting}
+                disabled={isReadOnly || submitting || isSubmitting}
               >
-                {isSubmitting
+                {submitting || isSubmitting
                   ? "Submitting..."
                   : onboarding.status === EOnboardingStatus.ModificationRequested
                     ? "Resubmit onboarding"
@@ -384,7 +429,8 @@ export function IndiaOnboardingForm({
             )}
           </div>
         </div>
-      </form>
+        </form>
+      </RequiredFieldProvider>
     </FormProvider>
   );
 }

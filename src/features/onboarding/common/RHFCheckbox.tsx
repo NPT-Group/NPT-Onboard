@@ -5,6 +5,7 @@ import { useFormContext, useController, type FieldPath } from "react-hook-form";
 
 import type { IndiaOnboardingFormInput } from "../india/indiaFormSchema";
 import { getErrorAtPath } from "./getErrorAtPath";
+import { useRequiredField } from "./requiredFieldContext";
 
 type RHFCheckboxProps = Omit<
   React.InputHTMLAttributes<HTMLInputElement>,
@@ -33,6 +34,7 @@ export function RHFCheckbox({
 
   const error = getErrorAtPath(errors, name);
   const errorMessage = error?.message as string | undefined;
+  const isRequired = Boolean(useRequiredField(String(name)));
 
   return (
     <div className={className}>
@@ -47,7 +49,17 @@ export function RHFCheckbox({
           {...rest}
           className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
         />
-        <span>{label}</span>
+        <span>
+          {label}
+          {isRequired && (
+            <>
+              <span className="ml-1 text-red-600" aria-hidden="true">
+                *
+              </span>
+              <span className="sr-only"> (required)</span>
+            </>
+          )}
+        </span>
       </label>
       {errorMessage && (
         <p className="mt-1 text-xs text-red-600">{errorMessage}</p>

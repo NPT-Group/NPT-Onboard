@@ -37,7 +37,7 @@ export function GovernmentIdsSection({ isReadOnly, docId }: Props) {
         <h2 className="text-sm font-semibold text-slate-900">Aadhaar</h2>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <RHFDigitsInput<IndiaOnboardingFormInput>
+          <RHFDigitsInput
             name={`${base}.aadhaar.aadhaarNumber`}
             label="Aadhaar number"
             maxDigits={12}
@@ -47,7 +47,7 @@ export function GovernmentIdsSection({ isReadOnly, docId }: Props) {
           />
 
           <div className="sm:col-span-2">
-            <RHFFileUpload<IndiaOnboardingFormInput>
+            <RHFFileUpload
               name={`${base}.aadhaar.file`}
               label="Aadhaar card (PDF)"
               namespace={ES3Namespace.ONBOARDINGS}
@@ -67,7 +67,7 @@ export function GovernmentIdsSection({ isReadOnly, docId }: Props) {
         <h2 className="text-sm font-semibold text-slate-900">PAN</h2>
 
         <div className="mt-4">
-          <RHFFileUpload<IndiaOnboardingFormInput>
+          <RHFFileUpload
             name={`${base}.panCard.file`}
             label="PAN card (PDF)"
             namespace={ES3Namespace.ONBOARDINGS}
@@ -86,7 +86,7 @@ export function GovernmentIdsSection({ isReadOnly, docId }: Props) {
         <h2 className="text-sm font-semibold text-slate-900">Passport</h2>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <RHFFileUpload<IndiaOnboardingFormInput>
+          <RHFFileUpload
             name={`${base}.passport.frontFile`}
             label="Passport front (PDF)"
             namespace={ES3Namespace.ONBOARDINGS}
@@ -98,7 +98,7 @@ export function GovernmentIdsSection({ isReadOnly, docId }: Props) {
             maxSizeMB={20}
           />
 
-          <RHFFileUpload<IndiaOnboardingFormInput>
+          <RHFFileUpload
             name={`${base}.passport.backFile`}
             label="Passport back (PDF)"
             namespace={ES3Namespace.ONBOARDINGS}
@@ -115,11 +115,11 @@ export function GovernmentIdsSection({ isReadOnly, docId }: Props) {
       {/* Driver's License (optional, but if one side provided -> both required by schema) */}
       <div className="mt-5 rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-5 sm:py-5">
         <h2 className="text-sm font-semibold text-slate-900">
-          Driver&apos;s license (optional)
+          Driver&apos;s license
         </h2>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <RHFFileUpload<IndiaOnboardingFormInput>
+          <RHFFileUpload
             name={`${base}.driversLicense.frontFile`}
             label="Driver’s license front (PDF)"
             namespace={ES3Namespace.ONBOARDINGS}
@@ -131,7 +131,7 @@ export function GovernmentIdsSection({ isReadOnly, docId }: Props) {
             maxSizeMB={20}
           />
 
-          <RHFFileUpload<IndiaOnboardingFormInput>
+          <RHFFileUpload
             name={`${base}.driversLicense.backFile`}
             label="Driver’s license back (PDF)"
             namespace={ES3Namespace.ONBOARDINGS}
