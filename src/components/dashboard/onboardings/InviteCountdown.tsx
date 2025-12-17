@@ -13,7 +13,14 @@ function formatRemaining(ms: number) {
   return `${sec}s`;
 }
 
-export function InviteCountdown({ expiresAt }: { expiresAt?: string | Date }) {
+export function InviteCountdown({
+  expiresAt,
+  hideWhenExpired,
+}: {
+  expiresAt?: string | Date;
+  /** If true, render nothing when the timer has expired. */
+  hideWhenExpired?: boolean;
+}) {
   const target = useMemo(() => {
     if (!expiresAt) return null;
     const d = typeof expiresAt === "string" ? new Date(expiresAt) : expiresAt;
@@ -33,10 +40,12 @@ export function InviteCountdown({ expiresAt }: { expiresAt?: string | Date }) {
   const remaining = target.getTime() - now;
   const expired = remaining <= 0;
 
+  if (expired && hideWhenExpired) return null;
+
   return (
     <span
       className={[
-        "text-[11px] font-medium",
+        "text-[11px] font-medium leading-none whitespace-nowrap",
         expired ? "text-[var(--dash-red)]" : "text-[var(--dash-muted)]",
       ].join(" ")}
       title={target.toLocaleString()}

@@ -157,49 +157,85 @@ export function OnboardingsDataGrid({
                     // Submitted / Resubmitted (Pending review) should not show invite link or resend.
                     <div className="text-sm text-[var(--dash-muted)]">—</div>
                   ) : link ? (
-                    <div className="flex items-center justify-between gap-2 min-w-0">
-                      <a
-                        href={link}
-                        target="_blank"
-                        rel="noreferrer"
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 min-w-0">
+                      {/* Invite link (NOT clickable for HR). Copy icon appears on hover only (unless expired). */}
+                      <div
                         className={cn(
-                          "min-w-0 flex-1 rounded-xl border px-3 py-2",
+                          // Keep badge + copy icon from shifting layout by reserving space on the right.
+                          "group relative min-w-0 flex-1 rounded-xl border px-3 py-2 pr-12",
                           "border-[var(--dash-border)] bg-[var(--dash-surface-2)]",
-                          "hover:bg-[var(--dash-surface)] transition"
+                          "transition-colors",
+                          !isExpired && "hover:bg-[var(--dash-surface)]",
+                          isExpired && "opacity-80"
                         )}
                         title={link}
                       >
-                        <div className="text-[11px] font-semibold tracking-[0.14em] text-[var(--dash-muted)]">
-                          INVITE Link
-                        </div>
-                        <div className="mt-1 font-mono text-xs text-[var(--dash-text)] truncate">
-                          {tokenHint}
-                        </div>
-                      </a>
-
-                      <div className="flex flex-col items-end gap-2 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => onCopyLink(link)}
-                          disabled={isExpired}
-                          className={cn(
-                            "rounded-xl border p-2 border-[var(--dash-border)] text-[var(--dash-muted)]",
-                            "hover:bg-[var(--dash-surface-2)]",
-                            "cursor-pointer active:scale-95 transition-transform",
-                            "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dash-red-soft)]",
-                            isExpired && "opacity-50 cursor-not-allowed active:scale-100"
-                          )}
-                          aria-label="Copy invite link"
-                          title={isExpired ? "Invite expired" : "Copy invite link"}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </button>
-                        {it.inviteExpiresAt && (
-                          <InviteCountdown expiresAt={it.inviteExpiresAt} />
+                        {/* Badge pinned to the exact top-right spot (timer uses same spot as Expired). */}
+                        {(isExpired || it.inviteExpiresAt) && (
+                          <span
+                            className={cn(
+                              "absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none whitespace-nowrap",
+                              isExpired
+                                ? "bg-[var(--dash-red-soft)] text-[var(--dash-red)]"
+                                : "border border-[var(--dash-border)] bg-[var(--dash-surface)] text-[var(--dash-muted)]"
+                            )}
+                            title={
+                              isExpired
+                                ? "Invite expired"
+                                : "Time remaining until this invite expires"
+                            }
+                          >
+                            {isExpired ? (
+                              "Expired"
+                            ) : (
+                              <InviteCountdown
+                                expiresAt={it.inviteExpiresAt}
+                                hideWhenExpired
+                              />
+                            )}
+                          </span>
                         )}
 
-                        {/* Resend appears only when expired (V1 requirement) */}
-                        {canResendInvite && isExpired && (
+                        <div className="min-w-0">
+                          <div className="text-[11px] font-semibold tracking-[0.14em] text-[var(--dash-muted)]">
+                            INVITE LINK
+                          </div>
+                          <div
+                            className={cn(
+                              "mt-1 font-mono text-xs text-[var(--dash-text)] truncate",
+                              isExpired && "line-through text-[var(--dash-muted)]"
+                            )}
+                          >
+                            {tokenHint}
+                          </div>
+                        </div>
+
+                        {/* Hover-only copy control (hidden when expired). Pinned bottom-right to avoid badge overlap. */}
+                        {!isExpired && (
+                          <button
+                            type="button"
+                            onClick={() => onCopyLink(link)}
+                            className={cn(
+                              "absolute bottom-2 right-2 rounded-lg border p-2",
+                              "border-[var(--dash-border)] bg-[var(--dash-surface)] text-[var(--dash-muted)]",
+                              "opacity-0 pointer-events-none",
+                              "group-hover:opacity-100 group-hover:pointer-events-auto",
+                              "group-focus-within:opacity-100 group-focus-within:pointer-events-auto",
+                              "hover:bg-[var(--dash-surface-2)]",
+                              "active:scale-95 transition",
+                              "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dash-red-soft)]"
+                            )}
+                            aria-label="Copy invite link"
+                            title="Copy invite link"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-end gap-2 shrink-0">
+                        {/* Resend is always available for InviteGenerated (even before expiry). */}
+                        {canResendInvite && (
                           <button
                             type="button"
                             onClick={() => onResendInvite(it.id)}
@@ -213,8 +249,14 @@ export function OnboardingsDataGrid({
                                 "opacity-60 cursor-not-allowed active:scale-100"
                             )}
                             aria-label="Resend invite"
+                            title="Send a new invite link to the employee"
                           >
-                            <RefreshCcw className="h-4 w-4" />
+                            <RefreshCcw
+                              className={cn(
+                                "h-4 w-4",
+                                resendingId === it.id && "animate-spin"
+                              )}
+                            />
                             {resendingId === it.id ? "Resending…" : "Resend"}
                           </button>
                         )}
