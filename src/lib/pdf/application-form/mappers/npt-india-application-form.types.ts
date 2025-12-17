@@ -1,16 +1,11 @@
-/**
- * ======================================================================
- * NPT INDIA - Hiring Application (3-page) - Fillable PDF Field Names
- * ----------------------------------------------------------------------
- * IMPORTANT:
- * - Update these string values to match the *actual* field names inside:
- *   npt-india-application-form-fillable.pdf
- * - You can inspect them by opening the PDF in Acrobat/Preview (form field
- *   properties) or via pdf-lib form.getFields() during dev.
- * ======================================================================
- */
+// src/lib/pdf/application-form/mappers/npt-india-application-form.types.ts
+
+// Enums for NPT India Application Form PDF fields
 export enum ENptIndiaApplicationFormFields {
-  /* ============================ Page 1: Personal ============================ */
+  /* ====================== Page 1: Checklist / Instructions ====================== */
+  // (No fields)
+
+  /* ===================== Page 2: Personal Info & Banking ===================== */
 
   FIRST_NAME = "first_name",
   LAST_NAME = "last_name",
@@ -53,7 +48,49 @@ export enum ENptIndiaApplicationFormFields {
   LICENSE_FRONT_ATTACHED = "license_front_attached",
   LICENSE_BACK_ATTACHED = "license_back_attached",
 
-  /* ========================== Page 2: Employment ============================ */
+  // Bank details
+  BANK_NAME = "bank_name",
+  BRANCH_NAME = "branch_name",
+  ACCOUNT_HOLDER_NAME = "account_holder_name",
+  ACCOUNT_NUMBER = "account_number",
+  IFSC_CODE = "ifsc_code",
+  UPI_ID = "upi_id",
+  VOID_CHEQUE_ATTACHED_YES = "void_cheque_attached_yes",
+  VOID_CHEQUE_ATTACHED_NO = "void_cheque_attached_no",
+
+  /* ============================ Page 3: Education ============================= */
+
+  EDU_PRIMARY_SCHOOL = "edu_primary_school",
+  EDU_HIGH_SCHOOL = "edu_high_school",
+  EDU_DIPLOMA = "edu_diploma",
+  EDU_BACHELORS = "edu_bachelors",
+  EDU_MASTERS = "edu_masters",
+  EDU_DOCTORATE = "edu_doctorate",
+  EDU_OTHER = "edu_other",
+  EDU_OTHER_TEXT = "edu_other_text",
+
+  PRIMARY_SCHOOL_NAME = "primary_school_name",
+  PRIMARY_SCHOOL_LOCATION = "primary_school_location",
+  PRIMARY_YEAR_COMPLETED = "primary_year_completed",
+
+  HIGH_SCHOOL_NAME = "high_school_name",
+  HIGH_SCHOOL_BOARD = "high_school_board",
+  HIGH_SCHOOL_YEAR_COMPLETED = "high_school_year_completed",
+  HIGH_SCHOOL_STREAM = "high_school_stream",
+  HIGH_SCHOOL_GRADE = "high_school_grade",
+
+  INSTITUTION_NAME = "institution_name",
+  UNIVERSITY_OR_BOARD = "university_or_board",
+  FIELD_OF_STUDY = "field_of_study",
+  START_YEAR = "start_year",
+  END_YEAR = "end_year",
+  GRADE_OR_PERCENTAGE = "grade_or_percentage",
+
+  /* ======================= Page 4: Employment History ========================= */
+
+  // NEW: Previously employed? (Yes/No)
+  PREVIOUSLY_EMPLOYED_YES = "previously_employed_yes",
+  PREVIOUSLY_EMPLOYED_NO = "previously_employed_no",
 
   // Entry 1
   EMP1_ORG_NAME = "emp1_org_name",
@@ -82,52 +119,10 @@ export enum ENptIndiaApplicationFormFields {
   EMP3_EXP_CERT_YES = "emp3_exp_cert_yes",
   EMP3_EXP_CERT_NO = "emp3_exp_cert_no",
 
-  /* ===================== Page 3: Education and Banking ====================== */
-
-  // Highest education level checkboxes (Choose one)
-  EDU_PRIMARY_SCHOOL = "edu_primary_school",
-  EDU_HIGH_SCHOOL = "edu_high_school",
-  EDU_DIPLOMA = "edu_diploma",
-  EDU_BACHELORS = "edu_bachelors",
-  EDU_MASTERS = "edu_masters",
-  EDU_DOCTORATE = "edu_doctorate",
-  EDU_OTHER = "edu_other",
-  EDU_OTHER_TEXT = "edu_other_text",
-
-  // Primary school block
-  PRIMARY_SCHOOL_NAME = "primary_school_name",
-  PRIMARY_SCHOOL_LOCATION = "primary_school_location",
-  PRIMARY_YEAR_COMPLETED = "primary_year_completed",
-
-  // High school / secondary block
-  HIGH_SCHOOL_NAME = "high_school_name",
-  HIGH_SCHOOL_BOARD = "high_school_board",
-  HIGH_SCHOOL_YEAR_COMPLETED = "high_school_year_completed",
-  HIGH_SCHOOL_STREAM = "high_school_stream",
-  HIGH_SCHOOL_GRADE = "high_school_grade",
-
-  // Diploma/Bachelors/Masters/Doctorate/Other block
-  INSTITUTION_NAME = "institution_name",
-  UNIVERSITY_OR_BOARD = "university_or_board",
-  FIELD_OF_STUDY = "field_of_study",
-  START_YEAR = "start_year",
-  END_YEAR = "end_year",
-  GRADE_OR_PERCENTAGE = "grade_or_percentage",
-
-  // Bank details
-  BANK_NAME = "bank_name",
-  BRANCH_NAME = "branch_name",
-  ACCOUNT_HOLDER_NAME = "account_holder_name",
-  ACCOUNT_NUMBER = "account_number",
-  IFSC_CODE = "ifsc_code",
-  UPI_ID = "upi_id",
-  VOID_CHEQUE_ATTACHED_YES = "void_cheque_attached_yes",
-  VOID_CHEQUE_ATTACHED_NO = "void_cheque_attached_no",
-
-  /* ===================== Page 3: Declaration & Signature ==================== */
+  /* ==================== Page 5: Declaration & Signature ======================= */
 
   DECLARATION_ACCEPTED = "declaration_accepted",
-  DECLARATION_SIGNATURE = "declaration_signature", // signature widget field name
+  DECLARATION_SIGNATURE = "declaration_signature",
   DECLARATION_DATE = "declaration_date",
 }
 

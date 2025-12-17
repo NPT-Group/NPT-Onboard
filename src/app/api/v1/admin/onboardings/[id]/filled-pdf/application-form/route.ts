@@ -97,7 +97,7 @@ export const GET = async (req: NextRequest, { params }: { params: Promise<{ id: 
       await drawPdfImage({
         pdfDoc,
         form,
-        page: pages[2], // declaration page
+        page: pages[4], // declaration page
         fieldName: F.DECLARATION_SIGNATURE,
         imageBytes: sigBytes,
         width: 140,
