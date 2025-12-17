@@ -123,3 +123,17 @@ export async function resendOnboardingInvite(id: string) {
   );
 }
 
+export async function restoreOnboarding(id: string) {
+  return postJson<undefined, { onboarding: any }>(
+    `/api/v1/admin/onboardings/${id}/restore`,
+    undefined
+  );
+}
+
+export async function deleteOnboarding(id: string) {
+  return request<{ deleted: { id: string; deletedS3KeysCount: number } }>(
+    `/api/v1/admin/onboardings/${id}`,
+    { method: "DELETE" }
+  );
+}
+

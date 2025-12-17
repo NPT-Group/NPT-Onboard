@@ -77,6 +77,37 @@ body {
   --app-modal-surface: var(--dash-surface);
 }
 
+/* Prevent "white flash" on reload: allow pre-paint theme via html[data-dash-theme]. */
+html[data-dash-theme="dark"],
+html[data-dash-theme="dark"] body {
+  background: #06070b;
+  color-scheme: dark;
+}
+
+html[data-dash-theme="light"],
+html[data-dash-theme="light"] body {
+  background: #f8fafc;
+  color-scheme: light;
+}
+
+html[data-dash-theme="dark"] .dashboard-root {
+  /* Mirror the dark tokens so the dashboard can render correctly before hydration */
+  --dash-bg: #06070b;
+  --dash-surface: #0c1018;
+  --dash-surface-2: #121a26;
+  --dash-text: #e2e8f0;
+  --dash-muted: #9aa9be;
+  --dash-border: rgba(148, 163, 184, 0.16);
+  --dash-shadow: 0 14px 34px rgba(0, 0, 0, 0.62);
+
+  --dash-red: #ff3b3f;
+  --dash-red-2: #ff4d4f;
+  --dash-red-soft: rgba(255, 59, 63, 0.16);
+
+  --app-overlay: rgba(0, 0, 0, 0.62);
+  --app-modal-surface: var(--dash-surface);
+}
+
 /* ================================================================== */
 /* Hero Brand Pill Component                                          */
 /* ================================================================== */

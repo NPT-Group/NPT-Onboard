@@ -102,10 +102,17 @@ export function InviteEmployeeModal({ open, onClose, subsidiary, onCreated }: Pr
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
         <div className="space-y-1">
-          <label className="text-xs font-semibold text-[var(--dash-muted)]">First name</label>
+          <label
+            htmlFor="invite-first-name"
+            className="text-xs font-semibold text-[var(--dash-muted)]"
+          >
+            First name
+          </label>
           <div className="relative">
             <User2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--dash-muted)]" />
             <input
+              id="invite-first-name"
+              name="invite-first-name"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               className={cn(
@@ -114,16 +121,24 @@ export function InviteEmployeeModal({ open, onClose, subsidiary, onCreated }: Pr
                 "focus:outline-none focus:ring-2 focus:ring-[var(--dash-red-soft)]"
               )}
               placeholder="e.g. Faruq"
-              autoComplete="given-name"
+              autoComplete="section-invite given-name"
+              autoFocus
             />
           </div>
         </div>
 
         <div className="space-y-1">
-          <label className="text-xs font-semibold text-[var(--dash-muted)]">Last name</label>
+          <label
+            htmlFor="invite-last-name"
+            className="text-xs font-semibold text-[var(--dash-muted)]"
+          >
+            Last name
+          </label>
           <div className="relative">
             <User2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--dash-muted)]" />
             <input
+              id="invite-last-name"
+              name="invite-last-name"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
               className={cn(
@@ -132,17 +147,24 @@ export function InviteEmployeeModal({ open, onClose, subsidiary, onCreated }: Pr
                 "focus:outline-none focus:ring-2 focus:ring-[var(--dash-red-soft)]"
               )}
               placeholder="e.g. Atanda"
-              autoComplete="family-name"
+              autoComplete="section-invite family-name"
             />
           </div>
         </div>
       </div>
 
       <div className="mt-4 space-y-1">
-        <label className="text-xs font-semibold text-[var(--dash-muted)]">Email</label>
+        <label
+          htmlFor="invite-email"
+          className="text-xs font-semibold text-[var(--dash-muted)]"
+        >
+          Email
+        </label>
         <div className="relative">
           <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--dash-muted)]" />
           <input
+            id="invite-email"
+            name="invite-email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className={cn(
@@ -151,7 +173,7 @@ export function InviteEmployeeModal({ open, onClose, subsidiary, onCreated }: Pr
               "focus:outline-none focus:ring-2 focus:ring-[var(--dash-red-soft)]"
             )}
             placeholder="name@company.com"
-            autoComplete="email"
+            autoComplete="section-invite email"
             inputMode="email"
           />
         </div>
@@ -231,4 +253,5 @@ export function InviteEmployeeModal({ open, onClose, subsidiary, onCreated }: Pr
     </Modal>
   );
 }
+
 

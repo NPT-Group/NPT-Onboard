@@ -71,6 +71,15 @@ export function DashboardHomeClient() {
 
   const isSupportedSubsidiary = subsidiary === ESubsidiary.INDIA;
 
+  // Remember last selected subsidiary for other dashboard pages (e.g. Terminated).
+  useEffect(() => {
+    try {
+      localStorage.setItem("dash_subsidiary", subsidiary);
+    } catch {
+      // ignore
+    }
+  }, [subsidiary]);
+
   // Keep draft in sync when URL changes externally (back/forward)
   useEffect(() => {
     setSearchDraft(q);
@@ -181,7 +190,14 @@ export function DashboardHomeClient() {
         searchDraft={searchDraft}
         onSearchDraft={setSearchDraft}
         subsidiary={subsidiary}
-        onSubsidiary={(s) => updateQuery({ subsidiary: s })}
+        onSubsidiary={(s) => {
+          try {
+            localStorage.setItem("dash_subsidiary", s);
+          } catch {
+            // ignore
+          }
+          updateQuery({ subsidiary: s });
+        }}
         supported={isSupportedSubsidiary}
         canSendInvite={isSupportedSubsidiary}
         statusGroup={statusGroup}

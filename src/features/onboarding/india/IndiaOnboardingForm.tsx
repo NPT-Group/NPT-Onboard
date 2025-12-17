@@ -42,6 +42,7 @@ import { normalizeIndiaFormDataForSubmit } from "./normalizeIndiaFormData";
 import { ensureGeoAtSubmit } from "../form-engine/geo";
 import { findFirstErrorAcrossSteps, findFirstErrorInStep } from "../form-engine/errors";
 import { scrollToField, scrollToSection } from "../form-engine/scrolling";
+import { EOnboardingStatus } from "@/types/onboarding.types";
 
 type IndiaOnboardingFormProps = {
   onboarding: TOnboardingContext;
@@ -374,7 +375,11 @@ export function IndiaOnboardingForm({
                 className="cursor-pointer rounded-full bg-slate-900 px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
                 disabled={isReadOnly || isSubmitting}
               >
-                {isSubmitting ? "Submitting..." : "Submit onboarding"}
+                {isSubmitting
+                  ? "Submitting..."
+                  : onboarding.status === EOnboardingStatus.ModificationRequested
+                    ? "Resubmit onboarding"
+                    : "Submit onboarding"}
               </button>
             )}
           </div>

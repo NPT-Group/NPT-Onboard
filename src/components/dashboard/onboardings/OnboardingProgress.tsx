@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils/cn";
-import { EOnboardingStatus, type EOnboardingMethod } from "@/types/onboarding.types";
+import { EOnboardingMethod, EOnboardingStatus, type EOnboardingMethod as TOnboardingMethod } from "@/types/onboarding.types";
 
 type ProgressModel = {
   title: string;
@@ -10,21 +10,23 @@ type ProgressModel = {
   tone: "neutral" | "info" | "warn" | "success" | "danger";
 };
 
-function mapProgress(status: EOnboardingStatus, method?: EOnboardingMethod): ProgressModel {
+function mapProgress(status: EOnboardingStatus, method?: TOnboardingMethod): ProgressModel {
   // Apple-ish: subtle dot + thin progress rail + short subtitle.
   switch (status) {
     case EOnboardingStatus.InviteGenerated:
       return {
         title: "Invite sent",
-        subtitle: method === "manual" ? "Waiting for HR upload" : "Waiting for employee",
+        subtitle: method === EOnboardingMethod.MANUAL ? "Waiting for HR upload" : "Waiting for employee",
         pct: 20,
-        tone: "info",
+        // Keep this visually calmer than "Pending review" so HR can scan.
+        tone: "neutral",
       };
     case EOnboardingStatus.ModificationRequested:
       return { title: "Needs changes", subtitle: "Awaiting employee update", pct: 55, tone: "warn" };
     case EOnboardingStatus.Submitted:
-    case EOnboardingStatus.Resubmitted:
       return { title: "Pending review", subtitle: "HR review in progress", pct: 75, tone: "info" };
+    case EOnboardingStatus.Resubmitted:
+      return { title: "Pending review · Resubmitted", subtitle: "HR review in progress", pct: 75, tone: "info" };
     case EOnboardingStatus.Approved:
       return { title: "Approved", subtitle: "Completed", pct: 100, tone: "success" };
     case EOnboardingStatus.ManualPDFSent:
@@ -41,7 +43,7 @@ export function OnboardingProgress({
   method,
 }: {
   status: EOnboardingStatus;
-  method?: EOnboardingMethod;
+  method?: TOnboardingMethod;
 }) {
   const m = mapProgress(status, method);
 

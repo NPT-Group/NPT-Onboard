@@ -16,10 +16,13 @@ function formatRemaining(ms: number) {
 export function InviteCountdown({
   expiresAt,
   hideWhenExpired,
+  nowMs,
 }: {
   expiresAt?: string | Date;
   /** If true, render nothing when the timer has expired. */
   hideWhenExpired?: boolean;
+  /** Optional shared clock (ms since epoch) to avoid per-row intervals. */
+  nowMs?: number;
 }) {
   const target = useMemo(() => {
     if (!expiresAt) return null;
@@ -27,13 +30,15 @@ export function InviteCountdown({
     return isNaN(d.getTime()) ? null : d;
   }, [expiresAt]);
 
-  const [now, setNow] = useState(() => Date.now());
+  const [localNow, setLocalNow] = useState(() => Date.now());
+  const now = nowMs ?? localNow;
 
   useEffect(() => {
-    if (!target) return;
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    // If a shared clock is provided, do not create an interval here.
+    if (!target || nowMs != null) return;
+    const id = window.setInterval(() => setLocalNow(Date.now()), 1000);
     return () => window.clearInterval(id);
-  }, [target]);
+  }, [target, nowMs]);
 
   if (!target) return null;
 

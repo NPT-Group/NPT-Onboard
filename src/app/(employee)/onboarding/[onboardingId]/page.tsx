@@ -259,12 +259,26 @@ export default function OnboardingFormPage() {
     }
 
     if (status === EOnboardingStatus.ModificationRequested) {
+      const message = onboarding.modificationRequestMessage?.trim();
       return (
-        <Alert
-          variant="info"
-          title="Updates requested"
-          description="HR has requested some changes to your information. Please review each section, update any fields with comments, and resubmit your onboarding."
-        />
+        <div className="space-y-3">
+          <Alert
+            variant="info"
+            title="Updates requested"
+            description="HR has requested changes to your submission. Please review the message below, update the relevant fields, and resubmit."
+          />
+
+          {message && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div className="text-[11px] font-semibold tracking-[0.14em] text-slate-500">
+                HR MESSAGE
+              </div>
+              <div className="mt-2 whitespace-pre-line text-sm text-slate-800">
+                {message}
+              </div>
+            </div>
+          )}
+        </div>
       );
     }
 

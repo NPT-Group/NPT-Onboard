@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Home, Ban, Settings, ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -27,6 +27,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   // Sidebar is fixed/open on desktop (xl+). Below xl, it becomes collapsible.
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
+  const sp = useSearchParams();
+  const subsidiary = sp.get("subsidiary");
+  const terminatedHref = subsidiary
+    ? `/dashboard/terminated?subsidiary=${encodeURIComponent(subsidiary)}`
+    : "/dashboard/terminated";
 
   const sidebarNav = (
     <div className="px-3 py-4">
@@ -35,11 +40,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       </div>
       <nav className="space-y-1">
         {navItems.map(({ href, label, Icon }) => {
+          const computedHref = href === "/dashboard/terminated" ? terminatedHref : href;
           const active = pathname === href;
           return (
             <Link
               key={href}
-              href={href}
+              href={computedHref}
               onClick={() => setSidebarOpen(false)}
               className={cn(
                 "flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition",
@@ -164,4 +170,5 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
 

@@ -1,12 +1,23 @@
 "use client";
 
-import { Copy, Eye, RefreshCcw, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, Copy, Eye, RefreshCcw, Trash2 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 
 import type { AdminOnboardingListItem } from "@/lib/api/admin/onboardings";
 import { cn } from "@/lib/utils/cn";
 import { InviteCountdown } from "@/components/dashboard/onboardings/InviteCountdown";
 import { OnboardingProgress } from "@/components/dashboard/onboardings/OnboardingProgress";
 import { SmartPagination } from "@/components/dashboard/pagination/SmartPagination";
+import { EOnboardingMethod, EOnboardingStatus } from "@/types/onboarding.types";
+import { RowActionsMenu } from "@/components/dashboard/onboardings/RowActionsMenu";
+
+function formatMethodLabel(method: unknown): string {
+  const v = String(method ?? "").trim().toLowerCase();
+  if (v === "digital") return "Digital";
+  if (v === "manual") return "Manual";
+  return String(method ?? "—");
+}
 
 function toDate(value?: string | Date | null) {
   if (!value) return null;
@@ -41,6 +52,26 @@ export function OnboardingsDataGrid({
   onResendInvite: (id: string) => void;
   resendingId?: string | null;
 }) {
+  const hasAnyInviteTimer = useMemo(
+    () => items.some((it) => it.inviteExpiresAt != null),
+    [items]
+  );
+
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!copiedId) return;
+    const t = window.setTimeout(() => setCopiedId(null), 1400);
+    return () => window.clearTimeout(t);
+  }, [copiedId]);
+
+  // Single shared clock so expiry UI is accurate & consistent.
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    if (!hasAnyInviteTimer) return;
+    const id = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [hasAnyInviteTimer]);
+
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-surface)] shadow-[var(--dash-shadow)] overflow-hidden">
@@ -68,65 +99,102 @@ export function OnboardingsDataGrid({
         </div>
 
         {error && <div className="p-5 text-sm text-[var(--dash-red)]">{error}</div>}
-        {!error && loading && (
-          <div className="p-5 text-sm text-[var(--dash-muted)]">Loading…</div>
-        )}
-        {!error && !loading && items.length === 0 && (
-          <div className="p-5 text-sm text-[var(--dash-muted)]">No results found.</div>
-        )}
+        {!error && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+          >
+            <AnimatePresence mode="wait">
+              {loading ? (
+                <motion.div
+                  key="loading"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="p-5 text-sm text-[var(--dash-muted)]"
+                >
+                  Loading…
+                </motion.div>
+              ) : items.length === 0 ? (
+                <motion.div
+                  key="empty"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="p-5 text-sm text-[var(--dash-muted)]"
+                >
+                  No results found.
+                </motion.div>
+              ) : (
+                <>
+                  {items.map((it, index) => {
+                    const fullName = `${it.firstName} ${it.lastName}`.trim();
+                    const methodLabel = formatMethodLabel(it.method);
+                    const link = it.inviteUrl;
+                    const expiresAt = toDate(it.inviteExpiresAt);
+                    const isExpired = expiresAt ? expiresAt.getTime() <= nowMs : false;
 
-        {!error &&
-          !loading &&
-          items.map((it) => {
-            const fullName = `${it.firstName} ${it.lastName}`.trim();
-            const link = it.inviteUrl;
-            const expiresAt = toDate(it.inviteExpiresAt);
-            const isExpired = expiresAt ? expiresAt.getTime() <= Date.now() : false;
+                    const isComplete =
+                      it.status === EOnboardingStatus.Approved ||
+                      it.status === EOnboardingStatus.Terminated;
+                    const isModReq = it.status === EOnboardingStatus.ModificationRequested;
+                    const linkLabel = isModReq ? "MODIFICATION LINK" : "INVITE LINK";
+                    const resendLabel = "Resend";
 
-            const isComplete = it.status === "Approved" || it.status === "Terminated";
+                    // Employee-facing invite link is only relevant while an invite can be used.
+                    // Once the employee has submitted (Submitted/Resubmitted), the invite flow is no longer valid.
+                    const isInviteEligible =
+                      it.method === EOnboardingMethod.DIGITAL &&
+                      (it.status === EOnboardingStatus.InviteGenerated ||
+                        it.status === EOnboardingStatus.ModificationRequested);
 
-            // Employee-facing invite link is only relevant while an invite can be used.
-            // Once the employee has submitted (Submitted/Resubmitted), the invite flow is no longer valid.
-            const isInviteEligible =
-              it.method === "digital" &&
-              (it.status === "InviteGenerated" ||
-                it.status === "ModificationRequested");
+                    const canResendInvite =
+                      it.method === EOnboardingMethod.DIGITAL &&
+                      (it.status === EOnboardingStatus.InviteGenerated ||
+                        it.status === EOnboardingStatus.ModificationRequested);
 
-            const canResendInvite = it.method === "digital" && it.status === "InviteGenerated";
+                    const tokenHint = (() => {
+                      if (!link) return null;
+                      try {
+                        const u = new URL(link);
+                        const token = u.searchParams.get("token");
+                        if (!token) return link;
+                        if (token.length <= 12) return token;
+                        return `${token.slice(0, 6)}…${token.slice(-6)}`;
+                      } catch {
+                        return link;
+                      }
+                    })();
 
-            const tokenHint = (() => {
-              if (!link) return null;
-              try {
-                const u = new URL(link);
-                const token = u.searchParams.get("token");
-                if (!token) return link;
-                if (token.length <= 12) return token;
-                return `${token.slice(0, 6)}…${token.slice(-6)}`;
-              } catch {
-                return link;
-              }
-            })();
-
-            return (
-              <div
-                key={it.id}
-                className={cn(
-                  "border-b border-[var(--dash-border)] px-5 py-4",
-                  "md:grid md:grid-cols-[1.25fr_1.2fr_1.35fr_1.7fr_0.9fr] md:gap-4 md:items-center"
-                )}
-              >
+                    return (
+                      <motion.div
+                        key={it.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{
+                          duration: 0.3,
+                          delay: index * 0.05,
+                          ease: "easeOut",
+                        }}
+                        className={cn(
+                          "border-b border-[var(--dash-border)] px-5 py-4",
+                          "md:grid md:grid-cols-[1.25fr_1.2fr_1.35fr_1.7fr_0.9fr] md:gap-4 md:items-center"
+                        )}
+                      >
                 {/* Employee (name + optional employee number) */}
                 <div className="min-w-0">
-                  {it.employeeNumber && (
-                    <div className="text-xs text-[var(--dash-muted)] truncate">
-                      EN#:{" "}
-                      <span className="font-mono text-[var(--dash-text)]">
-                        {it.employeeNumber}
-                      </span>
-                    </div>
-                  )}
+                  <div className="text-xs text-[var(--dash-muted)] truncate">
+                    EN#:{" "}
+                    <span className="font-mono text-[var(--dash-text)]">
+                      {it.employeeNumber || "—"}
+                    </span>
+                  </div>
 
-                  <div className={cn("text-sm font-semibold truncate", it.employeeNumber && "mt-1")}>
+                  <div className="mt-1 text-sm font-semibold truncate">
                     {fullName}
                   </div>
 
@@ -134,11 +202,19 @@ export function OnboardingsDataGrid({
                   <div className="mt-1 text-xs text-[var(--dash-muted)] truncate md:hidden">
                     {it.email}
                   </div>
+                  <div className="mt-0.5 text-xs text-[var(--dash-muted)] md:hidden">
+                    {methodLabel}
+                  </div>
                 </div>
 
                 {/* Email */}
-                <div className="hidden md:block min-w-0 text-sm text-[var(--dash-muted)] truncate">
-                  {it.email}
+                <div className="hidden md:block min-w-0">
+                  <div className="text-sm text-[var(--dash-text)] truncate">
+                    {it.email}
+                  </div>
+                  <div className="mt-0.5 text-xs text-[var(--dash-muted)]">
+                    {methodLabel}
+                  </div>
                 </div>
 
                 {/* Progress (Apple-like: dot + rail) */}
@@ -151,7 +227,7 @@ export function OnboardingsDataGrid({
                   {/* Completed onboardings should not expose invites */}
                   {isComplete ? (
                     <div className="text-sm text-[var(--dash-muted)]">—</div>
-                  ) : it.method === "manual" ? (
+                  ) : it.method === EOnboardingMethod.MANUAL ? (
                     <div className="text-sm text-[var(--dash-muted)]">—</div>
                   ) : !isInviteEligible ? (
                     // Submitted / Resubmitted (Pending review) should not show invite link or resend.
@@ -181,8 +257,12 @@ export function OnboardingsDataGrid({
                             )}
                             title={
                               isExpired
-                                ? "Invite expired"
-                                : "Time remaining until this invite expires"
+                                ? isModReq
+                                  ? "Modification link expired"
+                                  : "Invite link expired"
+                                : isModReq
+                                  ? "Time remaining until this modification link expires"
+                                  : "Time remaining until this invite expires"
                             }
                           >
                             {isExpired ? (
@@ -190,7 +270,7 @@ export function OnboardingsDataGrid({
                             ) : (
                               <InviteCountdown
                                 expiresAt={it.inviteExpiresAt}
-                                hideWhenExpired
+                                nowMs={nowMs}
                               />
                             )}
                           </span>
@@ -198,7 +278,7 @@ export function OnboardingsDataGrid({
 
                         <div className="min-w-0">
                           <div className="text-[11px] font-semibold tracking-[0.14em] text-[var(--dash-muted)]">
-                            INVITE LINK
+                            {linkLabel}
                           </div>
                           <div
                             className={cn(
@@ -214,9 +294,12 @@ export function OnboardingsDataGrid({
                         {!isExpired && (
                           <button
                             type="button"
-                            onClick={() => onCopyLink(link)}
+                            onClick={() => {
+                              onCopyLink(link);
+                              setCopiedId(it.id);
+                            }}
                             className={cn(
-                              "absolute bottom-2 right-2 rounded-lg border p-2",
+                              "absolute bottom-2 right-2 rounded-lg border p-2 cursor-pointer",
                               "border-[var(--dash-border)] bg-[var(--dash-surface)] text-[var(--dash-muted)]",
                               "opacity-0 pointer-events-none",
                               "group-hover:opacity-100 group-hover:pointer-events-auto",
@@ -225,10 +308,26 @@ export function OnboardingsDataGrid({
                               "active:scale-95 transition",
                               "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dash-red-soft)]"
                             )}
-                            aria-label="Copy invite link"
-                            title="Copy invite link"
+                            aria-label={
+                              copiedId === it.id
+                                ? "Copied"
+                                : isModReq
+                                  ? "Copy modification link"
+                                  : "Copy invite link"
+                            }
+                            title={
+                              copiedId === it.id
+                                ? "Copied"
+                                : isModReq
+                                  ? "Copy modification link"
+                                  : "Copy invite link"
+                            }
                           >
-                            <Copy className="h-4 w-4" />
+                            {copiedId === it.id ? (
+                              <Check className="h-4 w-4 text-[var(--dash-red)]" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
                           </button>
                         )}
                       </div>
@@ -248,8 +347,12 @@ export function OnboardingsDataGrid({
                               resendingId === it.id &&
                                 "opacity-60 cursor-not-allowed active:scale-100"
                             )}
-                            aria-label="Resend invite"
-                            title="Send a new invite link to the employee"
+                            aria-label={isModReq ? "Resend modification request" : "Resend invite"}
+                            title={
+                              isModReq
+                                ? "Resend modification request email (generates a new link)"
+                                : "Resend invitation email (generates a new link)"
+                            }
                           >
                             <RefreshCcw
                               className={cn(
@@ -257,7 +360,7 @@ export function OnboardingsDataGrid({
                                 resendingId === it.id && "animate-spin"
                               )}
                             />
-                            {resendingId === it.id ? "Resending…" : "Resend"}
+                            {resendingId === it.id ? "Resending…" : resendLabel}
                           </button>
                         )}
                       </div>
@@ -265,7 +368,9 @@ export function OnboardingsDataGrid({
                   ) : (
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="text-sm font-semibold">Invite link unavailable</div>
+                        <div className="text-sm font-semibold">
+                          {isModReq ? "Modification link unavailable" : "Invite link unavailable"}
+                        </div>
                         <div className="mt-0.5 text-xs text-[var(--dash-muted)]">
                           This usually means the invite was created before link-copy support or the invite was cleared.
                         </div>
@@ -295,35 +400,23 @@ export function OnboardingsDataGrid({
                   )}
                 </div>
 
-                <div className="mt-4 flex items-center justify-end gap-2 md:mt-0">
-                  <button
-                    type="button"
-                    onClick={() => onView(it.id)}
-                    className={cn(
-                      "inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition",
-                      "border-[var(--dash-border)] text-[var(--dash-text)] hover:bg-[var(--dash-surface-2)]"
-                    )}
-                    aria-label="View onboarding"
-                  >
-                    <Eye className="h-4 w-4" />
-                    <span className="hidden sm:inline">View</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onTerminate(it)}
-                    className={cn(
-                      "inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition",
-                      "border-[var(--dash-border)] text-[var(--dash-red)] hover:bg-[var(--dash-red-soft)]"
-                    )}
-                    aria-label="Terminate onboarding"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span className="hidden sm:inline">Terminate</span>
-                  </button>
+                <div className="mt-4 flex items-center justify-end md:mt-0">
+                  <RowActionsMenu
+                    ariaLabel="Onboarding actions"
+                    actions={[
+                      { key: "view", label: "View", Icon: Eye, onSelect: () => onView(it.id) },
+                      { key: "terminate", label: "Terminate", Icon: Trash2, destructive: true, onSelect: () => onTerminate(it) },
+                    ]}
+                  />
                 </div>
-              </div>
-            );
-          })}
+                      </motion.div>
+                    );
+                  })}
+                </>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
       </div>
     </div>
   );

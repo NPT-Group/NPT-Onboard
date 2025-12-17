@@ -59,7 +59,7 @@ export const viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: "#0f172a",
-  colorScheme: "light",
+  colorScheme: "light dark",
 };
 
 export default function RootLayout({
@@ -68,7 +68,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <SessionWrapper>{children}</SessionWrapper>
       </body>

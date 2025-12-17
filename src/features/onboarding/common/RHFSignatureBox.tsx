@@ -370,7 +370,17 @@ export const RHFSignatureBox = React.forwardRef(function RHFSignatureBox<
       setStatus("idle");
     }
 
-    onChange?.(undefined as any);
+    // IMPORTANT:
+    // Use an explicit NULL value here (not undefined). With prefilled defaultValues,
+    // some RHF/controller timing can cause `undefined` to appear as "fall back to default".
+    // Null is an unambiguous "no value" for this field, and our render treats it as empty.
+    try {
+      setValue(name, null as any, { shouldDirty: true, shouldValidate: true });
+    } catch {
+      // ignore
+    }
+    onChange?.(null as any);
+    latestAssetRef.current = null;
 
     if (signedAtName) {
       setValue(signedAtName, "" as any, { shouldDirty: true });
@@ -386,6 +396,7 @@ export const RHFSignatureBox = React.forwardRef(function RHFSignatureBox<
     status,
     revokePendingPreview,
     clearCanvasOnly,
+    name,
     signedAtName,
     setValue,
     measureNow,
@@ -600,6 +611,7 @@ export const RHFSignatureBox = React.forwardRef(function RHFSignatureBox<
             error={showZodError}
             description={description}
             className="w-full"
+            errorClassName="w-full text-center"
           >
             <div data-field={dataField || String(name)} className="space-y-3">
               <div

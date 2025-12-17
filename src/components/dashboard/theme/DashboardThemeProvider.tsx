@@ -15,6 +15,18 @@ const DashboardThemeContext = createContext<DashboardThemeContextValue | null>(
 );
 
 const STORAGE_KEY = "npt.dashboard.theme.mode";
+const COOKIE_KEY = "npt.dashboard.theme.mode";
+
+function setThemeCookie(mode: DashboardThemeMode) {
+  try {
+    // 1 year, Lax so it works across reloads without being overly permissive.
+    document.cookie = `${COOKIE_KEY}=${encodeURIComponent(
+      mode
+    )}; path=/; max-age=31536000; samesite=lax`;
+  } catch {
+    // ignore
+  }
+}
 
 function resolveTheme(mode: DashboardThemeMode): "light" | "dark" {
   if (mode === "light" || mode === "dark") return mode;
@@ -34,11 +46,15 @@ export function useDashboardTheme() {
 
 export function DashboardThemeProvider({
   children,
+  initialMode,
 }: {
   children: React.ReactNode;
+  initialMode?: DashboardThemeMode;
 }) {
-  const [mode, setMode] = useState<DashboardThemeMode>("system");
-  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
+  const [mode, setMode] = useState<DashboardThemeMode>(initialMode ?? "system");
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() =>
+    resolveTheme(initialMode ?? "system")
+  );
 
   // Load persisted mode once
   useEffect(() => {
@@ -72,6 +88,15 @@ export function DashboardThemeProvider({
     return () => (mql as any).removeListener?.(handler);
   }, [mode]);
 
+  // Make theme available BEFORE dashboard-root paints (CSS also listens on html[data-dash-theme]).
+  useEffect(() => {
+    try {
+      document.documentElement.dataset.dashTheme = resolvedTheme;
+    } catch {
+      // ignore
+    }
+  }, [resolvedTheme]);
+
   const value = useMemo<DashboardThemeContextValue>(
     () => ({
       mode,
@@ -83,6 +108,7 @@ export function DashboardThemeProvider({
         } catch {
           // ignore
         }
+        setThemeCookie(next);
       },
     }),
     [mode, resolvedTheme]
