@@ -32,14 +32,12 @@ export const onboardingAuditLogSchema = new Schema<IOnboardingAuditLog>(
       type: Schema.Types.ObjectId,
       ref: "Onboarding",
       required: true,
-      index: true,
     },
 
     action: {
       type: String,
       enum: Object.values(EOnboardingAuditAction),
       required: true,
-      index: true,
     },
 
     actor: {
@@ -57,10 +55,19 @@ export const onboardingAuditLogSchema = new Schema<IOnboardingAuditLog>(
       type: Date,
       required: true,
       default: Date.now,
-      index: true,
     },
   },
   {
     timestamps: { createdAt: "createdAt", updatedAt: false },
   }
 );
+
+/* -------------------------------------------------------------------------- */
+/* Indexes for OnboardingAuditLog list route performance                       */
+/* -------------------------------------------------------------------------- */
+
+// Primary list pattern: filter by onboardingId + sort / range on createdAt
+onboardingAuditLogSchema.index({ onboardingId: 1, createdAt: -1 });
+
+// Optional: if you often filter by action within an onboarding
+onboardingAuditLogSchema.index({ onboardingId: 1, action: 1, createdAt: -1 });

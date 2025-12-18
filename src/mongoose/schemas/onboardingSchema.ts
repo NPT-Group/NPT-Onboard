@@ -119,6 +119,29 @@ onboardingSchema.index(
   }
 );
 
+/* -------------------------------------------------------------------------- */
+/* Indexes for admin list route performance                                    */
+/* -------------------------------------------------------------------------- */
+
+// Default listing: always subsidiary-scoped, commonly sorted by createdAt desc
+onboardingSchema.index({ subsidiary: 1, createdAt: -1 });
+
+// Most common dashboard filters: status groups + sort by created/updated
+onboardingSchema.index({ subsidiary: 1, status: 1, createdAt: -1 });
+onboardingSchema.index({ subsidiary: 1, status: 1, updatedAt: -1 });
+
+// Terminated view: status=Terminated + sort/filter by terminatedAt
+onboardingSchema.index({ subsidiary: 1, status: 1, terminatedAt: -1 });
+
+// Method filter (digital/manual) + sort
+onboardingSchema.index({ subsidiary: 1, method: 1, createdAt: -1 });
+
+// Completion filter (if you use it in list queries)
+onboardingSchema.index({ subsidiary: 1, isCompleted: 1, createdAt: -1 });
+
+// Fast subsidiary-scoped lookups by email (common admin workflow)
+onboardingSchema.index({ subsidiary: 1, email: 1 });
+
 // Validate presence of per-subsidiary formData *only when status requires it*
 onboardingSchema.pre<TOnboardingDoc>("save", function () {
   // Decide in which statuses full formData must be present.
