@@ -153,6 +153,7 @@ export function RHFFileUpload({
       const url = await getDownloadUrlFromS3Key({
         s3Key: asset.s3Key,
         filename: asset.originalName || "document",
+        disposition: "inline",
       });
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (err: any) {
@@ -192,7 +193,6 @@ export function RHFFileUpload({
                 <button
                   type="button"
                   onClick={handleView}
-                  disabled={disabled}
                   className="mt-0.5 text-left text-xs text-sky-700 hover:underline disabled:opacity-60"
                 >
                   View / download

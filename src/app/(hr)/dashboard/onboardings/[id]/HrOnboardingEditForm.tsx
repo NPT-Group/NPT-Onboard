@@ -10,7 +10,7 @@ import { normalizeIndiaFormDataForSubmit } from "@/features/onboarding/india/nor
 
 import { RequiredFieldProvider } from "@/features/onboarding/common/requiredFieldContext";
 import { isIndiaRequiredField } from "@/features/onboarding/india/requiredFields";
-import { EEducationLevel, EOnboardingMethod } from "@/types/onboarding.types";
+import { EEducationLevel } from "@/types/onboarding.types";
 import { UpdateSubmitBar } from "@/components/dashboard/onboardings/UpdateSubmitBar";
 import { updateAdminOnboarding } from "@/lib/api/admin/onboardings";
 import { ApiError } from "@/lib/api/client";
@@ -53,10 +53,6 @@ type TabKey =
   | "employment"
   | "banking"
   | "declaration";
-
-function unique<T>(arr: T[]): T[] {
-  return Array.from(new Set(arr));
-}
 
 function findFirstEmploymentErrorPath(errs: any): string | null {
   if (errs?.hasPreviousEmployment?.message) return "hasPreviousEmployment";
@@ -169,15 +165,6 @@ export function HrOnboardingEditForm({
   const [activeIdx, setActiveIdx] = useState(0);
   const activeTab = steps[activeIdx]?.id ?? ("summary" as TabKey);
 
-  // Gate navigation like employee flow: validate current section before moving forward.
-  // If editing is disabled (terminated), allow free navigation.
-  const [maxUnlockedIdx, setMaxUnlockedIdx] = useState(() =>
-    canEdit ? 0 : steps.length - 1
-  );
-  useEffect(() => {
-    if (!canEdit) setMaxUnlockedIdx(steps.length - 1);
-  }, [canEdit, steps.length]);
-
   const [saving, setSaving] = useState(false);
   const [barError, setBarError] = useState<string | null>(null);
 
@@ -229,9 +216,7 @@ export function HrOnboardingEditForm({
   };
 
   const handleStepClick = (idx: number) => {
-    if (!canEdit) return navigateTo(idx);
-    if (idx <= maxUnlockedIdx) return navigateTo(idx);
-    setBarError("Complete the previous section(s) before continuing.");
+    navigateTo(idx);
   };
 
   const handlePrev = () => navigateTo(activeIdx - 1);
@@ -242,9 +227,7 @@ export function HrOnboardingEditForm({
 
     // Summary is an overview tab, not a form section.
     if (step.id === "summary") {
-      const next = Math.min(steps.length - 1, activeIdx + 1);
-      setMaxUnlockedIdx((v) => Math.max(v, next));
-      navigateTo(next);
+      navigateTo(activeIdx + 1);
       return;
     }
 
@@ -267,28 +250,16 @@ export function HrOnboardingEditForm({
       return;
     }
 
-    const next = Math.min(steps.length - 1, activeIdx + 1);
-    setMaxUnlockedIdx((v) => Math.max(v, next));
-    navigateTo(next);
+    navigateTo(activeIdx + 1);
   };
 
   const onSave = async () => {
     if (!canEdit) return;
     setBarError(null);
 
-    const method = (onboarding as any)?.method as EOnboardingMethod | undefined;
-    const wasFormComplete = Boolean((onboarding as any)?.isFormComplete);
-    const validateAll = wasFormComplete || method === EOnboardingMethod.MANUAL;
-
-    const stepsToValidate = validateAll
-      ? steps.filter((s) => s.id !== "summary")
-      : steps.slice(1, maxUnlockedIdx + 1); // exclude Summary for partial saves
-
-    const namesToValidate = unique(
-      stepsToValidate.flatMap((s) => (s.fieldPaths ?? []).map(String))
-    );
-
-    const ok = await trigger(validateAll ? undefined : (namesToValidate as any), {
+    // HR can access any section, so validate the full payload before saving.
+    const stepsToValidate = steps.filter((s) => s.id !== "summary");
+    const ok = await trigger(undefined, {
       shouldFocus: false,
     });
     if (!ok) {
@@ -301,7 +272,6 @@ export function HrOnboardingEditForm({
         if (stepId) {
           const idx = steps.findIndex((s) => s.id === stepId);
           if (idx >= 0) {
-            setMaxUnlockedIdx((v) => Math.max(v, idx));
             navigateTo(idx);
             if (errorPath) {
               setTimeout(() => {
@@ -314,9 +284,7 @@ export function HrOnboardingEditForm({
 
       setBarError(
         errorCount > 0
-          ? validateAll
-            ? `Fix ${errorCount} field(s) before saving.`
-            : `Fix ${errorCount} field(s) in the unlocked sections before saving.`
+          ? `Fix ${errorCount} field(s) before saving.`
           : "Fix validation errors before saving."
       );
       return;
@@ -358,7 +326,7 @@ export function HrOnboardingEditForm({
       <RequiredFieldProvider isRequired={isRequired}>
         <div className="space-y-4">
           {/* Sticky stack: tabs + update bar */}
-          <div className="sticky top-16 z-20 space-y-3 pb-2">
+          <div className="sticky top-16 z-20 space-y-3 pb-2 bg-[var(--dash-bg)]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[var(--dash-bg)]/60">
             {/* Tabs */}
             <div className="rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-surface)] shadow-[var(--dash-shadow)] p-2">
               <div className="flex flex-wrap gap-2">
@@ -366,7 +334,6 @@ export function HrOnboardingEditForm({
                   <TabButton
                     key={s.id}
                     active={activeIdx === idx}
-                    disabled={canEdit ? idx > maxUnlockedIdx : false}
                     onClick={() => handleStepClick(idx)}
                   >
                     {s.label}
@@ -411,21 +378,6 @@ export function HrOnboardingEditForm({
                   ) : (
                     <div className="text-sm text-[var(--dash-muted)]">
                       Use the tabs above to review and edit the onboarding details. Changes are saved via the admin update route.
-                    </div>
-                  )}
-
-                  {canEdit && (
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        onClick={handleNext}
-                        className={cn(
-                          "rounded-xl px-4 py-2 text-sm font-semibold transition",
-                          "bg-[var(--dash-red)] text-white hover:opacity-95 cursor-pointer"
-                        )}
-                      >
-                        Start editing
-                      </button>
                     </div>
                   )}
                 </div>

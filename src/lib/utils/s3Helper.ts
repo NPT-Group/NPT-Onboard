@@ -458,10 +458,12 @@ function ensureExtension(filename: string, key: string): string {
 export async function getPresignedGetUrl({
   key,
   filename,
+  disposition = "attachment",
   expiresIn = DEFAULT_PRESIGN_EXPIRY_SECONDS,
 }: {
   key: string;
   filename?: string; // we’ll append extension if missing
+  disposition?: "inline" | "attachment";
   expiresIn?: number;
 }): Promise<{ url: string }> {
   // 1) Look up stored metadata to preserve real content-type
@@ -479,7 +481,7 @@ export async function getPresignedGetUrl({
   const encoded = encodeURIComponent(finalName);
 
   // 3) Build Content-Disposition
-  const contentDisposition = `attachment; filename="${finalName}"; filename*=UTF-8''${encoded}`;
+  const contentDisposition = `${disposition}; filename="${finalName}"; filename*=UTF-8''${encoded}`;
 
   // 4) Prefer stored content-type; otherwise, fall back to octet-stream
   const responseContentType = storedContentType || "application/octet-stream";

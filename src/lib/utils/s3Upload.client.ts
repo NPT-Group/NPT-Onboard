@@ -116,16 +116,18 @@ export async function deleteTempFile(asset?: IFileAsset | null) {
 export async function getDownloadUrlFromS3Key({
   s3Key,
   filename,
+  disposition,
   expiresIn,
 }: {
   s3Key: string;
   filename?: string;
+  disposition?: "inline" | "attachment";
   expiresIn?: number;
 }): Promise<string> {
   const res = await fetch("/api/v1/presign/download", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ key: s3Key, filename, expiresIn }),
+    body: JSON.stringify({ key: s3Key, filename, disposition, expiresIn }),
   });
 
   if (!res.ok) {

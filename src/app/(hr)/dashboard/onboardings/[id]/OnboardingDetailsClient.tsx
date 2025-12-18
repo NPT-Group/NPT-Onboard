@@ -275,12 +275,12 @@ export function OnboardingDetailsClient({
                   ) : submitActor?.actor?.type === EOnboardingActor.EMPLOYEE ? (
                     locationStr !== "—" ? (
                       <div className="text-sm text-[var(--dash-text)]">
-                        The applicant completed the onboard process at:{" "}
+                        The applicant completed the onboard form at:{" "}
                         <span className="font-medium">{locationStr}</span>.
                       </div>
                     ) : (
                       <div className="text-sm text-[var(--dash-text)]">
-                        The applicant completed the onboard process.
+                        The applicant completed the onboard form.
                       </div>
                     )
                   ) : method === EOnboardingMethod.MANUAL ? (
@@ -311,7 +311,9 @@ export function OnboardingDetailsClient({
                     className={cn(
                       "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition",
                       "border-[var(--dash-border)] bg-[var(--dash-surface)] text-[var(--dash-text)] hover:bg-[var(--dash-surface-2)]",
-                      loading ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
+                      loading
+                        ? "opacity-60 cursor-not-allowed"
+                        : "cursor-pointer"
                     )}
                   >
                     <RefreshCcw
@@ -351,7 +353,9 @@ export function OnboardingDetailsClient({
                       className={cn(
                         "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition",
                         "border-[var(--dash-border)] bg-[var(--dash-surface)] text-[var(--dash-text)] hover:bg-[var(--dash-surface-2)]",
-                        working != null ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
+                        working != null
+                          ? "opacity-60 cursor-not-allowed"
+                          : "cursor-pointer"
                       )}
                     >
                       <Wand2 className="h-4 w-4" />
@@ -367,7 +371,9 @@ export function OnboardingDetailsClient({
                       className={cn(
                         "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition",
                         "bg-[var(--dash-red)] text-white hover:opacity-95",
-                        working != null ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
+                        working != null
+                          ? "opacity-60 cursor-not-allowed"
+                          : "cursor-pointer"
                       )}
                     >
                       <ShieldCheck className="h-4 w-4" />
@@ -383,7 +389,9 @@ export function OnboardingDetailsClient({
                       className={cn(
                         "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition",
                         "border-[var(--dash-red-soft)] bg-[var(--dash-red-soft)] text-[var(--dash-red)] hover:brightness-[0.98]",
-                        working != null ? "opacity-70 cursor-not-allowed" : "cursor-pointer"
+                        working != null
+                          ? "opacity-70 cursor-not-allowed"
+                          : "cursor-pointer"
                       )}
                     >
                       <Download className="h-4 w-4 rotate-90" />

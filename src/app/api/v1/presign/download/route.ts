@@ -36,22 +36,27 @@ import { getPresignedGetUrl, s3ObjectExists } from "@/lib/utils/s3Helper";
 type Body = {
   key?: string;
   filename?: string; // can be "some file" (no ext) — server will append from key
+  disposition?: "inline" | "attachment";
   expiresIn?: number;
 };
 
 export async function POST(req: NextRequest) {
   try {
     const body = await parseJsonBody<Body>(req);
-    const { key, filename, expiresIn } = body || {};
+    const { key, filename, expiresIn, disposition } = body || {};
 
     if (!key || typeof key !== "string" || !key.trim()) {
       return errorResponse(400, "Missing or invalid 'key'");
     }
 
+    if (disposition && disposition !== "inline" && disposition !== "attachment") {
+      return errorResponse(400, "Invalid 'disposition' (expected 'inline' or 'attachment')");
+    }
+
     const exists = await s3ObjectExists(key);
     if (!exists) return errorResponse(404, "S3 object not found");
 
-    const { url } = await getPresignedGetUrl({ key, filename, expiresIn });
+    const { url } = await getPresignedGetUrl({ key, filename, expiresIn, disposition });
     return successResponse(200, "Presigned GET URL generated", {
       url,
       expiresIn: expiresIn ?? undefined,
