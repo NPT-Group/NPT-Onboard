@@ -94,38 +94,59 @@ export async function sendEmployeeOnboardingInvitation(params: SendEmployeeOnboa
 
     const bodyHtml = `
       <p style="margin:0 0 16px 0;">Hi ${escapedName},</p>
+
       <p style="margin:0 0 12px 0;">
         Please find attached the employee onboarding form for
         <strong>NPT (${escapedSubsidiary})</strong>.
       </p>
 
-      <p style="margin:0 0 8px 0; font-weight:600;">How to complete</p>
+      <p style="margin:0 0 12px 0;">
+        Please follow the steps below to complete your onboarding.
+      </p>
+
       <ol style="margin:0 0 16px 24px; padding:0; font-size:14px; color:#374151;">
-        <li style="margin-bottom:4px;">Download and open the attached PDF form.</li>
-        <li style="margin-bottom:4px;">Fill in all applicable sections and sign where indicated.</li>
-        <li style="margin-bottom:4px;">Scan the completed form and gather the requested supporting documents.</li>
-        <li>Reply to this email with the completed form and documents attached.</li>
+        <li style="margin-bottom:8px;">
+          <strong>Print</strong> all pages of the attached PDF form.
+        </li>
+        <li style="margin-bottom:8px;">
+          <strong>Fill in all sections by hand</strong> using a pen.
+          Please write clearly in <strong>BLOCK LETTERS</strong>.
+        </li>
+        <li style="margin-bottom:8px;">
+          <strong>Sign</strong> the declaration on the <strong>last page</strong>.
+        </li>
+        <li style="margin-bottom:8px;">
+          <strong>Scan all pages</strong> after completion.
+        </li>
+        <li style="margin-bottom:8px;">
+          Combine all scanned pages into <strong>one single PDF file</strong>.
+        </li>
+        <li style="margin-bottom:8px;">
+          Create a clear image of your signature and save it as a
+          <strong>PNG file</strong>.
+        </li>
+        <li>
+          Reply to this email and attach the files listed below.
+        </li>
       </ol>
 
-      <div style="margin:16px 0 16px 0; padding:12px 14px; border:1px solid #e5e7eb; border-radius:12px; background:#f9fafb;">
-        <p style="margin:0 0 8px 0; font-weight:600;">Submission instructions</p>
+      <div style="margin:16px 0; padding:12px 14px; border:1px solid #e5e7eb; border-radius:12px; background:#f9fafb;">
+        <p style="margin:0 0 8px 0; font-weight:600;">Attach these files in your reply</p>
         <ul style="margin:0 0 0 18px; padding:0; font-size:14px; color:#374151;">
-          <li style="margin-bottom:6px;">Ensure all fields are filled clearly in <strong>BLOCK LETTERS</strong>.</li>
-          <li style="margin-bottom:6px;">Sign the declaration on the <strong>last page</strong>.</li>
-          <li style="margin-bottom:6px;">Scan <strong>all pages</strong> into <strong>one combined PDF</strong>.</li>
           <li style="margin-bottom:6px;">
-            Prepare all required supporting documents in <strong>PDF format only</strong>
-            (Aadhaar, PAN, Passport, License, Experience Certificates, Void Cheque).
+            Completed onboarding form (<strong>one combined PDF</strong>)
           </li>
-          <li style="margin-bottom:6px;"><strong>Images (JPEG/PNG) will not be accepted.</strong></li>
           <li style="margin-bottom:6px;">
-            Reply to this onboarding email and attach:
-            <ul style="margin:6px 0 0 18px; padding:0;">
-              <li style="margin-bottom:4px;">The completed form (PDF)</li>
-              <li>All supporting documents (PDF)</li>
-            </ul>
+            Supporting documents (<strong>PDF only</strong>):
+            Aadhaar, PAN, Passport, License, Experience Certificates, Void Cheque
           </li>
-          <li>Send the email to <strong>NPT HR</strong>.</li>
+          <li style="margin-bottom:6px;">
+            Signature image (<strong>PNG format</strong>)
+          </li>
+          <li>
+            <strong>Note:</strong> Do not send photos or images of documents.
+            Only PDF files are accepted (except the signature PNG).
+          </li>
         </ul>
       </div>
 
@@ -139,7 +160,7 @@ export async function sendEmployeeOnboardingInvitation(params: SendEmployeeOnboa
       subtitle: `NPT (${escapedSubsidiary})`,
       bodyHtml,
       footerContactEmail: NPT_HR_EMAIL,
-      footerNote: "Please ensure you include all required documents.",
+      footerNote: "Please ensure you include all required documents and a PNG signature file.",
     });
   }
 
