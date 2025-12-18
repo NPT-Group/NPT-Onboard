@@ -81,10 +81,7 @@ type OnboardingListFilters = {
 function mapOnboardingToListItem(o: TOnboarding, baseUrl: string): OnboardingListItem {
   const inviteTokenEncrypted = (o as any).invite?.tokenEncrypted as string | undefined;
   const inviteToken = inviteTokenEncrypted ? decryptString(inviteTokenEncrypted) : undefined;
-  const inviteUrl =
-    o.method === EOnboardingMethod.DIGITAL && inviteToken
-      ? `${baseUrl}/onboarding?token=${encodeURIComponent(inviteToken)}`
-      : undefined;
+  const inviteUrl = o.method === EOnboardingMethod.DIGITAL && inviteToken ? `${baseUrl}/onboarding?token=${encodeURIComponent(inviteToken)}` : undefined;
 
   return {
     id: (o as any)._id?.toString?.() ?? (o as any).id ?? "",
@@ -453,15 +450,14 @@ export const POST = async (req: NextRequest) => {
       return errorResponse(400, "Invalid onboarding method");
     }
 
-    /* ----------------- Prevent duplicate active onboardings ----------------- */
+    /* ----------------- Prevent duplicate onboardings ----------------- */
     const existing = await OnboardingModel.findOne({
       subsidiary,
       email,
-      status: { $ne: EOnboardingStatus.Terminated },
     }).lean();
 
     if (existing) {
-      return errorResponse(409, "An active onboarding already exists for this email in this subsidiary");
+      return errorResponse(409, "An onboarding already exists for this email in this subsidiary");
     }
 
     const now = new Date();
