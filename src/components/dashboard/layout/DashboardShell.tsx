@@ -53,7 +53,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     ? [
         {
           label: "NAVIGATION",
-          items: [{ href: "/dashboard", label: "Home", Icon: Home }],
+          items: [
+            { href: "/dashboard", label: "Home", Icon: Home },
+            { href: "/dashboard/terminated", label: "Terminated", Icon: Ban },
+          ],
         },
         {
           label: "APPLICATION",
