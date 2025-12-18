@@ -146,7 +146,16 @@ export function EducationSection({ isReadOnly }: EducationSectionProps) {
     prevLevelRef.current = level;
 
     const clear = (path: FieldPath<IndiaOnboardingFormInput>) => {
-      setValue(path as any, undefined as any, { shouldDirty: true, shouldValidate: false });
+      // IMPORTANT:
+      // - On first load of an existing application, we may be "normalizing" stale fields
+      //   that are not applicable for the selected education level. That should NOT mark
+      //   the form as dirty (no user intent yet).
+      // - On subsequent level changes (user interaction), we DO want dirty=true.
+      const isInitialNormalize = prev == null;
+      setValue(path as any, undefined as any, {
+        shouldDirty: !isInitialNormalize,
+        shouldValidate: false,
+      });
     };
 
     if (level === EEducationLevel.PRIMARY_SCHOOL) {
