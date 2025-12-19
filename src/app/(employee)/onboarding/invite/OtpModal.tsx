@@ -34,31 +34,31 @@ export const OtpModal: React.FC<OtpModalProps> = ({
   inviteToken,
   onSubsidiaryResolved,
 }) => {
-  const [otpStep, setOtpStep] = useState<OtpStep>("idle");
+  // IMPORTANT UX:
+  // Users may already have a valid OTP (e.g. they closed the modal by mistake).
+  // So we default to showing the OTP entry UI whenever the modal opens.
+  const [otpStep, setOtpStep] = useState<OtpStep>("code-sent");
   const [otpError, setOtpError] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [otp, setOtp] = useState("");
   const otpInputRef = useRef<HTMLInputElement | null>(null);
 
-  const isInitialOtpStep = otpStep === "idle" || otpStep === "sending";
   const isVerifiedStep = otpStep === "verified";
   const isSending = otpStep === "sending";
   const isVerifying = otpStep === "verifying";
 
-  // Focus OTP input whenever we transition into "code-sent" with modal open.
+  // Focus OTP input whenever the modal opens on the code-entry screen.
   useEffect(() => {
-    if (open && otpStep === "code-sent" && otpInputRef.current) {
+    if (open && !isVerifiedStep && otpInputRef.current) {
       otpInputRef.current.focus();
       otpInputRef.current.select?.();
     }
-  }, [open, otpStep]);
+  }, [open, isVerifiedStep]);
 
   // Reset state when modal is closed.
   useEffect(() => {
     if (!open) {
-      setOtpStep("idle");
       setOtpError(null);
-      setOtp("");
     }
   }, [open]);
 
@@ -104,7 +104,8 @@ export const OtpModal: React.FC<OtpModalProps> = ({
         );
       }
 
-      setOtpStep("idle");
+      // Keep the code-entry UI visible so users can still enter an already-valid OTP.
+      setOtpStep("code-sent");
     }
   }
 
@@ -125,6 +126,10 @@ export const OtpModal: React.FC<OtpModalProps> = ({
       if (err instanceof ApiError) {
         const reason = err.meta && (err.meta as any).reason;
 
+        if (err.status === 400 && reason === "OTP_NOT_ISSUED") {
+          setOtpError("No active verification code found. Please request a new code.");
+          setOtp("");
+        } else
         if (err.status === 400 && reason === "OTP_EXPIRED") {
           setOtpError(
             "This verification code has expired. Please request a new code."
@@ -165,6 +170,8 @@ export const OtpModal: React.FC<OtpModalProps> = ({
     [email]
   );
 
+  const sendLabel = email ? "Resend code" : "Send verification code";
+
   return (
     <Modal
       open={open}
@@ -190,24 +197,12 @@ export const OtpModal: React.FC<OtpModalProps> = ({
       {/* Error Alert: Accessible, aria-live */}
       <OtpErrorBanner message={otpError} />
 
-      {/* Phase 1: Initial State - No code sent yet */}
-      {isInitialOtpStep ? (
-        <div className="mt-4 space-y-4">
-          <p className="text-sm text-slate-600 text-center">
-            We&apos;ll send a 6-digit verification code to the email address
-            used for your invitation when you&apos;re ready.
-          </p>
-          <Button className="w-full" onClick={sendOtp} isLoading={isSending}>
-            Send verification code
-          </Button>
-        </div>
-      ) : !isVerifiedStep ? (
-        // Phase 2: Code Sent - Show input field and verification controls
+      {/* Code Entry: Always visible so users can enter an already-valid OTP */}
+      {!isVerifiedStep ? (
         <form onSubmit={handleVerifyOtp} className="mt-4 space-y-4">
           <p className="text-sm text-slate-600 text-center">
-            We&apos;ve sent a 6-digit verification code
-            {emailDisplay}. Enter the code below to continue to your onboarding
-            form.
+            Enter your 6-digit verification code{emailDisplay}. If you don&apos;t have a code,
+            request one below.
           </p>
 
           {/* OTP Input Field */}
@@ -222,20 +217,22 @@ export const OtpModal: React.FC<OtpModalProps> = ({
             />
           </div>
 
-          {/* Action Buttons: Resend and Verify */}
-          <div className="flex items-center justify-between gap-2">
+          {/* Action Buttons: Send/Resend and Verify */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <Button
               type="button"
-              variant="ghost"
+              variant="secondary"
               onClick={sendOtp}
               disabled={isSending}
+              className="w-full sm:w-auto"
             >
-              {isSending ? "Sending..." : "Resend code"}
+              {isSending ? "Sending..." : sendLabel}
             </Button>
             <Button
               type="submit"
               isLoading={isVerifying}
               disabled={otp.length < 6}
+              className="w-full sm:w-auto"
             >
               Verify &amp; continue
             </Button>

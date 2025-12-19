@@ -117,7 +117,7 @@ export function RHFSelect({
         {/* Dropdown */}
         <div
           className={cn(
-            "absolute z-20 mt-1 w-full rounded-xl border border-slate-200 bg-white text-sm shadow-lg",
+            "absolute z-20 mt-1 w-full max-h-64 overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch] rounded-xl border border-slate-200 bg-white text-sm text-slate-900 shadow-lg",
             "origin-top transform transition-all duration-150 ease-out",
             open ? "scale-100 opacity-100" : "pointer-events-none scale-95 opacity-0"
           )}
@@ -134,8 +134,8 @@ export function RHFSelect({
                 aria-selected={isSelected}
                 onClick={() => handleSelect(opt.value)}
                 className={cn(
-                  "flex w-full cursor-pointer items-center px-3 py-2 text-left",
-                  "hover:bg-slate-50",
+                  "flex w-full cursor-pointer items-center px-3 py-2 text-left text-slate-900",
+                  "hover:bg-slate-50 active:bg-slate-100",
                   isSelected && "bg-slate-100 font-medium"
                 )}
               >

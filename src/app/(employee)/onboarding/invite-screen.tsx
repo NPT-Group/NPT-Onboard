@@ -33,7 +33,7 @@ export function OnboardingInviteScreen({ inviteToken }: Props) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-white">
+    <div className="onboarding flex min-h-screen flex-col bg-white">
       {/* Navigation Bar */}
       <Navbar
         subsidiaryDisplayName={regionName}
@@ -42,7 +42,7 @@ export function OnboardingInviteScreen({ inviteToken }: Props) {
       />
 
       {/* Main hero content */}
-      <main className="flex flex-1 items-stretch justify-center px-4 pb-25 pt-20 sm:px-6 lg:px-8">
+      <main className="flex flex-1 items-stretch justify-center px-4 pb-24 pt-20 sm:px-6 lg:px-8">
         <WelcomeHero
           onContinue={openOtpModal}
           subsidiary={resolvedSubsidiary}

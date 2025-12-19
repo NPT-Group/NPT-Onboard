@@ -305,7 +305,7 @@ export default function OnboardingFormPage() {
   const statusBanner = renderStatusBanner();
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="onboarding min-h-screen bg-slate-50">
       <Navbar
         subsidiaryDisplayName={regionName}
         subsidiaryCode={effectiveSubsidiary}

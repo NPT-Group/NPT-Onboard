@@ -33,8 +33,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     title: "NPT Onboard",
-    description:
-      "Secure employee onboarding platform for NPT subsidiaries.",
+    description: "Secure employee onboarding platform for NPT subsidiaries.",
     siteName: "NPT Onboard",
     images: [
       {
@@ -48,8 +47,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary",
     title: "NPT Onboard",
-    description:
-      "Secure employee onboarding platform for NPT subsidiaries.",
+    description: "Secure employee onboarding platform for NPT subsidiaries.",
     images: ["/assets/logos/NPTlogo.png"],
   },
 };
@@ -60,6 +58,8 @@ export const viewport = {
   viewportFit: "cover",
   themeColor: "#0f172a",
   colorScheme: "light dark",
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -69,7 +69,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
         <SessionWrapper>{children}</SessionWrapper>
       </body>
     </html>

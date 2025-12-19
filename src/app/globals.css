@@ -20,12 +20,111 @@
 html,
 body {
   height: 100%;
+  /* Force light-styled native form controls (checkboxes/radios) for the employee UI on mobile.
+     Dashboard overrides this via html[data-dash-theme]. */
+  color-scheme: light;
+  min-height: 100%;
 }
 
 /* App-wide overlay + modal defaults (safe for all areas). */
 :root {
   --app-overlay: rgba(15, 23, 42, 0.40);
   --app-modal-surface: #ffffff;
+  --npt-red: #c31c20;
+}
+
+/* Theme native form controls consistently (esp. iOS/Android checkboxes). */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--npt-red);
+}
+
+/* =========================
+ * iOS viewport stability (safe fallback)
+ * ========================= */
+@supports (height: -webkit-fill-available) {
+  html,
+  body {
+    height: -webkit-fill-available;
+  }
+}
+
+/* =========================
+ * Mobile zoom prevention (iOS Safari)
+ * - iOS zooms inputs when font-size < 16px
+ * - Scope to employee onboarding only
+ * ========================= */
+@media (pointer: coarse) {
+  .onboarding input,
+  .onboarding select,
+  .onboarding textarea {
+    font-size: 16px;
+  }
+
+  /* Onboarding modals are portalled to <body>, so we also scope via Modal context. */
+  #modal-root[data-modal-context="onboarding"] input,
+  #modal-root[data-modal-context="onboarding"] select,
+  #modal-root[data-modal-context="onboarding"] textarea {
+    font-size: 16px;
+  }
+}
+
+/* =========================
+ * Date input cross-platform styling (employee onboarding)
+ * - iOS Safari can hide borders/shadows/icons on input[type=date]
+ * - Normalize appearance and keep the field visually "present"
+ * ========================= */
+@layer components {
+  .onboarding input[type="date"] {
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: #ffffff;
+    border: 1px solid #d1d5db; /* slate/gray-300 */
+    border-radius: 0.5rem; /* rounded-lg */
+    padding: 0.5rem 2.25rem 0.5rem 0.75rem; /* space for icon on the right */
+    line-height: 1.5rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); /* shadow-sm-ish */
+  }
+
+  .onboarding input[type="date"]:focus {
+    outline: none;
+    border-color: #94a3b8; /* slate-400 */
+    box-shadow: 0 0 0 3px rgba(203, 213, 225, 0.75); /* slate-300 ring */
+  }
+
+  /* WebKit date field text parts */
+  .onboarding input[type="date"]::-webkit-datetime-edit {
+    color: #0f172a; /* slate-900 */
+  }
+  .onboarding input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+    padding: 0;
+  }
+  .onboarding input[type="date"]::-webkit-datetime-edit-text {
+    color: #64748b; /* slate-500 separators */
+  }
+  .onboarding input[type="date"]::-webkit-datetime-edit-month-field,
+  .onboarding input[type="date"]::-webkit-datetime-edit-day-field,
+  .onboarding input[type="date"]::-webkit-datetime-edit-year-field {
+    color: #0f172a; /* slate-900 */
+  }
+
+  /* Visible calendar icon (WebKit) */
+  .onboarding input[type="date"]::-webkit-calendar-picker-indicator {
+    opacity: 1;
+    display: block;
+    background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='4' width='18' height='18' rx='2' ry='2'/><line x1='16' y1='2' x2='16' y2='6'/><line x1='8' y1='2' x2='8' y2='6'/><line x1='3' y1='10' x2='21' y2='10'/></svg>")
+      no-repeat center;
+    width: 1.75rem;
+    height: 1.75rem;
+    cursor: pointer;
+    filter: none;
+  }
+
+  /* Firefox calendar icon */
+  .onboarding input[type="date"]::-moz-calendar-picker-indicator {
+    color: #64748b;
+    opacity: 1;
+  }
 }
 
 /* ================================================================== */

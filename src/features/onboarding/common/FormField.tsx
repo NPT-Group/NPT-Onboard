@@ -35,7 +35,11 @@ export function FormField({
   const showRequired = required ?? inferredRequired;
 
   return (
-    <div className={cn("space-y-1.5", className)}>
+    // IMPORTANT:
+    // Many sections use CSS grid. Grid items default to min-width:auto, which can cause
+    // children (inputs, file cards, etc.) to overflow horizontally on narrow screens.
+    // `min-w-0` ensures fields can shrink within their grid cell.
+    <div className={cn("space-y-1.5 w-full min-w-0", className)}>
       {label && (
         <Label
           htmlFor={htmlFor}

@@ -174,37 +174,36 @@ export function RHFFileUpload({
         {hasAsset ? (
           <div
             className={cn(
-              "mt-1 relative flex items-center justify-between rounded-lg border bg-white px-4 py-3",
+              "mt-1 relative grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border bg-white px-4 py-3",
               hasError ? "border-red-500" : "border-slate-300"
             )}
           >
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-8 items-center justify-center rounded-md bg-red-50 border border-red-200 text-xs font-semibold text-red-700">
-                {isPdf ? "PDF" : "FILE"}
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium text-slate-800">
-                  Document uploaded
-                </span>
-                <span className="text-xs text-slate-500 truncate max-w-[220px]">
-                  {asset?.originalName || "PDF file"}
-                </span>
+            <div className="flex h-10 w-8 items-center justify-center rounded-md bg-red-50 border border-red-200 text-xs font-semibold text-red-700">
+              {isPdf ? "PDF" : "FILE"}
+            </div>
 
-                <button
-                  type="button"
-                  onClick={handleView}
-                  className="mt-0.5 text-left text-xs text-sky-700 hover:underline disabled:opacity-60"
-                >
-                  View / download
-                </button>
-              </div>
+            <div className="min-w-0 flex flex-col">
+              <span className="text-sm font-medium text-slate-800">
+                Document uploaded
+              </span>
+              <span className="text-xs text-slate-500 truncate max-w-full">
+                {asset?.originalName || "PDF file"}
+              </span>
+
+              <button
+                type="button"
+                onClick={handleView}
+                className="mt-0.5 w-fit text-left text-xs text-sky-700 hover:underline disabled:opacity-60"
+              >
+                View / download
+              </button>
             </div>
 
             <button
               type="button"
               onClick={handleRemove}
               disabled={disabled || status === "uploading" || status === "deleting"}
-              className="ml-3 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs hover:bg-red-600 disabled:opacity-60"
+              className="shrink-0 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs hover:bg-red-600 disabled:opacity-60"
               aria-label="Remove uploaded document"
             >
               <X size={14} />

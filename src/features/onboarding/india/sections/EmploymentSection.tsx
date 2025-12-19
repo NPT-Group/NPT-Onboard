@@ -109,7 +109,7 @@ export function EmploymentSection({
           <div className="mt-2 flex justify-center">
             <div
               className={cn(
-                "inline-flex overflow-hidden rounded-full border",
+                "flex w-full max-w-xs overflow-hidden rounded-full border",
                 "border-slate-300"
               )}
             >
@@ -126,7 +126,7 @@ export function EmploymentSection({
                     disabled={isReadOnly}
                     onClick={() => handleTogglePreviousEmployment(opt.value)}
                     className={cn(
-                      "w-28 px-4 py-2 text-sm font-medium transition-all",
+                      "flex-1 min-w-0 px-4 py-2 text-sm font-medium transition-all",
                       idx > 0 && "border-l border-slate-300",
                       isActive
                         ? "bg-slate-900 text-white"

@@ -46,7 +46,7 @@ export function GovernmentIdsSection({ isReadOnly, docId }: Props) {
             disabled={isReadOnly}
           />
 
-          <div className="sm:col-span-2">
+          <div className="sm:col-span-2 w-full min-w-0">
             <RHFFileUpload
               name={`${base}.aadhaar.file`}
               label="Aadhaar card (PDF)"
