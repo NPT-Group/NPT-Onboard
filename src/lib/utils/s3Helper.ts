@@ -277,6 +277,22 @@ export function collectS3KeysDeep(input: unknown): string[] {
   return Array.from(out);
 }
 
+/**
+ * Diff two arbitrary objects and return S3 keys present in `before` but missing in `after`.
+ * - Uses `collectS3KeysDeep` to find all keys in both objects.
+ * - Excludes temp keys via `isTempKey`.
+ */
+export function diffS3KeysToDelete(before: unknown, after: unknown): string[] {
+  const beforeKeys = new Set(collectS3KeysDeep(before));
+  const afterKeys = new Set(collectS3KeysDeep(after));
+
+  const out: string[] = [];
+  for (const k of beforeKeys) {
+    if (!afterKeys.has(k) && !isTempKey(k)) out.push(k);
+  }
+  return out;
+}
+
 /* ───────────── Client-side presigned upload convenience ───────────── */
 
 /**

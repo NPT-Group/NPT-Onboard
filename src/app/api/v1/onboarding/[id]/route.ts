@@ -8,7 +8,7 @@ import { parseJsonBody } from "@/lib/utils/reqParser";
 import { clearOnboardingCookieHeader, requireOnboardingSession } from "@/lib/utils/auth/onboardingSession";
 import { createOnboardingContext, createOnboardingAuditLogSafe } from "@/lib/utils/onboardingUtils";
 
-import { makeEntityFinalPrefix, finalizeAssetWithCache, deleteS3Objects } from "@/lib/utils/s3Helper";
+import { makeEntityFinalPrefix, finalizeAssetWithCache, deleteS3Objects, diffS3KeysToDelete } from "@/lib/utils/s3Helper";
 
 import { ES3Namespace, ES3Folder } from "@/types/aws.types";
 import { EOnboardingStatus, type IIndiaOnboardingFormData } from "@/types/onboarding.types";
@@ -209,6 +209,8 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
   // Collector of finalized S3 keys to delete if something goes wrong
   const movedFinalKeys: string[] = [];
   let saved = false;
+  const replacedKeysToDelete: string[] = [];
+
   try {
     await connectDB();
 
@@ -221,6 +223,8 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
     if (onboarding.subsidiary !== ESubsidiary.INDIA) {
       return errorResponse(400, "Only INDIA subsidiary onboarding is supported at this time");
     }
+    // Deep clone old form data for diffing later
+    const oldIndiaFormData = onboarding.indiaFormData ? JSON.parse(JSON.stringify(onboarding.indiaFormData)) : undefined;
 
     // Ensure employee is allowed to edit in current status
     const prevStatus: EOnboardingStatus = onboarding.status;
@@ -310,6 +314,10 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
       return errorResponse(502, e?.message || "Unable to determine your city/state/country from GPS. Please try again.");
     }
 
+    if (oldIndiaFormData) {
+      replacedKeysToDelete.push(...diffS3KeysToDelete(oldIndiaFormData, finalizedIndiaFormData));
+    }
+
     // Mutate onboarding document
     onboarding.indiaFormData = finalizedIndiaFormData;
     onboarding.status = nextStatus;
@@ -322,6 +330,12 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
     await onboarding.validate();
     await onboarding.save();
     saved = true;
+
+    if (replacedKeysToDelete.length) {
+      deleteS3Objects(replacedKeysToDelete).catch((e) => {
+        console.warn("Failed to delete replaced S3 keys during employee POST:", replacedKeysToDelete, e);
+      });
+    }
 
     // Build sanitized context for frontend
     const onboardingObj = onboarding.toObject({ virtuals: true, getters: true });

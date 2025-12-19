@@ -6,7 +6,7 @@ import { errorResponse, successResponse } from "@/lib/utils/apiResponse";
 import { guard } from "@/lib/utils/auth/authUtils";
 import { parseJsonBody } from "@/lib/utils/reqParser";
 
-import { makeEntityFinalPrefix, finalizeAssetWithCache, deleteS3Objects, collectS3KeysDeep } from "@/lib/utils/s3Helper";
+import { makeEntityFinalPrefix, finalizeAssetWithCache, deleteS3Objects, collectS3KeysDeep, diffS3KeysToDelete } from "@/lib/utils/s3Helper";
 
 import { OnboardingModel } from "@/mongoose/models/Onboarding";
 
@@ -190,6 +190,7 @@ export const GET = async (_req: NextRequest, { params }: { params: Promise<{ id:
 export const PUT = async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
   const movedFinalKeys: string[] = [];
   let saved = false;
+  const replacedKeysToDelete: string[] = [];
 
   try {
     await connectDB();
@@ -223,11 +224,17 @@ export const PUT = async (req: NextRequest, { params }: { params: Promise<{ id: 
         return errorResponse(400, "indiaFormData is required for India onboardings");
       }
 
+      const oldIndiaFormData = onboarding.indiaFormData ? JSON.parse(JSON.stringify(onboarding.indiaFormData)) : undefined;
+
       // Validate structure & business rules
       validateIndiaOnboardingForm(body.indiaFormData);
 
       // Finalize S3 assets (temp -> final) with rollback collector
       const finalizedIndiaFormData = await finalizeIndiaOnboardingAssetsForAdmin(onboarding._id?.toString?.() ?? onboardingId, body.indiaFormData, movedFinalKeys);
+
+      if (oldIndiaFormData) {
+        replacedKeysToDelete.push(...diffS3KeysToDelete(oldIndiaFormData, finalizedIndiaFormData));
+      }
 
       onboarding.indiaFormData = finalizedIndiaFormData;
     } else {
@@ -259,6 +266,13 @@ export const PUT = async (req: NextRequest, { params }: { params: Promise<{ id: 
     await onboarding.validate();
     await onboarding.save();
     saved = true;
+
+    if (replacedKeysToDelete.length) {
+      // best-effort cleanup; don't fail request if this fails
+      deleteS3Objects(replacedKeysToDelete).catch((e) => {
+        console.warn("Failed to delete replaced S3 keys during admin PUT:", replacedKeysToDelete, e);
+      });
+    }
 
     const obj = onboarding.toObject({ virtuals: true, getters: true });
     const responsePayload = {
