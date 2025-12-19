@@ -10,7 +10,7 @@ export function MissingTokenScreen() {
   const regionName = content.name.replace(/^NPT\s+/i, "");
 
   return (
-    <div className="flex min-h-screen flex-col bg-white">
+    <div className="onboarding flex min-h-screen flex-col bg-white">
       <Navbar
         subsidiaryDisplayName={regionName}
         subsidiaryCode={ESubsidiary.INDIA}

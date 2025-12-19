@@ -60,6 +60,13 @@ input[type="radio"] {
   .onboarding textarea {
     font-size: 16px;
   }
+
+  /* Onboarding modals are portalled to <body>, so we also scope via Modal context. */
+  #modal-root[data-modal-context="onboarding"] input,
+  #modal-root[data-modal-context="onboarding"] select,
+  #modal-root[data-modal-context="onboarding"] textarea {
+    font-size: 16px;
+  }
 }
 
 /* =========================

@@ -28,6 +28,7 @@ export function Modal({
   const portalRootRef = useRef<HTMLElement | null>(null);
   const inertedElsRef = useRef<Array<{ el: HTMLElement; inert: boolean; ariaHidden: string | null }>>([]);
   const portalThemeSnapshotRef = useRef<Array<{ name: string; prev: string }>>([]);
+  const portalContextSnapshotRef = useRef<{ prev: string | null } | null>(null);
   const [mounted, setMounted] = useState(false);
 
   const canClose = Boolean(onClose);
@@ -71,6 +72,19 @@ export function Modal({
     // dashboard CSS variables onto the portal root while a modal is open.
     const portalRoot = portalRootRef.current;
     const dashboardRoot = document.querySelector(".dashboard-root") as HTMLElement | null;
+    const onboardingRoot = document.querySelector(".onboarding") as HTMLElement | null;
+
+    // Tag the portal with a context so global CSS can scope mobile fixes correctly
+    // even though the modal is rendered outside the page subtree.
+    if (portalRoot) {
+      portalContextSnapshotRef.current = {
+        prev: portalRoot.getAttribute("data-modal-context"),
+      };
+      if (dashboardRoot) portalRoot.setAttribute("data-modal-context", "dashboard");
+      else if (onboardingRoot) portalRoot.setAttribute("data-modal-context", "onboarding");
+      else portalRoot.removeAttribute("data-modal-context");
+    }
+
     if (portalRoot && dashboardRoot) {
       const computed = window.getComputedStyle(dashboardRoot);
       const varNames = [
@@ -202,6 +216,14 @@ export function Modal({
         portalThemeSnapshotRef.current = [];
       }
 
+      // Restore portal root modal context marker.
+      if (portalRootRef.current && portalContextSnapshotRef.current) {
+        const prev = portalContextSnapshotRef.current.prev;
+        if (prev == null) portalRootRef.current.removeAttribute("data-modal-context");
+        else portalRootRef.current.setAttribute("data-modal-context", prev);
+        portalContextSnapshotRef.current = null;
+      }
+
       // Restore inert + aria-hidden on background content.
       for (const rec of inertedElsRef.current) {
         try {
@@ -267,7 +289,10 @@ export function Modal({
             ref={dialogRef}
             tabIndex={-1}
             className={cn(
-              "w-full max-w-sm rounded-2xl bg-[color:var(--app-modal-surface)] p-6 shadow-xl",
+              // Make modals stable on small viewports:
+              // - Constrain height so content never renders off-screen
+              // - Allow internal scroll with momentum on iOS
+              "w-full max-w-sm max-h-[calc(100dvh-3rem)] overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] rounded-2xl bg-[color:var(--app-modal-surface)] p-6 shadow-xl",
               className
             )}
             onClick={(e) => e.stopPropagation()}

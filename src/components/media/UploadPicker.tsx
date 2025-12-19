@@ -4,6 +4,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import Image from "next/image";
 import { FileUp } from "lucide-react";
+import { Modal } from "@/components/ui/modal";
 
 /* ───────────────── Types ───────────────── */
 
@@ -145,16 +146,8 @@ function PdfGuidanceModal({
   }, []);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      aria-modal="true"
-      role="dialog"
-      aria-labelledby={titleId}
-    >
-      <div className="fixed inset-0 bg-black/40" onClick={onClose} />
-
-      <div className="relative z-10 w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-        <h2 id={titleId} className="text-lg font-semibold text-slate-900">
+    <Modal open={true} onClose={onClose} ariaLabel="PDF upload guidance" className="max-w-md">
+      <h2 id={titleId} className="text-lg font-semibold text-slate-900">
           Use a clear PDF scan
         </h2>
 
@@ -176,7 +169,7 @@ function PdfGuidanceModal({
           <ul className="list-disc list-inside space-y-1">
             <li>CamScanner (recommended)</li>
             <li>Apple Notes → Scan Document (iPhone)</li>
-            <li>GYour phone's built-in "Scan" option in Files or Camera</li>
+            <li>Your phone&apos;s built-in "Scan" option in Files or Camera</li>
           </ul>
         </div>
 
@@ -243,7 +236,6 @@ function PdfGuidanceModal({
             Continue to upload PDF
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

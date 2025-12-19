@@ -62,8 +62,8 @@ export function RHFPhoneInput({
             error={errorMessage}
             className={containerClassName}
           >
-            <div className="flex gap-2">
-              <div className="mt-1 flex items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-600">
+            <div className="flex w-full min-w-0 gap-2">
+              <div className="mt-1 flex shrink-0 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-600">
                 {countryCodePrefix}
               </div>
 
@@ -80,7 +80,7 @@ export function RHFPhoneInput({
                 inputMode="numeric"
                 placeholder={placeholder}
                 className={cn(
-                  "mt-1 flex-1 text-sm",
+                  "mt-1 flex-1 min-w-0 text-sm",
                   hasError &&
                     "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-200",
                   disabled &&

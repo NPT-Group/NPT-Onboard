@@ -68,9 +68,31 @@ export function RHFDigitsInput({
             error={errorMessage}
             className={containerClassName}
           >
-            <div className={cn("flex gap-2", leftAddon ? "items-start" : "")}>
-              {leftAddon}
-
+            {leftAddon ? (
+              <div className="flex w-full min-w-0 items-start gap-2">
+                {leftAddon}
+                <Input
+                  id={String(name)}
+                  data-field={String(name)}
+                  name={field.name}
+                  ref={field.ref}
+                  aria-invalid={hasError || undefined}
+                  value={displayValue}
+                  onChange={handleChange}
+                  onBlur={field.onBlur}
+                  disabled={disabled}
+                  inputMode="numeric"
+                  placeholder={placeholder}
+                  className={cn(
+                    "mt-1 text-sm flex-1 min-w-0",
+                    hasError &&
+                      "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-200",
+                    disabled &&
+                      "bg-slate-50 text-slate-400 cursor-not-allowed shadow-none"
+                  )}
+                />
+              </div>
+            ) : (
               <Input
                 id={String(name)}
                 data-field={String(name)}
@@ -85,14 +107,13 @@ export function RHFDigitsInput({
                 placeholder={placeholder}
                 className={cn(
                   "mt-1 text-sm",
-                  Boolean(leftAddon) && "flex-1",
                   hasError &&
                     "border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-200",
                   disabled &&
                     "bg-slate-50 text-slate-400 cursor-not-allowed shadow-none"
                 )}
               />
-            </div>
+            )}
           </FormField>
         );
       }}

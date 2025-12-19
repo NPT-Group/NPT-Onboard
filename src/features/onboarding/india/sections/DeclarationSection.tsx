@@ -270,7 +270,7 @@ export function DeclarationSection({
                 className="w-full"
                 errorClassName="w-full text-center"
               >
-                <label className="flex items-start justify-center gap-3">
+                <label className="flex w-full min-w-0 items-start justify-center gap-3">
                   <input
                     id="declaration.hasAcceptedDeclaration"
                     type="checkbox"
@@ -288,7 +288,7 @@ export function DeclarationSection({
                     disabled={isReadOnly}
                     data-field="declaration.hasAcceptedDeclaration"
                   />
-                  <span className="text-sm text-slate-800 max-w-[38rem]">
+                  <span className="min-w-0 text-sm text-slate-800 max-w-full sm:max-w-[38rem]">
                     I accept the declaration and confirm my information is true
                     and complete.
                     {acceptRequired && (

@@ -258,7 +258,7 @@ export function OnboardingDetailsClient({
                     </div>
                   </div>
 
-                  <div className="w-full sm:w-[320px]">
+                  <div className="w-full sm:max-w-[320px]">
                     <OnboardingProgress status={status} method={method} />
                   </div>
                 </div>
