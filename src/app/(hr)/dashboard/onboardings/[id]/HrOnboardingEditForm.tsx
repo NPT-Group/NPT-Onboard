@@ -156,7 +156,7 @@ export function HrOnboardingEditForm({
   });
 
   const {
-    formState: { isDirty, errors },
+    formState: { isDirty },
     reset,
     getValues,
     trigger,
@@ -197,8 +197,6 @@ export function HrOnboardingEditForm({
 
     return isIndiaRequiredField(path);
   };
-
-  const errorCount = useMemo(() => countErrors(errors), [errors]);
 
   const sectionRefs = useRef<SectionRefs<TabKey>>({
     summary: null,
@@ -266,6 +264,9 @@ export function HrOnboardingEditForm({
       // Jump + scroll to the first section with an error (mirrors employee behavior).
       setTimeout(() => {
         const errs = methods.formState.errors as any;
+        const n = countErrors(errs);
+        setBarError(n > 0 ? `Fix ${n} field(s) before saving.` : "Fix validation errors before saving.");
+
         const first = findFirstErrorAcrossSteps(stepsToValidate as any, errs as any) as any;
         const stepId = first?.stepId as TabKey | undefined;
         const errorPath = first?.errorPath as string | null | undefined;
@@ -281,12 +282,6 @@ export function HrOnboardingEditForm({
           }
         }
       }, 0);
-
-      setBarError(
-        errorCount > 0
-          ? `Fix ${errorCount} field(s) before saving.`
-          : "Fix validation errors before saving."
-      );
       return;
     }
 
