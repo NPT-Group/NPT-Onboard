@@ -82,11 +82,13 @@ export function EmploymentSection({
     <div className="rounded-2xl px-4 py-6 shadow-sm sm:px-6 sm:py-7">
       <header className="mb-6 text-center">
         <h1 className="text-lg font-semibold tracking-tight text-slate-900">
-          Employment history
+          Employment history (last 3 years)
         </h1>
         <p className="mt-1 text-sm text-slate-600">
-          Tell us about your most recent work experience. You can add up to 3
-          previous roles.
+          Please provide your work/occupation history for the last 3 years. If
+          one role doesn&apos;t cover the full 3 years, add additional entries (up
+          to 3 total). If you were a student, unemployed, or in a non-traditional
+          role during any part of this period, you can include that as an entry.
         </p>
       </header>
 

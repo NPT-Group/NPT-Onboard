@@ -122,6 +122,17 @@ export const personalInfoSchema = new Schema<IPersonalInfo>(
 
     emergencyContactName: { type: String, required: true },
     emergencyContactNumber: { type: String, required: true },
+
+    reference1Name: { type: String, required: true },
+    reference1PhoneNumber: { type: String, required: true },
+    reference2Name: { type: String, required: true },
+    reference2PhoneNumber: { type: String, required: true },
+
+    hasConsentToContactReferencesOrEmergencyContact: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
   },
   { _id: false }
 );

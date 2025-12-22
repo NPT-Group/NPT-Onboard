@@ -34,6 +34,11 @@ export const PERSONAL_INFO_FIELD_PATHS: FieldPath<IndiaOnboardingFormInput>[] =
     "personalInfo.phoneMobile",
     "personalInfo.emergencyContactName",
     "personalInfo.emergencyContactNumber",
+    "personalInfo.reference1Name",
+    "personalInfo.reference1PhoneNumber",
+    "personalInfo.reference2Name",
+    "personalInfo.reference2PhoneNumber",
+    "personalInfo.hasConsentToContactReferencesOrEmergencyContact",
   ];
 
 type PersonalInfoSectionProps = {
@@ -258,7 +263,7 @@ export function PersonalInfoSection({
           />
           <RHFTextInput
             name="personalInfo.residentialAddress.postalCode"
-            label="Postal code"
+            label="PIN code"
             disabled={isReadOnly}
           />
         </div>
@@ -303,6 +308,47 @@ export function PersonalInfoSection({
           <RHFPhoneInput
             name="personalInfo.emergencyContactNumber"
             label="Emergency contact number"
+            disabled={isReadOnly}
+          />
+        </div>
+
+        <div className="pt-2">
+          <h2 className="text-sm font-semibold text-slate-900">References</h2>
+          <p className="mt-1 text-xs text-slate-600">
+            Please provide two references we may contact.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <RHFTextInput
+            name="personalInfo.reference1Name"
+            label="Reference #1 name"
+            disabled={isReadOnly}
+          />
+          <RHFPhoneInput
+            name="personalInfo.reference1PhoneNumber"
+            label="Reference #1 phone number"
+            disabled={isReadOnly}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <RHFTextInput
+            name="personalInfo.reference2Name"
+            label="Reference #2 name"
+            disabled={isReadOnly}
+          />
+          <RHFPhoneInput
+            name="personalInfo.reference2PhoneNumber"
+            label="Reference #2 phone number"
+            disabled={isReadOnly}
+          />
+        </div>
+
+        <div className="flex items-center pt-2">
+          <RHFCheckbox
+            name="personalInfo.hasConsentToContactReferencesOrEmergencyContact"
+            label="I confirm that I have permission for NPT to contact my references and/or emergency contact."
             disabled={isReadOnly}
           />
         </div>

@@ -46,62 +46,95 @@ const requiredFileAsset = (message: string) =>
 /* Personal Info (IPersonalInfo)                                      */
 /* ------------------------------------------------------------------ */
 
-const personalInfoSchema = z.object({
-  // Backend rejects whitespace-only strings; enforce trim here so UI can't pass invalid payloads.
-  firstName: requiredTrimmedString("First name is required."),
-  lastName: requiredTrimmedString("Last name is required."),
-  email: z.string().trim().min(1, "Email is required.").email("Enter a valid email address."),
-  gender: z.string().refine((val): val is EGender => val === EGender.MALE || val === EGender.FEMALE, { message: "Gender is required." }),
+const personalInfoSchema = z
+  .object({
+    // Backend rejects whitespace-only strings; enforce trim here so UI can't pass invalid payloads.
+    firstName: requiredTrimmedString("First name is required."),
+    lastName: requiredTrimmedString("Last name is required."),
+    email: z.string().trim().min(1, "Email is required.").email("Enter a valid email address."),
+    gender: z.string().refine((val): val is EGender => val === EGender.MALE || val === EGender.FEMALE, { message: "Gender is required." }),
 
-  dateOfBirth: requiredDateString("Date of birth is required.", "Enter a valid date of birth."),
-  canProvideProofOfAge: z.boolean().refine((v) => v === true, {
-    message: "You must confirm that you can provide proof of age.",
-  }),
-  residentialAddress: z
-    .object({
-      addressLine1: requiredTrimmedString("Address line 1 is required."),
-      // Frontend requirement (product): require full address details
-      city: requiredTrimmedString("City is required."),
-      state: requiredTrimmedString("State / Province is required."),
-      postalCode: requiredTrimmedString("Postal code is required."),
-      fromDate: requiredDateString("From date is required.", "Enter a valid from date."),
-      toDate: requiredDateString("Until date is required.", "Enter a valid until date."),
-    })
-    .superRefine((addr, ctx) => {
-      // Industry-standard: prevent inverted ranges (backend doesn't enforce, but improves UX)
-      const from = new Date(addr.fromDate).valueOf();
-      const to = new Date(addr.toDate).valueOf();
-      if (!Number.isNaN(from) && !Number.isNaN(to) && to < from) {
-        ctx.addIssue({
-          path: ["toDate"],
-          code: z.ZodIssueCode.custom,
-          message: "Until date must be on or after the from date.",
-        });
-      }
+    dateOfBirth: requiredDateString("Date of birth is required.", "Enter a valid date of birth."),
+    canProvideProofOfAge: z.boolean().refine((v) => v === true, {
+      message: "You must confirm that you can provide proof of age.",
     }),
-  phoneHome: z.preprocess(
-    emptyToUndefined,
-    z
+    residentialAddress: z
+      .object({
+        addressLine1: requiredTrimmedString("Address line 1 is required."),
+        // Frontend requirement (product): require full address details
+        city: requiredTrimmedString("City is required."),
+        state: requiredTrimmedString("State / Province is required."),
+        postalCode: requiredTrimmedString("PIN code is required."),
+        fromDate: requiredDateString("From date is required.", "Enter a valid from date."),
+        toDate: requiredDateString("Until date is required.", "Enter a valid until date."),
+      })
+      .superRefine((addr, ctx) => {
+        // Industry-standard: prevent inverted ranges (backend doesn't enforce, but improves UX)
+        const from = new Date(addr.fromDate).valueOf();
+        const to = new Date(addr.toDate).valueOf();
+        if (!Number.isNaN(from) && !Number.isNaN(to) && to < from) {
+          ctx.addIssue({
+            path: ["toDate"],
+            code: z.ZodIssueCode.custom,
+            message: "Until date must be on or after the from date.",
+          });
+        }
+      }),
+    phoneHome: z.preprocess(
+      emptyToUndefined,
+      z
+        .string()
+        .regex(/^\d{10}$/, { message: "Enter a valid 10-digit phone number." })
+        .optional()
+    ),
+
+    phoneMobile: z
       .string()
-      .regex(/^\d{10}$/, { message: "Enter a valid 10-digit phone number." })
-      .optional()
-  ),
+      .trim()
+      .min(1, "Mobile number is required.")
+      .regex(/^\d{10}$/, { message: "Enter a valid 10-digit mobile number." }),
 
-  phoneMobile: z
-    .string()
-    .trim()
-    .min(1, "Mobile number is required.")
-    .regex(/^\d{10}$/, { message: "Enter a valid 10-digit mobile number." }),
+    emergencyContactName: z.string().trim().min(1, "Emergency contact name is required."),
+    emergencyContactNumber: z
+      .string()
+      .trim()
+      .min(1, "Emergency contact number is required.")
+      .regex(/^\d{10}$/, {
+        message: "Enter a valid 10-digit emergency contact number.",
+      }),
+    reference1Name: z.string().trim().min(1, "Reference #1 name is required."),
+    reference1PhoneNumber: z
+      .string()
+      .trim()
+      .min(1, "Reference #1 phone number is required.")
+      .regex(/^\d{10}$/, {
+        message: "Enter a valid 10-digit reference #1 phone number.",
+      }),
+    reference2Name: z.string().trim().min(1, "Reference #2 name is required."),
+    reference2PhoneNumber: z
+      .string()
+      .trim()
+      .min(1, "Reference #2 phone number is required.")
+      .regex(/^\d{10}$/, {
+        message: "Enter a valid 10-digit reference #2 phone number.",
+      }),
 
-  emergencyContactName: z.string().trim().min(1, "Emergency contact name is required."),
-  emergencyContactNumber: z
-    .string()
-    .trim()
-    .min(1, "Emergency contact number is required.")
-    .regex(/^\d{10}$/, {
-      message: "Enter a valid 10-digit emergency contact number.",
+    hasConsentToContactReferencesOrEmergencyContact: z.boolean().refine((v) => v === true, {
+      message: "You must confirm you have permission for us to contact your references and/or emergency contact.",
     }),
-});
+  })
+  .superRefine((info, ctx) => {
+    // Cross-field rule: user's mobile number cannot match emergency contact number.
+    const mobile = String(info.phoneMobile ?? "").trim();
+    const emergency = String(info.emergencyContactNumber ?? "").trim();
+    if (mobile && emergency && mobile === emergency) {
+      ctx.addIssue({
+        path: ["emergencyContactNumber"],
+        code: z.ZodIssueCode.custom,
+        message: "Emergency contact number must be different from your mobile number.",
+      });
+    }
+  });
 
 /* ------------------------------------------------------------------ */
 /* Government IDs (IIndiaGovernmentIds)                               */

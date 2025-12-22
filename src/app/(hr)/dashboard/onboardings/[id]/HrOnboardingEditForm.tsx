@@ -76,7 +76,11 @@ export function HrOnboardingEditForm({
   const steps = useMemo(() => {
     const defs: StepDef<IndiaOnboardingFormInput, TabKey>[] = [
       { id: "summary", label: "Summary", fieldPaths: [] as any },
-      { id: "personal", label: "Personal info", fieldPaths: PERSONAL_INFO_FIELD_PATHS as any },
+      {
+        id: "personal",
+        label: "Personal info",
+        fieldPaths: PERSONAL_INFO_FIELD_PATHS as any,
+      },
       {
         id: "governmentIds",
         label: "Government IDs",
@@ -105,7 +109,11 @@ export function HrOnboardingEditForm({
           "governmentIds.driversLicense.backFile",
         ],
       },
-      { id: "education", label: "Education", fieldPaths: EDUCATION_FIELD_PATHS as any },
+      {
+        id: "education",
+        label: "Education",
+        fieldPaths: EDUCATION_FIELD_PATHS as any,
+      },
       {
         id: "employment",
         label: "Employment",
@@ -126,7 +134,11 @@ export function HrOnboardingEditForm({
           "bankDetails.voidCheque",
         ],
       },
-      { id: "declaration", label: "Declaration", fieldPaths: DECLARATION_FIELD_PATHS as any },
+      {
+        id: "declaration",
+        label: "Declaration",
+        fieldPaths: DECLARATION_FIELD_PATHS as any,
+      },
     ];
     return defs;
   }, []);
@@ -258,7 +270,9 @@ export function HrOnboardingEditForm({
             navigateTo(idx);
             if (errorPath) {
               setTimeout(() => {
-                scrollToField(errorPath, stepId, sectionRefs as any, { delayMs: 0 });
+                scrollToField(errorPath, stepId, sectionRefs as any, {
+                  delayMs: 0,
+                });
               }, 80);
             }
           }
