@@ -51,7 +51,8 @@ const requiredFileAsset = (message: string) =>
 /* Personal Info (IPersonalInfo)                                      */
 /* ------------------------------------------------------------------ */
 
-const personalInfoSchema = z.object({
+const personalInfoSchema = z
+  .object({
   // Backend rejects whitespace-only strings; enforce trim here so UI can't pass invalid payloads.
   firstName: requiredTrimmedString("First name is required."),
   lastName: requiredTrimmedString("Last name is required."),
@@ -80,7 +81,7 @@ const personalInfoSchema = z.object({
     // Frontend requirement (product): require full address details
     city: requiredTrimmedString("City is required."),
     state: requiredTrimmedString("State / Province is required."),
-    postalCode: requiredTrimmedString("Postal code is required."),
+    postalCode: requiredTrimmedString("PIN code is required."),
     fromDate: requiredDateString("From date is required.", "Enter a valid from date."),
     toDate: requiredDateString("Until date is required.", "Enter a valid until date."),
   })
@@ -121,7 +122,46 @@ const personalInfoSchema = z.object({
     .regex(/^\d{10}$/, {
       message: "Enter a valid 10-digit emergency contact number.",
     }),
-});
+  reference1Name: z
+    .string()
+    .trim()
+    .min(1, "Reference #1 name is required."),
+  reference1PhoneNumber: z
+    .string()
+    .trim()
+    .min(1, "Reference #1 phone number is required.")
+    .regex(/^\d{10}$/, {
+      message: "Enter a valid 10-digit reference #1 phone number.",
+    }),
+  reference2Name: z
+    .string()
+    .trim()
+    .min(1, "Reference #2 name is required."),
+  reference2PhoneNumber: z
+    .string()
+    .trim()
+    .min(1, "Reference #2 phone number is required.")
+    .regex(/^\d{10}$/, {
+      message: "Enter a valid 10-digit reference #2 phone number.",
+    }),
+
+  hasConsentToContactReferencesOrEmergencyContact: z.boolean().refine((v) => v === true, {
+    message:
+      "You must confirm you have permission for us to contact your references and/or emergency contact.",
+  }),
+})
+  .superRefine((info, ctx) => {
+    // Cross-field rule: user's mobile number cannot match emergency contact number.
+    const mobile = String(info.phoneMobile ?? "").trim();
+    const emergency = String(info.emergencyContactNumber ?? "").trim();
+    if (mobile && emergency && mobile === emergency) {
+      ctx.addIssue({
+        path: ["emergencyContactNumber"],
+        code: z.ZodIssueCode.custom,
+        message: "Emergency contact number must be different from your mobile number.",
+      });
+    }
+  });
 
 /* ------------------------------------------------------------------ */
 /* Government IDs (IIndiaGovernmentIds)                               */

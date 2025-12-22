@@ -33,6 +33,12 @@ export function buildIndiaDefaultValuesFromOnboarding(
         firstName: onboarding.firstName ?? existing.personalInfo?.firstName ?? "",
         lastName: onboarding.lastName ?? existing.personalInfo?.lastName ?? "",
         email: onboarding.email ?? existing.personalInfo?.email ?? "",
+        reference1Name: existing.personalInfo?.reference1Name ?? "",
+        reference1PhoneNumber: existing.personalInfo?.reference1PhoneNumber ?? "",
+        reference2Name: existing.personalInfo?.reference2Name ?? "",
+        reference2PhoneNumber: existing.personalInfo?.reference2PhoneNumber ?? "",
+        hasConsentToContactReferencesOrEmergencyContact:
+          existing.personalInfo?.hasConsentToContactReferencesOrEmergencyContact ?? false,
         dateOfBirth: toYmd(existing.personalInfo?.dateOfBirth),
         residentialAddress: {
           ...existing.personalInfo?.residentialAddress,
@@ -92,6 +98,11 @@ export function buildIndiaDefaultValuesFromOnboarding(
       phoneMobile: "",
       emergencyContactName: "",
       emergencyContactNumber: "",
+      reference1Name: "",
+      reference1PhoneNumber: "",
+      reference2Name: "",
+      reference2PhoneNumber: "",
+      hasConsentToContactReferencesOrEmergencyContact: false,
     },
     governmentIds: {
       aadhaar: { aadhaarNumber: "", file: undefined as any },

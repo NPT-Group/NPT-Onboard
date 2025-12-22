@@ -4,7 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import { indiaOnboardingFormSchema, type IndiaOnboardingFormInput, type IndiaOnboardingFormValues } from "@/features/onboarding/india/indiaFormSchema";
+import {
+  indiaOnboardingFormSchema,
+  type IndiaOnboardingFormInput,
+  type IndiaOnboardingFormValues,
+} from "@/features/onboarding/india/indiaFormSchema";
 import { buildIndiaDefaultValuesFromOnboarding } from "@/features/onboarding/india/indiaDefaults";
 import { normalizeIndiaFormDataForSubmit } from "@/features/onboarding/india/normalizeIndiaFormData";
 
@@ -20,24 +24,20 @@ import { GovernmentIdsSection } from "@/features/onboarding/india/sections/Gover
 import { EducationSection } from "@/features/onboarding/india/sections/EducationSection";
 import { EmploymentSection } from "@/features/onboarding/india/sections/EmploymentSection";
 import { BankDetailsSection } from "@/features/onboarding/india/sections/BankDetailsSection";
-import {
-  PERSONAL_INFO_FIELD_PATHS,
-} from "@/features/onboarding/india/sections/PersonalInfoSection";
-import {
-  GOVERNMENT_IDS_FIELD_PATHS,
-} from "@/features/onboarding/india/sections/GovernmentIdsSection";
-import {
-  EDUCATION_FIELD_PATHS,
-} from "@/features/onboarding/india/sections/EducationSection";
-import {
-  DECLARATION_FIELD_PATHS,
-} from "@/features/onboarding/india/sections/DeclarationSection";
+import { PERSONAL_INFO_FIELD_PATHS } from "@/features/onboarding/india/sections/PersonalInfoSection";
+import { GOVERNMENT_IDS_FIELD_PATHS } from "@/features/onboarding/india/sections/GovernmentIdsSection";
+import { EDUCATION_FIELD_PATHS } from "@/features/onboarding/india/sections/EducationSection";
+import { DECLARATION_FIELD_PATHS } from "@/features/onboarding/india/sections/DeclarationSection";
 import {
   findFirstErrorAcrossSteps,
   findFirstErrorInStep,
 } from "@/features/onboarding/form-engine/errors";
 import type { StepDef } from "@/features/onboarding/form-engine/types";
-import { scrollToField, scrollToSection, type SectionRefs } from "@/features/onboarding/form-engine/scrolling";
+import {
+  scrollToField,
+  scrollToSection,
+  type SectionRefs,
+} from "@/features/onboarding/form-engine/scrolling";
 
 import { cn } from "@/lib/utils/cn";
 import { RHFCheckbox } from "@/features/onboarding/common/RHFCheckbox";
@@ -101,7 +101,11 @@ export function HrOnboardingEditForm({
   const steps = useMemo(() => {
     const defs: StepDef<IndiaOnboardingFormInput, TabKey>[] = [
       { id: "summary", label: "Summary", fieldPaths: [] as any },
-      { id: "personal", label: "Personal info", fieldPaths: PERSONAL_INFO_FIELD_PATHS as any },
+      {
+        id: "personal",
+        label: "Personal info",
+        fieldPaths: PERSONAL_INFO_FIELD_PATHS as any,
+      },
       {
         id: "governmentIds",
         label: "Government IDs",
@@ -116,7 +120,11 @@ export function HrOnboardingEditForm({
           "governmentIds.driversLicense.backFile",
         ],
       },
-      { id: "education", label: "Education", fieldPaths: EDUCATION_FIELD_PATHS as any },
+      {
+        id: "education",
+        label: "Education",
+        fieldPaths: EDUCATION_FIELD_PATHS as any,
+      },
       {
         id: "employment",
         label: "Employment",
@@ -137,7 +145,11 @@ export function HrOnboardingEditForm({
           "bankDetails.voidCheque",
         ],
       },
-      { id: "declaration", label: "Declaration", fieldPaths: DECLARATION_FIELD_PATHS as any },
+      {
+        id: "declaration",
+        label: "Declaration",
+        fieldPaths: DECLARATION_FIELD_PATHS as any,
+      },
     ];
     return defs;
   }, []);
@@ -147,7 +159,11 @@ export function HrOnboardingEditForm({
     [onboarding, today]
   );
 
-  const methods = useForm<IndiaOnboardingFormInput, unknown, IndiaOnboardingFormValues>({
+  const methods = useForm<
+    IndiaOnboardingFormInput,
+    unknown,
+    IndiaOnboardingFormValues
+  >({
     resolver: zodResolver(indiaOnboardingFormSchema),
     mode: "onChange",
     reValidateMode: "onChange",
@@ -181,10 +197,14 @@ export function HrOnboardingEditForm({
 
   const isRequired = (path: string): boolean => {
     const p = String(path).replace(/\.\d+(?=\.|$)/g, ".*");
-    if (p === "education.*.schoolName") return highestEducationLevel === EEducationLevel.PRIMARY_SCHOOL;
-    if (p === "education.*.primaryYearCompleted") return highestEducationLevel === EEducationLevel.PRIMARY_SCHOOL;
-    if (p === "education.*.highSchoolInstitutionName") return highestEducationLevel === EEducationLevel.HIGH_SCHOOL;
-    if (p === "education.*.highSchoolYearCompleted") return highestEducationLevel === EEducationLevel.HIGH_SCHOOL;
+    if (p === "education.*.schoolName")
+      return highestEducationLevel === EEducationLevel.PRIMARY_SCHOOL;
+    if (p === "education.*.primaryYearCompleted")
+      return highestEducationLevel === EEducationLevel.PRIMARY_SCHOOL;
+    if (p === "education.*.highSchoolInstitutionName")
+      return highestEducationLevel === EEducationLevel.HIGH_SCHOOL;
+    if (p === "education.*.highSchoolYearCompleted")
+      return highestEducationLevel === EEducationLevel.HIGH_SCHOOL;
 
     const isHigherEd =
       highestEducationLevel != null &&
@@ -242,7 +262,8 @@ export function HrOnboardingEditForm({
       setTimeout(() => {
         const errs = methods.formState.errors;
         const firstPath = findFirstErrorInStep(step as any, errs as any);
-        if (firstPath) scrollToField(firstPath, step.id, sectionRefs as any, { delayMs: 0 });
+        if (firstPath)
+          scrollToField(firstPath, step.id, sectionRefs as any, { delayMs: 0 });
         else scrollToSection(step.id, sectionRefs as any, { delayMs: 0 });
       }, 0);
       return;
@@ -265,9 +286,16 @@ export function HrOnboardingEditForm({
       setTimeout(() => {
         const errs = methods.formState.errors as any;
         const n = countErrors(errs);
-        setBarError(n > 0 ? `Fix ${n} field(s) before saving.` : "Fix validation errors before saving.");
+        setBarError(
+          n > 0
+            ? `Fix ${n} field(s) before saving.`
+            : "Fix validation errors before saving."
+        );
 
-        const first = findFirstErrorAcrossSteps(stepsToValidate as any, errs as any) as any;
+        const first = findFirstErrorAcrossSteps(
+          stepsToValidate as any,
+          errs as any
+        ) as any;
         const stepId = first?.stepId as TabKey | undefined;
         const errorPath = first?.errorPath as string | null | undefined;
         if (stepId) {
@@ -276,7 +304,9 @@ export function HrOnboardingEditForm({
             navigateTo(idx);
             if (errorPath) {
               setTimeout(() => {
-                scrollToField(errorPath, stepId, sectionRefs as any, { delayMs: 0 });
+                scrollToField(errorPath, stepId, sectionRefs as any, {
+                  delayMs: 0,
+                });
               }, 80);
             }
           }
@@ -296,12 +326,17 @@ export function HrOnboardingEditForm({
 
       onSaved(res.onboarding);
       // reset dirty state to the newly saved values
-      const nextDefaults = buildIndiaDefaultValuesFromOnboarding(res.onboarding as any, today);
+      const nextDefaults = buildIndiaDefaultValuesFromOnboarding(
+        res.onboarding as any,
+        today
+      );
       // Important: update BOTH values and defaultValues so `isDirty` becomes false after save.
       reset(nextDefaults as any);
       setBarError(null);
     } catch (e) {
-      setBarError(e instanceof ApiError ? e.message : "Unable to save changes.");
+      setBarError(
+        e instanceof ApiError ? e.message : "Unable to save changes."
+      );
     } finally {
       setSaving(false);
     }
@@ -389,7 +424,8 @@ export function HrOnboardingEditForm({
                     summaryNode
                   ) : (
                     <div className="text-sm text-[var(--dash-muted)]">
-                      Use the tabs above to review and edit the onboarding details. Changes are saved via the admin update route.
+                      Use the tabs above to review and edit the onboarding
+                      details. Changes are saved via the admin update route.
                     </div>
                   )}
                 </div>
@@ -402,7 +438,10 @@ export function HrOnboardingEditForm({
                     sectionRefs.current.personal = el;
                   }}
                 >
-                  <PersonalInfoSection onboarding={onboarding as any} isReadOnly={!canEdit} />
+                  <PersonalInfoSection
+                    onboarding={onboarding as any}
+                    isReadOnly={!canEdit}
+                  />
                 </div>
               )}
 
@@ -412,7 +451,10 @@ export function HrOnboardingEditForm({
                     sectionRefs.current.governmentIds = el;
                   }}
                 >
-                  <GovernmentIdsSection isReadOnly={!canEdit} docId={onboardingId} />
+                  <GovernmentIdsSection
+                    isReadOnly={!canEdit}
+                    docId={onboardingId}
+                  />
                 </div>
               )}
 
@@ -432,7 +474,10 @@ export function HrOnboardingEditForm({
                     sectionRefs.current.employment = el;
                   }}
                 >
-                  <EmploymentSection isReadOnly={!canEdit} docId={onboardingId} />
+                  <EmploymentSection
+                    isReadOnly={!canEdit}
+                    docId={onboardingId}
+                  />
                 </div>
               )}
 
@@ -442,7 +487,10 @@ export function HrOnboardingEditForm({
                     sectionRefs.current.banking = el;
                   }}
                 >
-                  <BankDetailsSection isReadOnly={!canEdit} docId={onboardingId} />
+                  <BankDetailsSection
+                    isReadOnly={!canEdit}
+                    docId={onboardingId}
+                  />
                 </div>
               )}
 
@@ -452,7 +500,10 @@ export function HrOnboardingEditForm({
                     sectionRefs.current.declaration = el;
                   }}
                 >
-                  <HrDeclarationSection onboardingId={onboardingId} canEdit={canEdit} />
+                  <HrDeclarationSection
+                    onboardingId={onboardingId}
+                    canEdit={canEdit}
+                  />
                 </div>
               )}
             </div>
@@ -467,7 +518,9 @@ export function HrOnboardingEditForm({
                   className={cn(
                     "rounded-xl border px-4 py-2 text-sm font-semibold transition",
                     "border-[var(--dash-border)] bg-[var(--dash-surface)] text-[var(--dash-text)] hover:bg-[var(--dash-surface-2)]",
-                    activeIdx === 0 ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
+                    activeIdx === 0
+                      ? "opacity-60 cursor-not-allowed"
+                      : "cursor-pointer"
                   )}
                 >
                   Back
@@ -525,11 +578,18 @@ function TabButton({
   );
 }
 
-function HrDeclarationSection({ onboardingId, canEdit }: { onboardingId: string; canEdit: boolean }) {
+function HrDeclarationSection({
+  onboardingId,
+  canEdit,
+}: {
+  onboardingId: string;
+  canEdit: boolean;
+}) {
   return (
     <div className="space-y-6">
       <div className="text-sm text-[var(--dash-muted)]">
-        HR can update the declaration fields and signature. (No Turnstile required for HR.)
+        HR can update the declaration fields and signature. (No Turnstile
+        required for HR.)
       </div>
 
       <RHFTextInput
@@ -577,5 +637,3 @@ function countErrors(errs: any): number {
   walk(errs);
   return n;
 }
-
-

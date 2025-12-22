@@ -24,6 +24,13 @@ function vDate(value: any, label: string) {
   return d;
 }
 
+function normalizePhoneForCompare(value: any) {
+  // Normalize to digits only; compare last 10 digits to handle "+91..." etc.
+  const digits = String(value ?? "").replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.length > 10 ? digits.slice(-10) : digits;
+}
+
 /** Validate an IFileAsset: url, s3Key, mimeType required; sizeBytes/originalName optional. */
 function vFileAsset(asset: any, label: string) {
   // Basic presence / shape check (whatever vFileish is already doing for you)
@@ -98,6 +105,30 @@ function validatePersonalInfo(personalInfo: any) {
   vString(personalInfo.phoneMobile, "personalInfo.phoneMobile");
   vString(personalInfo.emergencyContactName, "personalInfo.emergencyContactName");
   vString(personalInfo.emergencyContactNumber, "personalInfo.emergencyContactNumber");
+
+  // Cross-field rule: mobile number cannot be the same as emergency contact number.
+  const mobile = normalizePhoneForCompare(personalInfo.phoneMobile);
+  const emergency = normalizePhoneForCompare(personalInfo.emergencyContactNumber);
+  vAssert(
+    !mobile || !emergency || mobile !== emergency,
+    "Emergency contact number must be different from your mobile number"
+  );
+
+  // References (required)
+  vString(personalInfo.reference1Name, "personalInfo.reference1Name");
+  vString(personalInfo.reference1PhoneNumber, "personalInfo.reference1PhoneNumber");
+  vString(personalInfo.reference2Name, "personalInfo.reference2Name");
+  vString(personalInfo.reference2PhoneNumber, "personalInfo.reference2PhoneNumber");
+
+  // Consent (must be true)
+  vBoolean(
+    personalInfo.hasConsentToContactReferencesOrEmergencyContact,
+    "personalInfo.hasConsentToContactReferencesOrEmergencyContact"
+  );
+  vAssert(
+    personalInfo.hasConsentToContactReferencesOrEmergencyContact === true,
+    "You must confirm you have permission for us to contact your references and/or emergency contact"
+  );
 }
 
 function validateEducationEntry(entry: any, label: string) {

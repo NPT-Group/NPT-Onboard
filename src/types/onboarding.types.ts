@@ -111,6 +111,17 @@ export interface IPersonalInfo {
 
   emergencyContactName: string;
   emergencyContactNumber: string;
+
+  reference1Name: string;
+  reference1PhoneNumber: string;
+  reference2Name: string;
+  reference2PhoneNumber: string;
+
+  /**
+   * User confirms they have permission for us to contact their references
+   * and/or emergency contact.
+   */
+  hasConsentToContactReferencesOrEmergencyContact: boolean;
 }
 
 /* ------------------------------------------------------------------ */
