@@ -126,6 +126,14 @@ interface IFileDocumentBase {
 }
 
 /**
+ * Common issue/expiry date fields for documents.
+ */
+interface IDocumentWithIssueExpiry {
+  issueDate?: Date | string;
+  expiryDate?: Date | string;
+}
+
+/**
  * Base for front/back documents (passports, licenses, etc.).
  * Keep this very stable; add new fields to concrete document interfaces instead.
  */
@@ -146,19 +154,20 @@ export interface IIndiaAadhaarCardDocument extends IFileDocumentBase {
 }
 
 export interface IIndiaPanCardDocument extends IFileDocumentBase {
+  panNumber: string;
   // future PAN-specific fields go here
 }
 
-export interface IIndiaPassportDocument extends IFrontBackDocumentBase {
+export interface IIndiaPassportDocument extends IFrontBackDocumentBase, IDocumentWithIssueExpiry {
+  passportNumber: string;
   frontFile: IFileAsset;
   backFile: IFileAsset;
-  // future passport-specific fields go here (e.g. passportNumber, expiryDate)
 }
 
-export interface IIndiaDriversLicenseDocument extends IFrontBackDocumentBase {
+export interface IIndiaDriversLicenseDocument extends IFrontBackDocumentBase, IDocumentWithIssueExpiry {
+  licenseNumber: string;
   frontFile: IFileAsset;
   backFile: IFileAsset;
-  // future license-specific fields go here (e.g. licenseNumber, class)
 }
 
 export interface IIndiaVoidChequeDocument extends IFileDocumentBase {
@@ -168,7 +177,7 @@ export interface IIndiaVoidChequeDocument extends IFileDocumentBase {
 export interface IIndiaGovernmentIds {
   aadhaar: IIndiaAadhaarCardDocument;
   panCard: IIndiaPanCardDocument;
-  passport: IIndiaPassportDocument; // required front/back in validation
+  passport?: IIndiaPassportDocument; // optional
   driversLicense?: IIndiaDriversLicenseDocument; // optional
 }
 
@@ -193,10 +202,10 @@ export interface ICanadaSinCardDocument extends IFileDocumentBase {
   // future SIN-card-specific fields go here
 }
 
-export interface ICanadaPassportDocument extends IFrontBackDocumentBase {
+export interface ICanadaPassportDocument extends IFrontBackDocumentBase, IDocumentWithIssueExpiry {
+  passportNumber: string;
   frontFile: IFileAsset;
   backFile: IFileAsset;
-  // future passport-specific fields go here
 }
 
 export interface ICanadaPrCardDocument extends IFrontBackDocumentBase {
@@ -207,10 +216,10 @@ export interface ICanadaWorkPermitDocument extends IFileDocumentBase {
   // future work-permit-specific fields go here
 }
 
-export interface ICanadaDriversLicenseDocument extends IFrontBackDocumentBase {
+export interface ICanadaDriversLicenseDocument extends IFrontBackDocumentBase, IDocumentWithIssueExpiry {
+  licenseNumber: string;
   frontFile: IFileAsset;
   backFile: IFileAsset;
-  // future license-specific fields go here
 }
 
 export interface ICanadaDirectDepositDocument extends IFileDocumentBase {
@@ -220,7 +229,7 @@ export interface ICanadaDirectDepositDocument extends IFileDocumentBase {
 export interface ICanadaGovernmentIds {
   sin: ICanadaSinCardDocument;
 
-  passport: ICanadaPassportDocument; // required front/back in validation
+  passport?: ICanadaPassportDocument;
   prCard?: ICanadaPrCardDocument;
   workPermit?: ICanadaWorkPermitDocument;
   driversLicense?: ICanadaDriversLicenseDocument;
@@ -246,10 +255,10 @@ export interface IUsSsnCardDocument extends IFileDocumentBase {
   // future SSN-card-specific fields go here
 }
 
-export interface IUsPassportDocument extends IFrontBackDocumentBase {
+export interface IUsPassportDocument extends IFrontBackDocumentBase, IDocumentWithIssueExpiry {
+  passportNumber: string;
   frontFile: IFileAsset;
   backFile: IFileAsset;
-  // future passport-specific fields go here
 }
 
 export interface IUsGreenCardDocument extends IFrontBackDocumentBase {
@@ -260,10 +269,10 @@ export interface IUsWorkPermitDocument extends IFileDocumentBase {
   // future work-permit-specific fields go here
 }
 
-export interface IUsDriversLicenseDocument extends IFrontBackDocumentBase {
+export interface IUsDriversLicenseDocument extends IFrontBackDocumentBase, IDocumentWithIssueExpiry {
+  licenseNumber: string;
   frontFile: IFileAsset;
   backFile: IFileAsset;
-  // future license-specific fields go here
 }
 
 export interface IUsVoidChequeOrDepositSlipDocument extends IFileDocumentBase {
@@ -273,7 +282,7 @@ export interface IUsVoidChequeOrDepositSlipDocument extends IFileDocumentBase {
 export interface IUsGovernmentIds {
   ssn: IUsSsnCardDocument;
 
-  passport: IUsPassportDocument; // required front/back in validation
+  passport?: IUsPassportDocument;
   greenCard?: IUsGreenCardDocument;
   workPermit?: IUsWorkPermitDocument;
   driversLicense?: IUsDriversLicenseDocument;

@@ -68,6 +68,45 @@ function vImageFile(asset: any, label: string) {
   vAssert(mime.startsWith("image/"), `${label} must be an image`);
 }
 
+function vOptionalDate(value: any, label: string) {
+  if (value == null) return;
+  vDate(value, label);
+}
+
+function validateIssueExpiryDates(doc: any, label: string, opts?: { required?: boolean }) {
+  const required = opts?.required ?? true;
+
+  if (required) {
+    vDate(doc.issueDate, `${label}.issueDate`);
+    vDate(doc.expiryDate, `${label}.expiryDate`);
+  } else {
+    vOptionalDate(doc.issueDate, `${label}.issueDate`);
+    vOptionalDate(doc.expiryDate, `${label}.expiryDate`);
+  }
+}
+
+function validatePassportDoc(passport: any, label: string) {
+  vAssert(isObj(passport), `${label} must be an object`);
+  vString(passport.passportNumber, `${label}.passportNumber`);
+  validateIssueExpiryDates(passport, label, { required: true });
+
+  vAssert(passport.frontFile, `${label}.frontFile is required`);
+  vAssert(passport.backFile, `${label}.backFile is required`);
+  vPdfFile(passport.frontFile, `${label}.frontFile`);
+  vPdfFile(passport.backFile, `${label}.backFile`);
+}
+
+function validateDriversLicenseDoc(dl: any, label: string) {
+  vAssert(isObj(dl), `${label} is required`);
+  vString(dl.licenseNumber, `${label}.licenseNumber`);
+  validateIssueExpiryDates(dl, label, { required: true });
+
+  vAssert(dl.frontFile, `${label}.frontFile is required`);
+  vAssert(dl.backFile, `${label}.backFile is required`);
+  vPdfFile(dl.frontFile, `${label}.frontFile`);
+  vPdfFile(dl.backFile, `${label}.backFile`);
+}
+
 /* ──────────────────────── common sections ──────────────────────── */
 
 function validatePersonalInfo(personalInfo: any) {
@@ -246,23 +285,19 @@ function validateIndiaGovernmentIds(gov: any) {
   // PAN
   const panCard = gov.panCard;
   vAssert(isObj(panCard), "governmentIds.panCard is required");
+  vString(panCard.panNumber, "governmentIds.panCard.panNumber");
   vPdfFile(panCard.file, "governmentIds.panCard.file");
 
   // Passport (front/back both required)
   const passport = gov.passport;
-  vAssert(isObj(passport), "governmentIds.passport is required");
-  vAssert(passport.frontFile, "governmentIds.passport.frontFile is required");
-  vAssert(passport.backFile, "governmentIds.passport.backFile is required");
-  vPdfFile(passport.frontFile, "governmentIds.passport.frontFile");
-  vPdfFile(passport.backFile, "governmentIds.passport.backFile");
+  if (passport != null) {
+    validatePassportDoc(passport, "governmentIds.passport");
+  }
 
-  // Drivers license (optional doc, but if present front/back required)
+  // Drivers license (optional doc)
   const dl = gov.driversLicense;
-  if (dl) {
-    vAssert(dl.frontFile, "governmentIds.driversLicense.frontFile is required");
-    vAssert(dl.backFile, "governmentIds.driversLicense.backFile is required");
-    vPdfFile(dl.frontFile, "governmentIds.driversLicense.frontFile");
-    vPdfFile(dl.backFile, "governmentIds.driversLicense.backFile");
+  if (dl != null) {
+    validateDriversLicenseDoc(dl, "governmentIds.driversLicense");
   }
 }
 
@@ -314,11 +349,9 @@ function validateCanadaGovernmentIds(gov: any) {
 
   // Passport (front/back both required)
   const passport = gov.passport;
-  vAssert(isObj(passport), "governmentIds.passport is required");
-  vAssert(passport.frontFile, "governmentIds.passport.frontFile is required");
-  vAssert(passport.backFile, "governmentIds.passport.backFile is required");
-  vPdfFile(passport.frontFile, "governmentIds.passport.frontFile");
-  vPdfFile(passport.backFile, "governmentIds.passport.backFile");
+  if (passport != null) {
+    validatePassportDoc(passport, "governmentIds.passport");
+  }
 
   // PR Card (optional)
   const prCard = gov.prCard;
@@ -337,13 +370,10 @@ function validateCanadaGovernmentIds(gov: any) {
     vPdfFile(workPermit.file, "governmentIds.workPermit.file");
   }
 
-  // Drivers License (optional doc, but if present front/back required)
+  // Drivers License (optional doc)
   const dl = gov.driversLicense;
-  if (dl) {
-    vAssert(dl.frontFile, "governmentIds.driversLicense.frontFile is required");
-    vAssert(dl.backFile, "governmentIds.driversLicense.backFile is required");
-    vPdfFile(dl.frontFile, "governmentIds.driversLicense.frontFile");
-    vPdfFile(dl.backFile, "governmentIds.driversLicense.backFile");
+  if (dl != null) {
+    validateDriversLicenseDoc(dl, "governmentIds.driversLicense");
   }
 }
 
@@ -391,13 +421,11 @@ function validateUsGovernmentIds(gov: any) {
   vString(ssn.ssnNumber, "governmentIds.ssn.ssnNumber");
   vPdfFile(ssn.file, "governmentIds.ssn.file");
 
-  // Passport (front/back both required)
+  // Passport
   const passport = gov.passport;
-  vAssert(isObj(passport), "governmentIds.passport is required");
-  vAssert(passport.frontFile, "governmentIds.passport.frontFile is required");
-  vAssert(passport.backFile, "governmentIds.passport.backFile is required");
-  vPdfFile(passport.frontFile, "governmentIds.passport.frontFile");
-  vPdfFile(passport.backFile, "governmentIds.passport.backFile");
+  if (passport != null) {
+    validatePassportDoc(passport, "governmentIds.passport");
+  }
 
   // Green Card (optional)
   const green = gov.greenCard;
@@ -414,13 +442,10 @@ function validateUsGovernmentIds(gov: any) {
   const wp = gov.workPermit;
   if (wp) vPdfFile(wp.file, "governmentIds.workPermit.file");
 
-  // Drivers License (optional doc, but if present front/back required)
+  // Drivers License (optional doc)
   const dl = gov.driversLicense;
-  if (dl) {
-    vAssert(dl.frontFile, "governmentIds.driversLicense.frontFile is required");
-    vAssert(dl.backFile, "governmentIds.driversLicense.backFile is required");
-    vPdfFile(dl.frontFile, "governmentIds.driversLicense.frontFile");
-    vPdfFile(dl.backFile, "governmentIds.driversLicense.backFile");
+  if (dl != null) {
+    validateDriversLicenseDoc(dl, "governmentIds.driversLicense");
   }
 }
 

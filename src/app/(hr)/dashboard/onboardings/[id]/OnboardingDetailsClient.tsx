@@ -1,30 +1,14 @@
+// src/app/(hr)/dashboard/onboardings/[id]/OnboardingDetailsClient.tsx
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Download,
-  FileDown,
-  RefreshCcw,
-  ShieldCheck,
-  Wand2,
-} from "lucide-react";
+import { Download, FileDown, RefreshCcw, ShieldCheck, Wand2 } from "lucide-react";
 
 import { cn } from "@/lib/utils/cn";
-import {
-  approveOnboarding,
-  getAdminOnboarding,
-  getOnboardingAuditLogs,
-  requestModification,
-  terminateOnboarding,
-  type AdminOnboardingListItem,
-} from "@/lib/api/admin/onboardings";
+import { approveOnboarding, getAdminOnboarding, getOnboardingAuditLogs, requestModification, terminateOnboarding, type AdminOnboardingListItem } from "@/lib/api/admin/onboardings";
 import { EOnboardingMethod, EOnboardingStatus } from "@/types/onboarding.types";
 import { ESubsidiary } from "@/types/shared.types";
-import {
-  EOnboardingActor,
-  EOnboardingAuditAction,
-  type TOnboardingAuditActor,
-} from "@/types/onboardingAuditLog.types";
+import { EOnboardingActor, EOnboardingAuditAction, type TOnboardingAuditActor } from "@/types/onboardingAuditLog.types";
 
 import { OnboardingProgress } from "@/components/dashboard/onboardings/OnboardingProgress";
 import { TerminateModal } from "@/components/dashboard/onboardings/TerminateModal";
@@ -68,46 +52,24 @@ function fmtDateTime(value?: string | Date | null, tz?: string) {
   return fmt.format(d);
 }
 
-function joinLocation(
-  loc?: { city?: string; region?: string; country?: string } | null
-) {
+function joinLocation(loc?: { city?: string; region?: string; country?: string } | null) {
   if (!loc) return "—";
-  const parts = [loc.city, loc.region, loc.country]
-    .map((s) => String(s ?? "").trim())
-    .filter(Boolean);
+  const parts = [loc.city, loc.region, loc.country].map((s) => String(s ?? "").trim()).filter(Boolean);
   return parts.length ? parts.join(", ") : "—";
 }
 
-function statusAllowsApprove(
-  status: EOnboardingStatus,
-  isFormComplete: boolean
-) {
+function statusAllowsApprove(status: EOnboardingStatus, isFormComplete: boolean) {
   if (!isFormComplete) return false;
-  return (
-    status !== EOnboardingStatus.Approved &&
-    status !== EOnboardingStatus.Terminated
-  );
+  return status !== EOnboardingStatus.Approved && status !== EOnboardingStatus.Terminated;
 }
 
-function statusAllowsModification(
-  method: EOnboardingMethod,
-  status: EOnboardingStatus,
-  isFormComplete: boolean
-) {
+function statusAllowsModification(method: EOnboardingMethod, status: EOnboardingStatus, isFormComplete: boolean) {
   if (method !== EOnboardingMethod.DIGITAL) return false;
   if (!isFormComplete) return false;
-  return (
-    status === EOnboardingStatus.Submitted ||
-    status === EOnboardingStatus.Resubmitted ||
-    status === EOnboardingStatus.ModificationRequested
-  );
+  return status === EOnboardingStatus.Submitted || status === EOnboardingStatus.Resubmitted || status === EOnboardingStatus.ModificationRequested;
 }
 
-export function OnboardingDetailsClient({
-  onboardingId,
-  initialOnboarding,
-  initialError,
-}: Props) {
+export function OnboardingDetailsClient({ onboardingId, initialOnboarding, initialError }: Props) {
   const [onboarding, setOnboarding] = useState<any | null>(initialOnboarding);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(initialError);
@@ -121,9 +83,7 @@ export function OnboardingDetailsClient({
   const [approveOpen, setApproveOpen] = useState(false);
   const [modOpen, setModOpen] = useState(false);
 
-  const [working, setWorking] = useState<
-    null | "refresh" | "approve" | "modify" | "terminate" | "downloadPdf"
-  >(null);
+  const [working, setWorking] = useState<null | "refresh" | "approve" | "modify" | "terminate" | "downloadPdf">(null);
 
   const loadSubmitActor = useCallback(async () => {
     try {
@@ -135,11 +95,7 @@ export function OnboardingDetailsClient({
         sortBy: "createdAt",
         sortDir: "desc",
       });
-      const hit = (res.items ?? []).find(
-        (it) =>
-          it.action === EOnboardingAuditAction.SUBMITTED ||
-          it.action === EOnboardingAuditAction.RESUBMITTED
-      ) as any;
+      const hit = (res.items ?? []).find((it) => it.action === EOnboardingAuditAction.SUBMITTED || it.action === EOnboardingAuditAction.RESUBMITTED) as any;
       if (hit?.actor?.type && hit?.actor?.email) {
         setSubmitActor({
           action: hit.action as EOnboardingAuditAction,
@@ -165,9 +121,7 @@ export function OnboardingDetailsClient({
       // Keep "completed by" signal in sync after refresh.
       loadSubmitActor();
     } catch (e) {
-      setError(
-        e instanceof ApiError ? e.message : "Unable to load onboarding."
-      );
+      setError(e instanceof ApiError ? e.message : "Unable to load onboarding.");
     } finally {
       setLoading(false);
       setWorking(null);
@@ -184,41 +138,24 @@ export function OnboardingDetailsClient({
     return `${head.firstName ?? ""} ${head.lastName ?? ""}`.trim() || "—";
   }, [head]);
 
-  const method = (head?.method ??
-    EOnboardingMethod.DIGITAL) as EOnboardingMethod;
-  const status = (head?.status ??
-    EOnboardingStatus.InviteGenerated) as EOnboardingStatus;
+  const method = (head?.method ?? EOnboardingMethod.DIGITAL) as EOnboardingMethod;
+  const status = (head?.status ?? EOnboardingStatus.InviteGenerated) as EOnboardingStatus;
   const isFormComplete = Boolean((head as any)?.isFormComplete);
 
   const canApprove = head ? statusAllowsApprove(status, isFormComplete) : false;
-  const canRequestModification = head
-    ? statusAllowsModification(method, status, isFormComplete)
-    : false;
+  const canRequestModification = head ? statusAllowsModification(method, status, isFormComplete) : false;
   const canTerminate = head ? status !== EOnboardingStatus.Terminated : false;
-  const canDownloadPdf = head
-    ? head.subsidiary === ESubsidiary.INDIA &&
-      Boolean((head as any)?.isFormComplete)
-    : false;
+  const canDownloadPdf = head ? head.subsidiary === ESubsidiary.INDIA && Boolean((head as any)?.isFormComplete) : false;
   const canEdit = head ? status !== EOnboardingStatus.Terminated : false;
 
   const locationStr = joinLocation((head as any)?.locationAtSubmit ?? null);
-  const tz =
-    ((head as any)?.locationAtSubmit?.timezone as string | undefined) ??
-    undefined;
-  const applicationDateTime =
-    (head as any)?.submittedAt ??
-    (head as any)?.completedAt ??
-    (head as any)?.updatedAt ??
-    null;
+  const tz = ((head as any)?.locationAtSubmit?.timezone as string | undefined) ?? undefined;
+  const applicationDateTime = (head as any)?.submittedAt ?? (head as any)?.completedAt ?? (head as any)?.updatedAt ?? null;
 
   const handleDownloadPdf = useCallback(() => {
     if (!head) return;
     setWorking("downloadPdf");
-    const url = `/api/v1/admin/onboardings/${encodeURIComponent(
-      onboardingId
-    )}/filled-pdf/application-form?subsidiary=${encodeURIComponent(
-      head.subsidiary
-    )}`;
+    const url = `/api/v1/admin/onboardings/${encodeURIComponent(onboardingId)}/filled-pdf/application-form?subsidiary=${encodeURIComponent(head.subsidiary)}`;
     window.open(url, "_blank", "noopener,noreferrer");
     setTimeout(() => setWorking(null), 600);
   }, [head, onboardingId]);
@@ -238,24 +175,13 @@ export function OnboardingDetailsClient({
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.18em] text-[var(--dash-muted)]">
-                      <span className="uppercase">
-                        {subsidiaryMeta((head as any)?.subsidiary).name}
-                      </span>
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-[11px] font-semibold leading-none",
-                          "bg-[var(--dash-red-soft)] text-[var(--dash-red)]"
-                        )}
-                      >
+                      <span className="uppercase">{subsidiaryMeta((head as any)?.subsidiary).name}</span>
+                      <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold leading-none", "bg-[var(--dash-red-soft)] text-[var(--dash-red)]")}>
                         {subsidiaryMeta((head as any)?.subsidiary).code}
                       </span>
                     </div>
-                    <div className="mt-1 text-lg font-semibold text-[var(--dash-text)] truncate">
-                      {fullName}
-                    </div>
-                    <div className="mt-0.5 text-sm text-[var(--dash-muted)] truncate">
-                      {(head as any)?.email ?? "—"}
-                    </div>
+                    <div className="mt-1 text-lg font-semibold text-[var(--dash-text)] truncate">{fullName}</div>
+                    <div className="mt-0.5 text-sm text-[var(--dash-muted)] truncate">{(head as any)?.email ?? "—"}</div>
                   </div>
 
                   <div className="w-full sm:max-w-[320px]">
@@ -266,37 +192,23 @@ export function OnboardingDetailsClient({
                 <div className="mt-4 space-y-1">
                   {submitActor?.actor?.type === EOnboardingActor.HR ? (
                     <div className="text-sm text-[var(--dash-text)]">
-                      This application was completed by HR:{" "}
-                      <span className="font-medium">
-                        {submitActor.actor.email}
-                      </span>
-                      .
+                      This application was completed by HR: <span className="font-medium">{submitActor.actor.email}</span>.
                     </div>
                   ) : submitActor?.actor?.type === EOnboardingActor.EMPLOYEE ? (
                     locationStr !== "—" ? (
                       <div className="text-sm text-[var(--dash-text)]">
-                        The applicant completed the onboard form at:{" "}
-                        <span className="font-medium">{locationStr}</span>.
+                        The applicant completed the onboard form at: <span className="font-medium">{locationStr}</span>.
                       </div>
                     ) : (
-                      <div className="text-sm text-[var(--dash-text)]">
-                        The applicant completed the onboard form.
-                      </div>
+                      <div className="text-sm text-[var(--dash-text)]">The applicant completed the onboard form.</div>
                     )
                   ) : method === EOnboardingMethod.MANUAL ? (
-                    <div className="text-sm text-[var(--dash-text)]">
-                      This application is being completed by HR.
-                    </div>
+                    <div className="text-sm text-[var(--dash-text)]">This application is being completed by HR.</div>
                   ) : (
-                    <div className="text-sm text-[var(--dash-text)]">
-                      The applicant has not completed the onboard process yet.
-                    </div>
+                    <div className="text-sm text-[var(--dash-text)]">The applicant has not completed the onboard process yet.</div>
                   )}
                   <div className="text-sm text-[var(--dash-muted)]">
-                    Date & time of application:{" "}
-                    <span className="text-[var(--dash-text)] font-medium">
-                      {fmtDateTime(applicationDateTime, tz)}
-                    </span>
+                    Date & time of application: <span className="text-[var(--dash-text)] font-medium">{fmtDateTime(applicationDateTime, tz)}</span>
                   </div>
                 </div>
               </div>
@@ -311,17 +223,10 @@ export function OnboardingDetailsClient({
                     className={cn(
                       "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition",
                       "border-[var(--dash-border)] bg-[var(--dash-surface)] text-[var(--dash-text)] hover:bg-[var(--dash-surface-2)]",
-                      loading
-                        ? "opacity-60 cursor-not-allowed"
-                        : "cursor-pointer"
+                      loading ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
                     )}
                   >
-                    <RefreshCcw
-                      className={cn(
-                        "h-4 w-4",
-                        working === "refresh" && "animate-spin"
-                      )}
-                    />
+                    <RefreshCcw className={cn("h-4 w-4", working === "refresh" && "animate-spin")} />
                     Refresh
                   </button>
                 </div>
@@ -335,9 +240,7 @@ export function OnboardingDetailsClient({
                       className={cn(
                         "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition",
                         "border-[var(--dash-border)] bg-[var(--dash-surface)] text-[var(--dash-text)] hover:bg-[var(--dash-surface-2)]",
-                        working === "downloadPdf"
-                          ? "opacity-60 cursor-not-allowed"
-                          : "cursor-pointer"
+                        working === "downloadPdf" ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
                       )}
                     >
                       <FileDown className="h-4 w-4" />
@@ -353,9 +256,7 @@ export function OnboardingDetailsClient({
                       className={cn(
                         "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition",
                         "border-[var(--dash-border)] bg-[var(--dash-surface)] text-[var(--dash-text)] hover:bg-[var(--dash-surface-2)]",
-                        working != null
-                          ? "opacity-60 cursor-not-allowed"
-                          : "cursor-pointer"
+                        working != null ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
                       )}
                     >
                       <Wand2 className="h-4 w-4" />
@@ -371,9 +272,7 @@ export function OnboardingDetailsClient({
                       className={cn(
                         "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition",
                         "bg-[var(--dash-red)] text-white hover:opacity-95",
-                        working != null
-                          ? "opacity-60 cursor-not-allowed"
-                          : "cursor-pointer"
+                        working != null ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
                       )}
                     >
                       <ShieldCheck className="h-4 w-4" />
@@ -389,9 +288,7 @@ export function OnboardingDetailsClient({
                       className={cn(
                         "inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition",
                         "border-[var(--dash-red-soft)] bg-[var(--dash-red-soft)] text-[var(--dash-red)] hover:brightness-[0.98]",
-                        working != null
-                          ? "opacity-70 cursor-not-allowed"
-                          : "cursor-pointer"
+                        working != null ? "opacity-70 cursor-not-allowed" : "cursor-pointer"
                       )}
                     >
                       <Download className="h-4 w-4 rotate-90" />
@@ -404,9 +301,7 @@ export function OnboardingDetailsClient({
 
             {error && (
               <div className="rounded-2xl border border-[var(--dash-red-soft)] bg-[var(--dash-red-soft)] p-4 text-sm">
-                <div className="font-semibold text-[var(--dash-red)]">
-                  Couldn’t load onboarding
-                </div>
+                <div className="font-semibold text-[var(--dash-red)]">Couldn’t load onboarding</div>
                 <div className="mt-1 text-[var(--dash-muted)]">{error}</div>
               </div>
             )}

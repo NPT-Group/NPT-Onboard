@@ -1,20 +1,15 @@
+// src/features/onboarding/india/indiaFormSchema.ts
 import { z } from "zod";
-import {
-  EEducationLevel,
-  EGender,
-  type IIndiaOnboardingFormData,
-} from "@/types/onboarding.types";
+import { EEducationLevel, EGender, type IIndiaOnboardingFormData } from "@/types/onboarding.types";
 
 /**
  * Backend treats many fields as optional-but-non-empty when provided.
  * In RHF we often hold empty string ("") for untouched inputs, so we normalize
  * optional strings: "" / whitespace -> undefined.
  */
-const emptyToUndefined = (v: unknown) =>
-  typeof v === "string" && v.trim().length === 0 ? undefined : v;
+const emptyToUndefined = (v: unknown) => (typeof v === "string" && v.trim().length === 0 ? undefined : v);
 
-const optionalTrimmedString = () =>
-  z.preprocess(emptyToUndefined, z.string().optional());
+const optionalTrimmedString = () => z.preprocess(emptyToUndefined, z.string().optional());
 
 const requiredTrimmedString = (message: string) => z.string().trim().min(1, message);
 
@@ -55,35 +50,23 @@ const personalInfoSchema = z.object({
   // Backend rejects whitespace-only strings; enforce trim here so UI can't pass invalid payloads.
   firstName: requiredTrimmedString("First name is required."),
   lastName: requiredTrimmedString("Last name is required."),
-  email: z
-    .string()
-    .trim()
-    .min(1, "Email is required.")
-    .email("Enter a valid email address."),
-  gender: z
-    .string()
-    .refine(
-      (val): val is EGender => val === EGender.MALE || val === EGender.FEMALE,
-      { message: "Gender is required." }
-    ),
+  email: z.string().trim().min(1, "Email is required.").email("Enter a valid email address."),
+  gender: z.string().refine((val): val is EGender => val === EGender.MALE || val === EGender.FEMALE, { message: "Gender is required." }),
 
-  dateOfBirth: requiredDateString(
-    "Date of birth is required.",
-    "Enter a valid date of birth."
-  ),
+  dateOfBirth: requiredDateString("Date of birth is required.", "Enter a valid date of birth."),
   canProvideProofOfAge: z.boolean().refine((v) => v === true, {
     message: "You must confirm that you can provide proof of age.",
   }),
   residentialAddress: z
     .object({
-    addressLine1: requiredTrimmedString("Address line 1 is required."),
-    // Frontend requirement (product): require full address details
-    city: requiredTrimmedString("City is required."),
-    state: requiredTrimmedString("State / Province is required."),
-    postalCode: requiredTrimmedString("Postal code is required."),
-    fromDate: requiredDateString("From date is required.", "Enter a valid from date."),
-    toDate: requiredDateString("Until date is required.", "Enter a valid until date."),
-  })
+      addressLine1: requiredTrimmedString("Address line 1 is required."),
+      // Frontend requirement (product): require full address details
+      city: requiredTrimmedString("City is required."),
+      state: requiredTrimmedString("State / Province is required."),
+      postalCode: requiredTrimmedString("Postal code is required."),
+      fromDate: requiredDateString("From date is required.", "Enter a valid from date."),
+      toDate: requiredDateString("Until date is required.", "Enter a valid until date."),
+    })
     .superRefine((addr, ctx) => {
       // Industry-standard: prevent inverted ranges (backend doesn't enforce, but improves UX)
       const from = new Date(addr.fromDate).valueOf();
@@ -110,10 +93,7 @@ const personalInfoSchema = z.object({
     .min(1, "Mobile number is required.")
     .regex(/^\d{10}$/, { message: "Enter a valid 10-digit mobile number." }),
 
-  emergencyContactName: z
-    .string()
-    .trim()
-    .min(1, "Emergency contact name is required."),
+  emergencyContactName: z.string().trim().min(1, "Emergency contact name is required."),
   emergencyContactNumber: z
     .string()
     .trim()
@@ -136,29 +116,120 @@ const indiaAadhaarSchema = z.object({
 });
 
 const indiaPanSchema = z.object({
+  panNumber: requiredTrimmedString("PAN number is required."),
   file: requiredFileAsset("Please upload your PAN PDF."),
 });
 
-const indiaPassportSchema = z.object({
-  frontFile: requiredFileAsset("Please upload your passport front PDF."),
-  backFile: requiredFileAsset("Please upload your passport back PDF."),
-});
+const indiaPassportSchema = z
+  .object({
+    passportNumber: optionalTrimmedString(),
+    issueDate: z.preprocess(emptyToUndefined, z.string().optional()),
+    expiryDate: z.preprocess(emptyToUndefined, z.string().optional()),
+    frontFile: fileAssetSchema.optional(),
+    backFile: fileAssetSchema.optional(),
+  })
+  .superRefine((p, ctx) => {
+    const hasAny = !!p.passportNumber || !!p.issueDate || !!p.expiryDate || !!p.frontFile || !!p.backFile;
+
+    if (!hasAny) return;
+
+    if (!p.passportNumber) {
+      ctx.addIssue({
+        path: ["passportNumber"],
+        code: z.ZodIssueCode.custom,
+        message: "Passport number is required.",
+      });
+    }
+
+    if (!p.issueDate || Number.isNaN(new Date(p.issueDate).valueOf())) {
+      ctx.addIssue({
+        path: ["issueDate"],
+        code: z.ZodIssueCode.custom,
+        message: !p.issueDate ? "Issue date is required." : "Enter a valid issue date.",
+      });
+    }
+
+    if (!p.expiryDate || Number.isNaN(new Date(p.expiryDate).valueOf())) {
+      ctx.addIssue({
+        path: ["expiryDate"],
+        code: z.ZodIssueCode.custom,
+        message: !p.expiryDate ? "Expiry date is required." : "Enter a valid expiry date.",
+      });
+    }
+
+    if (!p.frontFile) {
+      ctx.addIssue({
+        path: ["frontFile"],
+        code: z.ZodIssueCode.custom,
+        message: "Please upload your passport front PDF.",
+      });
+    }
+
+    if (!p.backFile) {
+      ctx.addIssue({
+        path: ["backFile"],
+        code: z.ZodIssueCode.custom,
+        message: "Please upload your passport back PDF.",
+      });
+    }
+
+    // optional: range check once both dates are valid
+    const issue = p.issueDate ? new Date(p.issueDate).valueOf() : NaN;
+    const expiry = p.expiryDate ? new Date(p.expiryDate).valueOf() : NaN;
+    if (!Number.isNaN(issue) && !Number.isNaN(expiry) && expiry < issue) {
+      ctx.addIssue({
+        path: ["expiryDate"],
+        code: z.ZodIssueCode.custom,
+        message: "Expiry date must be on or after the issue date.",
+      });
+    }
+  });
 
 const indiaDriversLicenseSchema = z
   .object({
+    licenseNumber: optionalTrimmedString(),
+    issueDate: z.preprocess(emptyToUndefined, z.string().optional()),
+    expiryDate: z.preprocess(emptyToUndefined, z.string().optional()),
     frontFile: fileAssetSchema.optional(),
     backFile: fileAssetSchema.optional(),
   })
   .superRefine((val, ctx) => {
-    const hasAny = !!val.frontFile || !!val.backFile;
-    if (hasAny && !val.frontFile) {
+    const hasAny = !!val.licenseNumber || !!val.issueDate || !!val.expiryDate || !!val.frontFile || !!val.backFile;
+
+    if (!hasAny) return;
+
+    if (!val.licenseNumber) {
+      ctx.addIssue({
+        path: ["licenseNumber"],
+        code: z.ZodIssueCode.custom,
+        message: "License number is required.",
+      });
+    }
+
+    if (!val.issueDate || Number.isNaN(new Date(val.issueDate).valueOf())) {
+      ctx.addIssue({
+        path: ["issueDate"],
+        code: z.ZodIssueCode.custom,
+        message: !val.issueDate ? "Issue date is required." : "Enter a valid issue date.",
+      });
+    }
+
+    if (!val.expiryDate || Number.isNaN(new Date(val.expiryDate).valueOf())) {
+      ctx.addIssue({
+        path: ["expiryDate"],
+        code: z.ZodIssueCode.custom,
+        message: !val.expiryDate ? "Expiry date is required." : "Enter a valid expiry date.",
+      });
+    }
+
+    if (!val.frontFile) {
       ctx.addIssue({
         path: ["frontFile"],
         code: z.ZodIssueCode.custom,
         message: "Front of driver's license is required.",
       });
     }
-    if (hasAny && !val.backFile) {
+    if (!val.backFile) {
       ctx.addIssue({
         path: ["backFile"],
         code: z.ZodIssueCode.custom,
@@ -170,7 +241,7 @@ const indiaDriversLicenseSchema = z
 const indiaGovernmentIdsSchema = z.object({
   aadhaar: indiaAadhaarSchema,
   panCard: indiaPanSchema,
-  passport: indiaPassportSchema,
+  passport: indiaPassportSchema.optional(),
   driversLicense: indiaDriversLicenseSchema.optional(),
 });
 
@@ -204,121 +275,116 @@ const educationEntrySchemaBase = z.object({
   gradeOrCgpa: optionalTrimmedString(),
 });
 
-const educationEntrySchema = educationEntrySchemaBase.superRefine(
-  (entry, ctx) => {
-    const level = entry.highestLevel;
+const educationEntrySchema = educationEntrySchemaBase.superRefine((entry, ctx) => {
+  const level = entry.highestLevel;
 
-    if (level === EEducationLevel.PRIMARY_SCHOOL) {
-      if (!entry.schoolName) {
-        ctx.addIssue({
-          path: ["schoolName"],
-          code: z.ZodIssueCode.custom,
-          message: "School name is required for primary education.",
-        });
-      }
-      if (entry.primaryYearCompleted == null) {
-        ctx.addIssue({
-          path: ["primaryYearCompleted"],
-          code: z.ZodIssueCode.custom,
-          message: "Year completed is required for primary education.",
-        });
-      }
-    } else if (level === EEducationLevel.HIGH_SCHOOL) {
-      if (!entry.highSchoolInstitutionName) {
-        ctx.addIssue({
-          path: ["highSchoolInstitutionName"],
-          code: z.ZodIssueCode.custom,
-          message: "Institution name is required for high school.",
-        });
-      }
-      if (entry.highSchoolYearCompleted == null) {
-        ctx.addIssue({
-          path: ["highSchoolYearCompleted"],
-          code: z.ZodIssueCode.custom,
-          message: "Year completed is required for high school.",
-        });
-      }
-    } else {
-      if (!entry.institutionName) {
-        ctx.addIssue({
-          path: ["institutionName"],
-          code: z.ZodIssueCode.custom,
-          message: "Institution name is required.",
-        });
-      }
-      if (!entry.fieldOfStudy) {
-        ctx.addIssue({
-          path: ["fieldOfStudy"],
-          code: z.ZodIssueCode.custom,
-          message: "Field of study is required.",
-        });
-      }
-      if (entry.endYear == null) {
-        ctx.addIssue({
-          path: ["endYear"],
-          code: z.ZodIssueCode.custom,
-          message: "End year is required.",
-        });
-      }
+  if (level === EEducationLevel.PRIMARY_SCHOOL) {
+    if (!entry.schoolName) {
+      ctx.addIssue({
+        path: ["schoolName"],
+        code: z.ZodIssueCode.custom,
+        message: "School name is required for primary education.",
+      });
     }
-
-    // Mirror backend strictness: disallow fields not applicable to selected level.
-    const disallow = (value: unknown, path: string) => {
-      if (value != null) {
-        ctx.addIssue({
-          path: [path],
-          code: z.ZodIssueCode.custom,
-          message: "This field must be empty for the selected education level.",
-        });
-      }
-    };
-
-    if (level === EEducationLevel.PRIMARY_SCHOOL) {
-      // Disallow high-school + diploma/bachelor+ fields
-      disallow(entry.highSchoolInstitutionName, "highSchoolInstitutionName");
-      disallow(entry.highSchoolBoard, "highSchoolBoard");
-      disallow(entry.highSchoolStream, "highSchoolStream");
-      disallow(entry.highSchoolYearCompleted, "highSchoolYearCompleted");
-      disallow(entry.highSchoolGradeOrPercentage, "highSchoolGradeOrPercentage");
-
-      disallow(entry.institutionName, "institutionName");
-      disallow(entry.universityOrBoard, "universityOrBoard");
-      disallow(entry.fieldOfStudy, "fieldOfStudy");
-      disallow(entry.startYear, "startYear");
-      disallow(entry.endYear, "endYear");
-      disallow(entry.gradeOrCgpa, "gradeOrCgpa");
-    } else if (level === EEducationLevel.HIGH_SCHOOL) {
-      // Disallow primary + diploma/bachelor+ fields
-      disallow(entry.schoolName, "schoolName");
-      disallow(entry.schoolLocation, "schoolLocation");
-      disallow(entry.primaryYearCompleted, "primaryYearCompleted");
-
-      disallow(entry.institutionName, "institutionName");
-      disallow(entry.universityOrBoard, "universityOrBoard");
-      disallow(entry.fieldOfStudy, "fieldOfStudy");
-      disallow(entry.startYear, "startYear");
-      disallow(entry.endYear, "endYear");
-      disallow(entry.gradeOrCgpa, "gradeOrCgpa");
-    } else {
-      // Diploma / Bachelor / Masters / Doctorate / Other
-      // Disallow primary + high-school fields
-      disallow(entry.schoolName, "schoolName");
-      disallow(entry.schoolLocation, "schoolLocation");
-      disallow(entry.primaryYearCompleted, "primaryYearCompleted");
-
-      disallow(entry.highSchoolInstitutionName, "highSchoolInstitutionName");
-      disallow(entry.highSchoolBoard, "highSchoolBoard");
-      disallow(entry.highSchoolStream, "highSchoolStream");
-      disallow(entry.highSchoolYearCompleted, "highSchoolYearCompleted");
-      disallow(entry.highSchoolGradeOrPercentage, "highSchoolGradeOrPercentage");
+    if (entry.primaryYearCompleted == null) {
+      ctx.addIssue({
+        path: ["primaryYearCompleted"],
+        code: z.ZodIssueCode.custom,
+        message: "Year completed is required for primary education.",
+      });
+    }
+  } else if (level === EEducationLevel.HIGH_SCHOOL) {
+    if (!entry.highSchoolInstitutionName) {
+      ctx.addIssue({
+        path: ["highSchoolInstitutionName"],
+        code: z.ZodIssueCode.custom,
+        message: "Institution name is required for high school.",
+      });
+    }
+    if (entry.highSchoolYearCompleted == null) {
+      ctx.addIssue({
+        path: ["highSchoolYearCompleted"],
+        code: z.ZodIssueCode.custom,
+        message: "Year completed is required for high school.",
+      });
+    }
+  } else {
+    if (!entry.institutionName) {
+      ctx.addIssue({
+        path: ["institutionName"],
+        code: z.ZodIssueCode.custom,
+        message: "Institution name is required.",
+      });
+    }
+    if (!entry.fieldOfStudy) {
+      ctx.addIssue({
+        path: ["fieldOfStudy"],
+        code: z.ZodIssueCode.custom,
+        message: "Field of study is required.",
+      });
+    }
+    if (entry.endYear == null) {
+      ctx.addIssue({
+        path: ["endYear"],
+        code: z.ZodIssueCode.custom,
+        message: "End year is required.",
+      });
     }
   }
-);
 
-const educationArraySchema = z
-  .array(educationEntrySchema)
-  .min(1, "At least one education entry is required.")
-  .max(1, "You can only enter up to 1 education entry.");
+  // Mirror backend strictness: disallow fields not applicable to selected level.
+  const disallow = (value: unknown, path: string) => {
+    if (value != null) {
+      ctx.addIssue({
+        path: [path],
+        code: z.ZodIssueCode.custom,
+        message: "This field must be empty for the selected education level.",
+      });
+    }
+  };
+
+  if (level === EEducationLevel.PRIMARY_SCHOOL) {
+    // Disallow high-school + diploma/bachelor+ fields
+    disallow(entry.highSchoolInstitutionName, "highSchoolInstitutionName");
+    disallow(entry.highSchoolBoard, "highSchoolBoard");
+    disallow(entry.highSchoolStream, "highSchoolStream");
+    disallow(entry.highSchoolYearCompleted, "highSchoolYearCompleted");
+    disallow(entry.highSchoolGradeOrPercentage, "highSchoolGradeOrPercentage");
+
+    disallow(entry.institutionName, "institutionName");
+    disallow(entry.universityOrBoard, "universityOrBoard");
+    disallow(entry.fieldOfStudy, "fieldOfStudy");
+    disallow(entry.startYear, "startYear");
+    disallow(entry.endYear, "endYear");
+    disallow(entry.gradeOrCgpa, "gradeOrCgpa");
+  } else if (level === EEducationLevel.HIGH_SCHOOL) {
+    // Disallow primary + diploma/bachelor+ fields
+    disallow(entry.schoolName, "schoolName");
+    disallow(entry.schoolLocation, "schoolLocation");
+    disallow(entry.primaryYearCompleted, "primaryYearCompleted");
+
+    disallow(entry.institutionName, "institutionName");
+    disallow(entry.universityOrBoard, "universityOrBoard");
+    disallow(entry.fieldOfStudy, "fieldOfStudy");
+    disallow(entry.startYear, "startYear");
+    disallow(entry.endYear, "endYear");
+    disallow(entry.gradeOrCgpa, "gradeOrCgpa");
+  } else {
+    // Diploma / Bachelor / Masters / Doctorate / Other
+    // Disallow primary + high-school fields
+    disallow(entry.schoolName, "schoolName");
+    disallow(entry.schoolLocation, "schoolLocation");
+    disallow(entry.primaryYearCompleted, "primaryYearCompleted");
+
+    disallow(entry.highSchoolInstitutionName, "highSchoolInstitutionName");
+    disallow(entry.highSchoolBoard, "highSchoolBoard");
+    disallow(entry.highSchoolStream, "highSchoolStream");
+    disallow(entry.highSchoolYearCompleted, "highSchoolYearCompleted");
+    disallow(entry.highSchoolGradeOrPercentage, "highSchoolGradeOrPercentage");
+  }
+});
+
+const educationArraySchema = z.array(educationEntrySchema).min(1, "At least one education entry is required.").max(1, "You can only enter up to 1 education entry.");
 
 /* ------------------------------------------------------------------ */
 /* Employment (IEmploymentHistoryEntry[])                             */
@@ -346,9 +412,7 @@ const employmentHistoryEntrySchema = z
     }
   });
 
-const employmentHistoryArraySchema = z
-  .array(employmentHistoryEntrySchema)
-  .max(3, "You can only enter up to 3 employment history entries.");
+const employmentHistoryArraySchema = z.array(employmentHistoryEntrySchema).max(3, "You can only enter up to 3 employment history entries.");
 
 /* ------------------------------------------------------------------ */
 /* Bank Details (IIndiaBankDetails)                                   */
@@ -375,10 +439,7 @@ const indiaBankDetailsSchema = z.object({
     emptyToUndefined,
     z
       .string()
-      .refine(
-        (v) => /^[a-z0-9.\-_]{2,256}@[a-z0-9.\-_]{2,64}$/i.test(v),
-        { message: "Enter a valid UPI ID (e.g. name@bank)." }
-      )
+      .refine((v) => /^[a-z0-9.\-_]{2,256}@[a-z0-9.\-_]{2,64}$/i.test(v), { message: "Enter a valid UPI ID (e.g. name@bank)." })
       .optional()
   ),
 
@@ -402,15 +463,9 @@ const declarationSchema = z
         },
         { message: "Signature must be an image file." }
       ),
-      signedAt: requiredDateString(
-        "Signature date is required.",
-        "Enter a valid signature date."
-      ),
+      signedAt: requiredDateString("Signature date is required.", "Enter a valid signature date."),
     }),
-    declarationDate: requiredDateString(
-      "Declaration date is required.",
-      "Enter a valid declaration date."
-    ),
+    declarationDate: requiredDateString("Declaration date is required.", "Enter a valid declaration date."),
   })
   .superRefine((value, ctx) => {
     if (!value.hasAcceptedDeclaration) {
@@ -453,16 +508,11 @@ export const indiaOnboardingFormSchema = z
       ctx.addIssue({
         path: ["employmentHistory"],
         code: z.ZodIssueCode.custom,
-        message:
-          "At least one employment history entry is required when you have previous employment.",
+        message: "At least one employment history entry is required when you have previous employment.",
       });
     }
   });
 
-export type IndiaOnboardingFormInput = z.input<
-  typeof indiaOnboardingFormSchema
->;
-export type IndiaOnboardingFormValues = z.output<
-  typeof indiaOnboardingFormSchema
->;
+export type IndiaOnboardingFormInput = z.input<typeof indiaOnboardingFormSchema>;
+export type IndiaOnboardingFormValues = z.output<typeof indiaOnboardingFormSchema>;
 export type IndiaFormDataT = IIndiaOnboardingFormData;

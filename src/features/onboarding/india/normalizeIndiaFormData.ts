@@ -1,3 +1,4 @@
+// src/features/onboarding/india/normalizeIndiaFormData.ts
 import { EEducationLevel } from "@/types/onboarding.types";
 import type { IndiaOnboardingFormValues } from "./indiaFormSchema";
 
@@ -5,8 +6,7 @@ export function normalizeIndiaFormDataForSubmit(values: IndiaOnboardingFormValue
   // Deep clone to avoid mutating RHF state
   const form: any = JSON.parse(JSON.stringify(values));
 
-  const toUndef = (v: any) =>
-    typeof v === "string" && v.trim() === "" ? undefined : v;
+  const toUndef = (v: any) => (typeof v === "string" && v.trim() === "" ? undefined : v);
 
   // personalInfo optionals
   if (form.personalInfo) {
@@ -39,14 +39,7 @@ export function normalizeIndiaFormDataForSubmit(values: IndiaOnboardingFormValue
 
     // Backend rejects optional-but-empty strings; normalize common optional fields.
     // (Required fields remain required by frontend validation before submit.)
-    [
-      "schoolLocation",
-      "highSchoolBoard",
-      "highSchoolStream",
-      "highSchoolGradeOrPercentage",
-      "universityOrBoard",
-      "gradeOrCgpa",
-    ].forEach((k) => {
+    ["schoolLocation", "highSchoolBoard", "highSchoolStream", "highSchoolGradeOrPercentage", "universityOrBoard", "gradeOrCgpa"].forEach((k) => {
       e[k] = toUndef(e[k]);
       if (e[k] === undefined) delete e[k];
     });
@@ -70,40 +63,43 @@ export function normalizeIndiaFormDataForSubmit(values: IndiaOnboardingFormValue
         "gradeOrCgpa",
       ].forEach(del);
     } else if (level === EEducationLevel.HIGH_SCHOOL) {
-      [
-        "schoolName",
-        "schoolLocation",
-        "primaryYearCompleted",
-        "institutionName",
-        "universityOrBoard",
-        "fieldOfStudy",
-        "startYear",
-        "endYear",
-        "gradeOrCgpa",
-      ].forEach(del);
+      ["schoolName", "schoolLocation", "primaryYearCompleted", "institutionName", "universityOrBoard", "fieldOfStudy", "startYear", "endYear", "gradeOrCgpa"].forEach(del);
     } else if (level) {
-      [
-        "schoolName",
-        "schoolLocation",
-        "primaryYearCompleted",
-        "highSchoolInstitutionName",
-        "highSchoolBoard",
-        "highSchoolStream",
-        "highSchoolYearCompleted",
-        "highSchoolGradeOrPercentage",
-      ].forEach(del);
+      ["schoolName", "schoolLocation", "primaryYearCompleted", "highSchoolInstitutionName", "highSchoolBoard", "highSchoolStream", "highSchoolYearCompleted", "highSchoolGradeOrPercentage"].forEach(
+        del
+      );
     }
   }
 
-  // governmentIds driversLicense empty-object protection
-  if (form.governmentIds?.driversLicense) {
-    const dl = form.governmentIds.driversLicense;
-    const hasFront = Boolean(dl?.frontFile);
-    const hasBack = Boolean(dl?.backFile);
-    if (!hasFront && !hasBack) delete form.governmentIds.driversLicense;
+  // governmentIds: normalize optional groups + delete empty ones
+  if (form.governmentIds) {
+    // PAN: normalize empty string
+    if (form.governmentIds.panCard) {
+      form.governmentIds.panCard.panNumber = toUndef(form.governmentIds.panCard.panNumber);
+    }
+
+    const isEmptyObj = (o: any) => o && typeof o === "object" && Object.keys(o).length === 0;
+
+    const hasAnyValue = (o: any) => {
+      if (!o || typeof o !== "object") return false;
+      return Object.values(o).some((v) => {
+        if (v == null) return false;
+        if (typeof v === "string") return v.trim().length > 0;
+        if (typeof v === "object") return !isEmptyObj(v);
+        return true;
+      });
+    };
+
+    // Passport optional: drop it if user left it blank
+    if (form.governmentIds.passport && !hasAnyValue(form.governmentIds.passport)) {
+      delete form.governmentIds.passport;
+    }
+
+    // Drivers license optional: drop it if user left it blank
+    if (form.governmentIds.driversLicense && !hasAnyValue(form.governmentIds.driversLicense)) {
+      delete form.governmentIds.driversLicense;
+    }
   }
 
   return form;
 }
-
-

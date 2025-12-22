@@ -1,35 +1,21 @@
+// src/features/onboarding/india/IndiaOnboardingForm.tsx
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import {
-  FormProvider,
-  useForm,
-} from "react-hook-form";
+import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import {
-  indiaOnboardingFormSchema,
-  type IndiaOnboardingFormInput,
-  type IndiaOnboardingFormValues,
-} from "./indiaFormSchema";
+import { indiaOnboardingFormSchema, type IndiaOnboardingFormInput, type IndiaOnboardingFormValues } from "./indiaFormSchema";
 
 import type { TOnboardingContext } from "@/types/onboarding.types";
 import { ONBOARDING_STEPS } from "@/config/onboardingSteps";
 
-import {
-  PersonalInfoSection,
-} from "./sections/PersonalInfoSection";
-import {
-  GovernmentIdsSection,
-} from "./sections/GovernmentIdsSection";
-import {
-  EducationSection,
-} from "./sections/EducationSection";
+import { PersonalInfoSection } from "./sections/PersonalInfoSection";
+import { GovernmentIdsSection } from "./sections/GovernmentIdsSection";
+import { EducationSection } from "./sections/EducationSection";
 import { EmploymentSection } from "./sections/EmploymentSection";
 import { BankDetailsSection } from "./sections/BankDetailsSection";
-import {
-  DeclarationSection,
-} from "./sections/DeclarationSection";
+import { DeclarationSection } from "./sections/DeclarationSection";
 
 import { submitIndiaOnboarding } from "@/lib/api/onboarding";
 import { ApiError } from "@/lib/api/client";
@@ -64,22 +50,10 @@ type IndiaOnboardingFormProps = {
 
 const STEP_IDS = INDIA_STEPS.map((s) => s.id) as IndiaStepId[];
 
-export function IndiaOnboardingForm({
-  onboarding,
-  isReadOnly,
-  currentIndex,
-  onStepChange,
-  onSubmitted,
-  geo,
-  geoDenied,
-}: IndiaOnboardingFormProps) {
+export function IndiaOnboardingForm({ onboarding, isReadOnly, currentIndex, onStepChange, onSubmitted, geo, geoDenied }: IndiaOnboardingFormProps) {
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
-  const methods = useForm<
-    IndiaOnboardingFormInput,
-    unknown,
-    IndiaOnboardingFormValues
-  >({
+  const methods = useForm<IndiaOnboardingFormInput, unknown, IndiaOnboardingFormValues>({
     resolver: zodResolver(indiaOnboardingFormSchema),
     mode: "onChange",
     reValidateMode: "onChange",
@@ -116,10 +90,7 @@ export function IndiaOnboardingForm({
 
     // For diploma/bachelor/masters/doctorate/other
     const isHigherEd =
-      highestEducationLevel != null &&
-      highestEducationLevel !== "" &&
-      highestEducationLevel !== EEducationLevel.PRIMARY_SCHOOL &&
-      highestEducationLevel !== EEducationLevel.HIGH_SCHOOL;
+      highestEducationLevel != null && highestEducationLevel !== "" && highestEducationLevel !== EEducationLevel.PRIMARY_SCHOOL && highestEducationLevel !== EEducationLevel.HIGH_SCHOOL;
     if (p === "education.*.institutionName") return Boolean(isHigherEd);
     if (p === "education.*.fieldOfStudy") return Boolean(isHigherEd);
     if (p === "education.*.endYear") return Boolean(isHigherEd);
@@ -151,10 +122,8 @@ export function IndiaOnboardingForm({
    * Scroll to a section by step ID.
    * Uses smooth scrolling for better UX.
    */
-  const scrollSection = (stepId: IndiaStepId) =>
-    scrollToSection(stepId, sectionRefs as any);
-  const scrollField = (path: string, fallback: IndiaStepId) =>
-    scrollToField(path, fallback, sectionRefs as any);
+  const scrollSection = (stepId: IndiaStepId) => scrollToSection(stepId, sectionRefs as any);
+  const scrollField = (path: string, fallback: IndiaStepId) => scrollToField(path, fallback, sectionRefs as any);
 
   /**
    * Handle Next button click - validates current section before proceeding.
@@ -201,7 +170,6 @@ export function IndiaOnboardingForm({
 
     setSubmitting(true);
     try {
-
       // Force error visibility in the last section (and signature box) for custom submit flow
       setSubmitAttempted(true);
       setSubmitError(null);
@@ -215,10 +183,7 @@ export function IndiaOnboardingForm({
         // Do this after the next render so we use the latest errors snapshot.
         setTimeout(() => {
           const errs = methods.formState.errors;
-          const firstError = findFirstErrorAcrossSteps(
-            INDIA_STEPS as any,
-            errs as any
-          );
+          const firstError = findFirstErrorAcrossSteps(INDIA_STEPS as any, errs as any);
           if (firstError) {
             const { stepId, errorPath } = firstError;
             // IMPORTANT:
@@ -260,20 +225,12 @@ export function IndiaOnboardingForm({
         locationAtSubmit = await ensureGeoAtSubmit({ geo, geoDenied });
 
         // Double-check we have valid coordinates
-        if (
-          locationAtSubmit.latitude == null ||
-          locationAtSubmit.longitude == null
-        ) {
-          throw new Error(
-            "Location coordinates are missing. Please allow location access to submit."
-          );
+        if (locationAtSubmit.latitude == null || locationAtSubmit.longitude == null) {
+          throw new Error("Location coordinates are missing. Please allow location access to submit.");
         }
       } catch (err: any) {
         // Location is REQUIRED - block submission with clear error message
-        setSubmitError(
-          err?.message ||
-            "Location access is required to submit. Please enable location access in your browser settings."
-        );
+        setSubmitError(err?.message || "Location access is required to submit. Please enable location access in your browser settings.");
         scrollSection("declaration");
         return;
       }
@@ -311,124 +268,102 @@ export function IndiaOnboardingForm({
   return (
     <FormProvider {...methods}>
       <RequiredFieldProvider isRequired={isRequired}>
-        <form
-          className="space-y-10"
-          autoComplete="off"
-          onSubmit={handleSubmitWithUploads}
-        >
+        <form className="space-y-10" autoComplete="off" onSubmit={handleSubmitWithUploads}>
           <section
             ref={(el) => {
               sectionRefs.current.personal = el;
             }}
             aria-label="Personal information"
           >
-            <PersonalInfoSection
-              onboarding={onboarding}
-              isReadOnly={isReadOnly}
-            />
+            <PersonalInfoSection onboarding={onboarding} isReadOnly={isReadOnly} />
           </section>
 
-        <section
-          ref={(el) => {
-            sectionRefs.current.governmentIds = el;
-          }}
-          aria-label="Government identification"
-        >
-          {currentIndex >= stepIndex("governmentIds") && (
-            <GovernmentIdsSection
-              isReadOnly={isReadOnly}
-              docId={onboarding.id}
-            />
-          )}
-        </section>
-
-        <section
-          ref={(el) => {
-            sectionRefs.current.education = el;
-          }}
-          aria-label="Education"
-        >
-          {currentIndex >= stepIndex("education") && (
-            <EducationSection isReadOnly={isReadOnly} />
-          )}
-        </section>
-
-        <section
-          ref={(el) => {
-            sectionRefs.current.employment = el;
-          }}
-          aria-label="Employment history"
-        >
-          {currentIndex >= stepIndex("employment") && (
-            <EmploymentSection isReadOnly={isReadOnly} docId={onboarding.id} />
-          )}
-        </section>
-
-        <section
-          ref={(el) => {
-            sectionRefs.current.banking = el;
-          }}
-          aria-label="Bank & payment details"
-        >
-          {currentIndex >= stepIndex("banking") && (
-            <BankDetailsSection isReadOnly={isReadOnly} docId={onboarding.id} />
-          )}
-        </section>
-
-        <section
-          ref={(el) => {
-            sectionRefs.current.declaration = el;
-          }}
-          aria-label="Declaration"
-        >
-          {currentIndex >= stepIndex("declaration") && (
-            <DeclarationSection
-              isReadOnly={isReadOnly}
-              docId={onboarding.id}
-              turnstileToken={turnstileToken}
-              onTurnstileToken={setTurnstileToken}
-              submitError={submitError}
-              signatureRef={signatureRef}
-              showErrors={submitAttempted}
-            />
-          )}
-        </section>
-
-        <div className="mt-4 flex items-center justify-between gap-3 text-sm">
-          <button
-            type="button"
-            className="cursor-pointer rounded-full border border-slate-200 px-4 py-2 text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-            onClick={handlePrev}
-            disabled={currentIndex === 0}
+          <section
+            ref={(el) => {
+              sectionRefs.current.governmentIds = el;
+            }}
+            aria-label="Government identification"
           >
-            Previous
-          </button>
+            {currentIndex >= stepIndex("governmentIds") && <GovernmentIdsSection isReadOnly={isReadOnly} docId={onboarding.id} />}
+          </section>
 
-          <div className="flex items-center gap-3">
-            {currentIndex < ONBOARDING_STEPS.length - 1 ? (
-              <button
-                type="button"
-                className="cursor-pointer rounded-full bg-slate-900 px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
-                onClick={handleNext}
-                disabled={isReadOnly}
-              >
-                Next section
-              </button>
-            ) : (
-              <button
-                type="submit"
-                className="cursor-pointer rounded-full bg-slate-900 px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
-                disabled={isReadOnly || submitting || isSubmitting}
-              >
-                {submitting || isSubmitting
-                  ? "Submitting..."
-                  : onboarding.status === EOnboardingStatus.ModificationRequested
-                    ? "Resubmit onboarding"
-                    : "Submit onboarding"}
-              </button>
+          <section
+            ref={(el) => {
+              sectionRefs.current.education = el;
+            }}
+            aria-label="Education"
+          >
+            {currentIndex >= stepIndex("education") && <EducationSection isReadOnly={isReadOnly} />}
+          </section>
+
+          <section
+            ref={(el) => {
+              sectionRefs.current.employment = el;
+            }}
+            aria-label="Employment history"
+          >
+            {currentIndex >= stepIndex("employment") && <EmploymentSection isReadOnly={isReadOnly} docId={onboarding.id} />}
+          </section>
+
+          <section
+            ref={(el) => {
+              sectionRefs.current.banking = el;
+            }}
+            aria-label="Bank & payment details"
+          >
+            {currentIndex >= stepIndex("banking") && <BankDetailsSection isReadOnly={isReadOnly} docId={onboarding.id} />}
+          </section>
+
+          <section
+            ref={(el) => {
+              sectionRefs.current.declaration = el;
+            }}
+            aria-label="Declaration"
+          >
+            {currentIndex >= stepIndex("declaration") && (
+              <DeclarationSection
+                isReadOnly={isReadOnly}
+                docId={onboarding.id}
+                turnstileToken={turnstileToken}
+                onTurnstileToken={setTurnstileToken}
+                submitError={submitError}
+                signatureRef={signatureRef}
+                showErrors={submitAttempted}
+              />
             )}
+          </section>
+
+          <div className="mt-4 flex items-center justify-between gap-3 text-sm">
+            <button
+              type="button"
+              className="cursor-pointer rounded-full border border-slate-200 px-4 py-2 text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={handlePrev}
+              disabled={currentIndex === 0}
+            >
+              Previous
+            </button>
+
+            <div className="flex items-center gap-3">
+              {currentIndex < ONBOARDING_STEPS.length - 1 ? (
+                <button
+                  type="button"
+                  className="cursor-pointer rounded-full bg-slate-900 px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                  onClick={handleNext}
+                  disabled={isReadOnly}
+                >
+                  Next section
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  className="cursor-pointer rounded-full bg-slate-900 px-6 py-2 text-sm font-medium text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                  disabled={isReadOnly || submitting || isSubmitting}
+                >
+                  {submitting || isSubmitting ? "Submitting..." : onboarding.status === EOnboardingStatus.ModificationRequested ? "Resubmit onboarding" : "Submit onboarding"}
+                </button>
+              )}
+            </div>
           </div>
-        </div>
         </form>
       </RequiredFieldProvider>
     </FormProvider>

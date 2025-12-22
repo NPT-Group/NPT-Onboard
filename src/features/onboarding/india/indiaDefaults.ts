@@ -1,3 +1,4 @@
+// src/features/onboarding/india/indiaDefaults.ts
 import type { DeepPartial } from "react-hook-form";
 import type { TOnboardingContext } from "@/types/onboarding.types";
 import type { IndiaOnboardingFormInput } from "./indiaFormSchema";
@@ -13,18 +14,14 @@ function toYmd(value: unknown): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function buildIndiaDefaultValuesFromOnboarding(
-  onboarding: TOnboardingContext,
-  today: string
-): DeepPartial<IndiaOnboardingFormInput> {
+export function buildIndiaDefaultValuesFromOnboarding(onboarding: TOnboardingContext, today: string): DeepPartial<IndiaOnboardingFormInput> {
   const existing = (onboarding as any).indiaFormData as any | undefined;
 
   // If this is a modification request, we want to prefill the last submitted data.
   // (Backend preserves indiaFormData; it only rotates the invite token.)
   if (existing && typeof existing === "object") {
     const vc = existing?.bankDetails?.voidCheque;
-    const voidCheque =
-      vc?.url && vc?.s3Key ? vc : vc?.file && (vc.file.url && vc.file.s3Key) ? vc.file : undefined;
+    const voidCheque = vc?.url && vc?.s3Key ? vc : vc?.file && vc.file.url && vc.file.s3Key ? vc.file : undefined;
 
     return {
       personalInfo: {
@@ -42,14 +39,37 @@ export function buildIndiaDefaultValuesFromOnboarding(
       },
       governmentIds: {
         ...existing.governmentIds,
+
+        // PAN
+        panCard: existing.governmentIds?.panCard
+          ? {
+              ...existing.governmentIds.panCard,
+              panNumber: existing.governmentIds.panCard.panNumber ?? "",
+            }
+          : { panNumber: "", file: undefined as any },
+
+        // Passport (optional) — normalize date strings for <input type="date" />
+        passport: existing.governmentIds?.passport
+          ? {
+              ...existing.governmentIds.passport,
+              issueDate: toYmd(existing.governmentIds.passport.issueDate),
+              expiryDate: toYmd(existing.governmentIds.passport.expiryDate),
+            }
+          : undefined,
+
+        // Drivers license (optional) — normalize date strings too
+        driversLicense: existing.governmentIds?.driversLicense
+          ? {
+              ...existing.governmentIds.driversLicense,
+              issueDate: toYmd(existing.governmentIds.driversLicense.issueDate),
+              expiryDate: toYmd(existing.governmentIds.driversLicense.expiryDate),
+            }
+          : undefined,
       },
-      education: Array.isArray(existing.education) && existing.education.length
-        ? [existing.education[0]]
-        : [{ highestLevel: "" as any }],
+
+      education: Array.isArray(existing.education) && existing.education.length ? [existing.education[0]] : [{ highestLevel: "" as any }],
       hasPreviousEmployment:
-        typeof existing.hasPreviousEmployment === "boolean"
-          ? existing.hasPreviousEmployment
-          : (Array.isArray(existing.employmentHistory) && existing.employmentHistory.length > 0) as any,
+        typeof existing.hasPreviousEmployment === "boolean" ? existing.hasPreviousEmployment : ((Array.isArray(existing.employmentHistory) && existing.employmentHistory.length > 0) as any),
       employmentHistory: Array.isArray(existing.employmentHistory)
         ? existing.employmentHistory.map((e: any) => ({
             ...e,
@@ -95,10 +115,17 @@ export function buildIndiaDefaultValuesFromOnboarding(
     },
     governmentIds: {
       aadhaar: { aadhaarNumber: "", file: undefined as any },
-      panCard: { file: undefined as any },
-      passport: { frontFile: undefined as any, backFile: undefined as any },
+
+      // PAN now has panNumber
+      panCard: { panNumber: "", file: undefined as any },
+
+      // Passport is optional now — DO NOT default to an empty object
+      passport: undefined,
+
+      // DL is optional — you can keep undefined (recommended)
       driversLicense: undefined,
     },
+
     // Backend expects exactly 1 education entry; keep a single placeholder row.
     education: [{ highestLevel: "" as any }],
     hasPreviousEmployment: undefined as any,
@@ -122,6 +149,3 @@ export function buildIndiaDefaultValuesFromOnboarding(
     },
   };
 }
-
-
-

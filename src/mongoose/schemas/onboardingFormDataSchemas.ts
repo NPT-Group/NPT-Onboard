@@ -34,14 +34,10 @@ const frontBackDocumentSchema = new Schema<IFrontBackDoc>(
   { _id: false }
 );
 
-// Variant where front & back are both required
-const requiredFrontBackDocumentSchema = new Schema<IFrontBackDoc>(
-  {
-    frontFile: { type: fileAssetSchema, required: true },
-    backFile: { type: fileAssetSchema, required: true },
-  },
-  { _id: false }
-);
+const issueExpiryFields = {
+  issueDate: { type: Date, required: false },
+  expiryDate: { type: Date, required: false },
+};
 
 /* ------------------------------------------------------------------ */
 /* INDIA                                                              */
@@ -50,6 +46,26 @@ const requiredFrontBackDocumentSchema = new Schema<IFrontBackDoc>(
 interface IIndiaSimpleFileDoc {
   file: any;
 }
+
+const indiaPassportDocumentSchema = new Schema(
+  {
+    passportNumber: { type: String, required: true },
+    ...issueExpiryFields,
+    frontFile: { type: fileAssetSchema, required: true },
+    backFile: { type: fileAssetSchema, required: true },
+  },
+  { _id: false }
+);
+
+const indiaDriversLicenseDocumentSchema = new Schema(
+  {
+    licenseNumber: { type: String, required: true },
+    ...issueExpiryFields,
+    frontFile: { type: fileAssetSchema, required: true },
+    backFile: { type: fileAssetSchema, required: true },
+  },
+  { _id: false }
+);
 
 const indiaAadhaarCardDocumentSchema = new Schema<IIndiaAadhaarCardDocument>(
   {
@@ -64,6 +80,10 @@ const indiaAadhaarCardDocumentSchema = new Schema<IIndiaAadhaarCardDocument>(
 
 const indiaPanCardDocumentSchema = new Schema<IIndiaPanCardDocument>(
   {
+    panNumber: {
+      ...encryptedStringField,
+      required: true,
+    },
     file: { type: fileAssetSchema, required: true },
   },
   { _id: false }
@@ -80,8 +100,9 @@ const indiaGovernmentIdsSchema = new Schema<IIndiaGovernmentIds>(
   {
     aadhaar: { type: indiaAadhaarCardDocumentSchema, required: true },
     panCard: { type: indiaPanCardDocumentSchema, required: true },
-    passport: { type: requiredFrontBackDocumentSchema, required: true },
-    driversLicense: { type: requiredFrontBackDocumentSchema, required: false },
+
+    passport: { type: indiaPassportDocumentSchema, required: false },
+    driversLicense: { type: indiaDriversLicenseDocumentSchema, required: false },
   },
   { _id: false }
 );
@@ -164,14 +185,31 @@ const canadaSinCardDocumentSchema = new Schema<ICanadaSinCardDocument>(
 const canadaWorkPermitDocumentSchema = canadaSimpleFileDocSchema.clone();
 const canadaDirectDepositDocumentSchema = canadaSimpleFileDocSchema.clone();
 
-const canadaPassportDocumentSchema = requiredFrontBackDocumentSchema.clone();
+const canadaPassportDocumentSchema = new Schema(
+  {
+    passportNumber: { type: String, required: true },
+    ...issueExpiryFields,
+    frontFile: { type: fileAssetSchema, required: true },
+    backFile: { type: fileAssetSchema, required: true },
+  },
+  { _id: false }
+);
+
 const canadaPrCardDocumentSchema = frontBackDocumentSchema.clone();
-const canadaDriversLicenseDocumentSchema = requiredFrontBackDocumentSchema.clone();
+const canadaDriversLicenseDocumentSchema = new Schema(
+  {
+    licenseNumber: { type: String, required: true },
+    ...issueExpiryFields,
+    frontFile: { type: fileAssetSchema, required: true },
+    backFile: { type: fileAssetSchema, required: true },
+  },
+  { _id: false }
+);
 
 const canadaGovernmentIdsSchema = new Schema<ICanadaGovernmentIds>(
   {
     sin: { type: canadaSinCardDocumentSchema, required: true },
-    passport: { type: canadaPassportDocumentSchema, required: true },
+    passport: { type: canadaPassportDocumentSchema, required: false },
     prCard: { type: canadaPrCardDocumentSchema, required: false },
     workPermit: { type: canadaWorkPermitDocumentSchema, required: false },
     driversLicense: {
@@ -263,14 +301,31 @@ const usSsnCardDocumentSchema = new Schema<IUsSsnCardDocument>(
 const usWorkPermitDocumentSchema = usSimpleFileDocSchema.clone();
 const usVoidChequeOrDepositSlipDocumentSchema = usSimpleFileDocSchema.clone();
 
-const usPassportDocumentSchema = requiredFrontBackDocumentSchema.clone();
+const usPassportDocumentSchema = new Schema(
+  {
+    passportNumber: { type: String, required: false },
+    ...issueExpiryFields,
+    frontFile: { type: fileAssetSchema, required: true },
+    backFile: { type: fileAssetSchema, required: true },
+  },
+  { _id: false }
+);
+
 const usGreenCardDocumentSchema = frontBackDocumentSchema.clone();
-const usDriversLicenseDocumentSchema = requiredFrontBackDocumentSchema.clone();
+const usDriversLicenseDocumentSchema = new Schema(
+  {
+    licenseNumber: { type: String, required: true },
+    ...issueExpiryFields,
+    frontFile: { type: fileAssetSchema, required: true },
+    backFile: { type: fileAssetSchema, required: true },
+  },
+  { _id: false }
+);
 
 const usGovernmentIdsSchema = new Schema<IUsGovernmentIds>(
   {
     ssn: { type: usSsnCardDocumentSchema, required: true },
-    passport: { type: usPassportDocumentSchema, required: true },
+    passport: { type: usPassportDocumentSchema, required: false },
     greenCard: { type: usGreenCardDocumentSchema, required: false },
     workPermit: { type: usWorkPermitDocumentSchema, required: false },
     driversLicense: {

@@ -20,22 +20,11 @@ import { GovernmentIdsSection } from "@/features/onboarding/india/sections/Gover
 import { EducationSection } from "@/features/onboarding/india/sections/EducationSection";
 import { EmploymentSection } from "@/features/onboarding/india/sections/EmploymentSection";
 import { BankDetailsSection } from "@/features/onboarding/india/sections/BankDetailsSection";
-import {
-  PERSONAL_INFO_FIELD_PATHS,
-} from "@/features/onboarding/india/sections/PersonalInfoSection";
-import {
-  GOVERNMENT_IDS_FIELD_PATHS,
-} from "@/features/onboarding/india/sections/GovernmentIdsSection";
-import {
-  EDUCATION_FIELD_PATHS,
-} from "@/features/onboarding/india/sections/EducationSection";
-import {
-  DECLARATION_FIELD_PATHS,
-} from "@/features/onboarding/india/sections/DeclarationSection";
-import {
-  findFirstErrorAcrossSteps,
-  findFirstErrorInStep,
-} from "@/features/onboarding/form-engine/errors";
+import { PERSONAL_INFO_FIELD_PATHS } from "@/features/onboarding/india/sections/PersonalInfoSection";
+import { GOVERNMENT_IDS_FIELD_PATHS } from "@/features/onboarding/india/sections/GovernmentIdsSection";
+import { EDUCATION_FIELD_PATHS } from "@/features/onboarding/india/sections/EducationSection";
+import { DECLARATION_FIELD_PATHS } from "@/features/onboarding/india/sections/DeclarationSection";
+import { findFirstErrorAcrossSteps, findFirstErrorInStep } from "@/features/onboarding/form-engine/errors";
 import type { StepDef } from "@/features/onboarding/form-engine/types";
 import { scrollToField, scrollToSection, type SectionRefs } from "@/features/onboarding/form-engine/scrolling";
 
@@ -45,14 +34,7 @@ import { RHFTextInput } from "@/features/onboarding/common/RHFTextInput";
 import { RHFSignatureBox } from "@/features/onboarding/common/RHFSignatureBox";
 import { ES3Folder, ES3Namespace } from "@/types/aws.types";
 
-type TabKey =
-  | "summary"
-  | "personal"
-  | "governmentIds"
-  | "education"
-  | "employment"
-  | "banking"
-  | "declaration";
+type TabKey = "summary" | "personal" | "governmentIds" | "education" | "employment" | "banking" | "declaration";
 
 function findFirstEmploymentErrorPath(errs: any): string | null {
   if (errs?.hasPreviousEmployment?.message) return "hasPreviousEmployment";
@@ -60,14 +42,7 @@ function findFirstEmploymentErrorPath(errs: any): string | null {
   if (!arr) return null;
   if (arr?.message) return "employmentHistory";
   if (Array.isArray(arr)) {
-    const order = [
-      "organizationName",
-      "designation",
-      "startDate",
-      "endDate",
-      "reasonForLeaving",
-      "experienceCertificateFile",
-    ];
+    const order = ["organizationName", "designation", "startDate", "endDate", "reasonForLeaving", "experienceCertificateFile"];
     for (let i = 0; i < priorLengthSafe(arr); i++) {
       const row = arr[i];
       if (!row) continue;
@@ -107,11 +82,25 @@ export function HrOnboardingEditForm({
         label: "Government IDs",
         fieldPaths: GOVERNMENT_IDS_FIELD_PATHS as any,
         nestedScrollPaths: [
+          // Aadhaar
           "governmentIds.aadhaar.aadhaarNumber",
           "governmentIds.aadhaar.file",
+
+          // PAN (NEW: panNumber)
+          "governmentIds.panCard.panNumber",
           "governmentIds.panCard.file",
+
+          // Passport (NEW: passportNumber + issue/expiry)
+          "governmentIds.passport.passportNumber",
+          "governmentIds.passport.issueDate",
+          "governmentIds.passport.expiryDate",
           "governmentIds.passport.frontFile",
           "governmentIds.passport.backFile",
+
+          // Driver's License (NEW: licenseNumber + issue/expiry)
+          "governmentIds.driversLicense.licenseNumber",
+          "governmentIds.driversLicense.issueDate",
+          "governmentIds.driversLicense.expiryDate",
           "governmentIds.driversLicense.frontFile",
           "governmentIds.driversLicense.backFile",
         ],
@@ -142,10 +131,7 @@ export function HrOnboardingEditForm({
     return defs;
   }, []);
 
-  const defaultValues = useMemo(
-    () => buildIndiaDefaultValuesFromOnboarding(onboarding as any, today),
-    [onboarding, today]
-  );
+  const defaultValues = useMemo(() => buildIndiaDefaultValuesFromOnboarding(onboarding as any, today), [onboarding, today]);
 
   const methods = useForm<IndiaOnboardingFormInput, unknown, IndiaOnboardingFormValues>({
     resolver: zodResolver(indiaOnboardingFormSchema),
@@ -176,8 +162,7 @@ export function HrOnboardingEditForm({
   }, [defaultValues, reset]);
 
   // Conditional requiredness (same as employee form)
-  const highestEducationLevel = (methods.watch("education.0.highestLevel") ??
-    "") as EEducationLevel | "" | undefined;
+  const highestEducationLevel = (methods.watch("education.0.highestLevel") ?? "") as EEducationLevel | "" | undefined;
 
   const isRequired = (path: string): boolean => {
     const p = String(path).replace(/\.\d+(?=\.|$)/g, ".*");
@@ -187,10 +172,7 @@ export function HrOnboardingEditForm({
     if (p === "education.*.highSchoolYearCompleted") return highestEducationLevel === EEducationLevel.HIGH_SCHOOL;
 
     const isHigherEd =
-      highestEducationLevel != null &&
-      highestEducationLevel !== "" &&
-      highestEducationLevel !== EEducationLevel.PRIMARY_SCHOOL &&
-      highestEducationLevel !== EEducationLevel.HIGH_SCHOOL;
+      highestEducationLevel != null && highestEducationLevel !== "" && highestEducationLevel !== EEducationLevel.PRIMARY_SCHOOL && highestEducationLevel !== EEducationLevel.HIGH_SCHOOL;
     if (p === "education.*.institutionName") return Boolean(isHigherEd);
     if (p === "education.*.fieldOfStudy") return Boolean(isHigherEd);
     if (p === "education.*.endYear") return Boolean(isHigherEd);
@@ -313,8 +295,7 @@ export function HrOnboardingEditForm({
     setBarError(null);
   };
 
-  const showUpdateBar =
-    activeTab !== "summary" || isDirty || Boolean(barError) || saving;
+  const showUpdateBar = activeTab !== "summary" || isDirty || Boolean(barError) || saving;
 
   return (
     <FormProvider {...methods}>
@@ -323,15 +304,7 @@ export function HrOnboardingEditForm({
           {/* Mobile: ONLY the update bar is sticky (tabs scroll away to save space) */}
           {showUpdateBar && (
             <div className="sticky top-16 z-20 mb-3 sm:hidden bg-[var(--dash-bg)]/75 backdrop-blur-xl supports-[backdrop-filter]:bg-[var(--dash-bg)]/60">
-              <UpdateSubmitBar
-                dirty={isDirty}
-                busy={saving}
-                errorMessage={barError}
-                onSubmit={onSave}
-                onDiscard={onDiscard}
-                placement="top"
-                sticky={false}
-              />
+              <UpdateSubmitBar dirty={isDirty} busy={saving} errorMessage={barError} onSubmit={onSave} onDiscard={onDiscard} placement="top" sticky={false} />
             </div>
           )}
 
@@ -341,11 +314,7 @@ export function HrOnboardingEditForm({
             <div className="rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-surface)] shadow-[var(--dash-shadow)] p-2">
               <div className="flex flex-wrap gap-2">
                 {steps.map((s, idx) => (
-                  <TabButton
-                    key={s.id}
-                    active={activeIdx === idx}
-                    onClick={() => handleStepClick(idx)}
-                  >
+                  <TabButton key={s.id} active={activeIdx === idx} onClick={() => handleStepClick(idx)}>
                     {s.label}
                   </TabButton>
                 ))}
@@ -355,15 +324,7 @@ export function HrOnboardingEditForm({
             {/* Update bar (non-sticky; parent provides sticky stacking) */}
             {showUpdateBar && (
               <div className="hidden sm:block">
-                <UpdateSubmitBar
-                  dirty={isDirty}
-                  busy={saving}
-                  errorMessage={barError}
-                  onSubmit={onSave}
-                  onDiscard={onDiscard}
-                  placement="top"
-                  sticky={false}
-                />
+                <UpdateSubmitBar dirty={isDirty} busy={saving} errorMessage={barError} onSubmit={onSave} onDiscard={onDiscard} placement="top" sticky={false} />
               </div>
             )}
           </div>
@@ -388,9 +349,7 @@ export function HrOnboardingEditForm({
                   {summaryNode ? (
                     summaryNode
                   ) : (
-                    <div className="text-sm text-[var(--dash-muted)]">
-                      Use the tabs above to review and edit the onboarding details. Changes are saved via the admin update route.
-                    </div>
+                    <div className="text-sm text-[var(--dash-muted)]">Use the tabs above to review and edit the onboarding details. Changes are saved via the admin update route.</div>
                   )}
                 </div>
               )}
@@ -474,14 +433,7 @@ export function HrOnboardingEditForm({
                 </button>
 
                 {activeIdx < steps.length - 1 ? (
-                  <button
-                    type="button"
-                    onClick={handleNext}
-                    className={cn(
-                      "rounded-xl px-4 py-2 text-sm font-semibold transition",
-                      "bg-[var(--dash-red)] text-white hover:opacity-95 cursor-pointer"
-                    )}
-                  >
+                  <button type="button" onClick={handleNext} className={cn("rounded-xl px-4 py-2 text-sm font-semibold transition", "bg-[var(--dash-red)] text-white hover:opacity-95 cursor-pointer")}>
                     Next
                   </button>
                 ) : null}
@@ -494,17 +446,7 @@ export function HrOnboardingEditForm({
   );
 }
 
-function TabButton({
-  active,
-  onClick,
-  children,
-  disabled,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-  disabled?: boolean;
-}) {
+function TabButton({ active, onClick, children, disabled }: { active: boolean; onClick: () => void; children: React.ReactNode; disabled?: boolean }) {
   return (
     <button
       type="button"
@@ -513,11 +455,8 @@ function TabButton({
       className={cn(
         "rounded-xl px-3 py-2 text-xs font-semibold transition",
         "cursor-pointer",
-        active
-          ? "bg-[var(--dash-red-soft)] text-[var(--dash-text)]"
-          : "bg-[var(--dash-surface)] text-[var(--dash-muted)] hover:bg-[var(--dash-surface-2)] hover:text-[var(--dash-text)]",
-        disabled &&
-          "opacity-50 cursor-not-allowed hover:bg-[var(--dash-surface)] hover:text-[var(--dash-muted)]"
+        active ? "bg-[var(--dash-red-soft)] text-[var(--dash-text)]" : "bg-[var(--dash-surface)] text-[var(--dash-muted)] hover:bg-[var(--dash-surface-2)] hover:text-[var(--dash-text)]",
+        disabled && "opacity-50 cursor-not-allowed hover:bg-[var(--dash-surface)] hover:text-[var(--dash-muted)]"
       )}
     >
       {children}
@@ -528,23 +467,12 @@ function TabButton({
 function HrDeclarationSection({ onboardingId, canEdit }: { onboardingId: string; canEdit: boolean }) {
   return (
     <div className="space-y-6">
-      <div className="text-sm text-[var(--dash-muted)]">
-        HR can update the declaration fields and signature. (No Turnstile required for HR.)
-      </div>
+      <div className="text-sm text-[var(--dash-muted)]">HR can update the declaration fields and signature. (No Turnstile required for HR.)</div>
 
-      <RHFTextInput
-        name={"declaration.declarationDate" as any}
-        label="Declaration date"
-        type="date"
-        disabled={!canEdit}
-      />
+      <RHFTextInput name={"declaration.declarationDate" as any} label="Declaration date" type="date" disabled={!canEdit} />
 
       <div className="flex items-center">
-        <RHFCheckbox
-          name={"declaration.hasAcceptedDeclaration" as any}
-          label="I accept the declaration and confirm the information is true and complete."
-          disabled={!canEdit}
-        />
+        <RHFCheckbox name={"declaration.hasAcceptedDeclaration" as any} label="I accept the declaration and confirm the information is true and complete." disabled={!canEdit} />
       </div>
 
       <RHFSignatureBox
@@ -577,5 +505,3 @@ function countErrors(errs: any): number {
   walk(errs);
   return n;
 }
-
-

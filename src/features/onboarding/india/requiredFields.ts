@@ -1,3 +1,4 @@
+// src/features/onboarding/india/requiredFields.ts
 import { z } from "zod";
 import { indiaOnboardingFormSchema } from "./indiaFormSchema";
 
@@ -58,12 +59,7 @@ function unwrap(schema: ZodTypeAny): UnwrapResult {
   return { schema: s as ZodTypeAny, isOptional: optional };
 }
 
-function collectRequiredPatterns(
-  schema: ZodTypeAny,
-  prefix: string,
-  out: Set<string>,
-  ancestorsRequired: boolean
-) {
+function collectRequiredPatterns(schema: ZodTypeAny, prefix: string, out: Set<string>, ancestorsRequired: boolean) {
   const { schema: unwrapped, isOptional } = unwrap(schema);
   const requiredHere = ancestorsRequired && !isOptional;
 
@@ -110,5 +106,3 @@ export function isIndiaRequiredField(path: string): boolean {
   const norm = normalizePath(path);
   return REQUIRED_PATTERNS.has(norm);
 }
-
-
