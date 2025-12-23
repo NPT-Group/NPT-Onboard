@@ -297,13 +297,19 @@ export const GET = async (req: NextRequest) => {
       filter.method = method;
     }
 
-    // Apply q filter (you were parsing it but not using it)
+    // Apply q filter
     if (q && q.trim()) {
-      const r = rx(q.trim());
-      const qOr = {
-        $or: [{ firstName: r }, { lastName: r }, { email: r }, { employeeNumber: r }],
-      };
-      filter.$and = filter.$and ? [...filter.$and, qOr] : [qOr];
+      const tokens = q.trim().split(/\s+/).filter(Boolean);
+
+      const tokenAndClauses = tokens.map((t) => {
+        const r = rx(t); // your existing helper (likely escapes + case-insensitive)
+        return {
+          $or: [{ firstName: r }, { lastName: r }, { email: r }, { employeeNumber: r }],
+        };
+      });
+
+      // Require every token to match at least one of the fields
+      filter.$and = filter.$and ? [...filter.$and, ...tokenAndClauses] : tokenAndClauses;
     }
 
     // Default: ignore terminated onboardings unless explicitly requested
