@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
     // India-only (for now)
     if (subsidiary !== ESubsidiary.INDIA) throw new AppError(400, "Only INDIA subsidiary export is supported at this time");
 
-    const jobId = uuidv4();
+    const jobId = `job-${uuidv4()}`;
 
     // Date parsing (same semantics as list route)
     const fromRaw = get("from");

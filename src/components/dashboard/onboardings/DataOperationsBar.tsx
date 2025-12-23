@@ -1,3 +1,4 @@
+// src/components/dashboard/onboardings/DataOperationsBar.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -7,13 +8,7 @@ import { Calendar, ChevronDown, Search, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { ESubsidiary } from "@/types/shared.types";
 
-export type StatusGroupKey =
-  | ""
-  | "pending"
-  | "modificationRequested"
-  | "pendingReview"
-  | "approved"
-  | "manual";
+export type StatusGroupKey = "" | "pending" | "modificationRequested" | "pendingReview" | "approved" | "manual";
 
 const statusGroups: Array<{ key: StatusGroupKey; label: string }> = [
   // No status filter selected by default → show all.
@@ -49,12 +44,9 @@ function FancySelect<T extends string>({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
-  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(
-    null
-  );
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
-  const activeLabel =
-    value ? options.find((o) => o.value === value)?.label ?? String(value) : "";
+  const activeLabel = value ? options.find((o) => o.value === value)?.label ?? String(value) : "";
 
   function compute() {
     const btn = buttonRef.current;
@@ -114,25 +106,15 @@ function FancySelect<T extends string>({
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <span className={cn("truncate text-left", !activeLabel && "text-[var(--dash-muted)]")}>
-          {activeLabel || placeholder}
-        </span>
-        <ChevronDown
-          className={cn(
-            "h-4 w-4 shrink-0 text-[var(--dash-muted)] transition-transform",
-            open && "rotate-180"
-          )}
-        />
+        <span className={cn("truncate text-left", !activeLabel && "text-[var(--dash-muted)]")}>{activeLabel || placeholder}</span>
+        <ChevronDown className={cn("h-4 w-4 shrink-0 text-[var(--dash-muted)] transition-transform", open && "rotate-180")} />
       </button>
 
       <AnimatePresence>
         {open && pos && (
           <motion.div
             role="listbox"
-            className={cn(
-              "fixed z-[60] rounded-2xl border p-3",
-              "border-[var(--dash-border)] bg-[var(--dash-surface-2)] shadow-[var(--dash-shadow)]"
-            )}
+            className={cn("fixed z-[60] rounded-2xl border p-3", "border-[var(--dash-border)] bg-[var(--dash-surface-2)] shadow-[var(--dash-shadow)]")}
             style={{
               top: pos.top,
               left: pos.left,
@@ -184,8 +166,10 @@ type DataOperationsBarBaseProps = {
   supported?: boolean;
 };
 
+type ExportUiState = { state: "idle" } | { state: "running"; showProgress: boolean; progressPercent: number } | { state: "ready"; downloadUrl: string } | { state: "error"; message: string };
+
 type DataOperationsBarHomeProps = DataOperationsBarBaseProps & {
-  variant?: "home";
+  variant: "home";
   subsidiary: ESubsidiary;
   onSubsidiary: (s: ESubsidiary) => void;
   canSendInvite?: boolean;
@@ -198,6 +182,10 @@ type DataOperationsBarHomeProps = DataOperationsBarBaseProps & {
 
   onUpdateQuery: (next: Record<string, string | undefined>) => void;
   onSendInvite: () => void;
+
+  exportState: ExportUiState;
+  onExport: () => void;
+  onDownloadExport: (url: string) => void;
 };
 
 type DataOperationsBarTerminatedProps = DataOperationsBarBaseProps & {
@@ -228,11 +216,7 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
               />
             </div>
 
-            {!supported && (
-              <div className="text-xs text-[var(--dash-muted)]">
-                Terminated view is only available for supported subsidiaries.
-              </div>
-            )}
+            {!supported && <div className="text-xs text-[var(--dash-muted)]">Terminated view is only available for supported subsidiaries.</div>}
           </div>
         </div>
       </div>
@@ -250,7 +234,10 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
     to,
     onUpdateQuery,
     onSendInvite,
-  } = props;
+    exportState,
+    onExport,
+    onDownloadExport,
+  } = props as DataOperationsBarHomeProps;
 
   const [open, setOpen] = useState(false);
   const barRef = useRef<HTMLDivElement | null>(null);
@@ -278,9 +265,7 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
     // Mobile: align to the bar so the dropdown starts right after the bar.
     // Desktop/tablet: align dropdown's RIGHT edge to the bar's RIGHT edge
     // for a clean, consistent end alignment.
-    const desiredWidth = isMobile
-      ? Math.min(vw - margin * 2, barRect?.width ?? vw - margin * 2)
-      : Math.min(720, vw - margin * 2);
+    const desiredWidth = isMobile ? Math.min(vw - margin * 2, barRect?.width ?? vw - margin * 2) : Math.min(720, vw - margin * 2);
 
     let left: number;
     if (isMobile) {
@@ -292,7 +277,7 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
       left = right - desiredWidth;
     }
 
-    const baseTop = isMobile ? (barRect?.bottom ?? rect.bottom) : rect.bottom;
+    const baseTop = isMobile ? barRect?.bottom ?? rect.bottom : rect.bottom;
     const top = clamp(baseTop + gap, margin, vh - margin); // y is further constrained by maxHeight + overflow
 
     setPopover({ top, left, width: desiredWidth });
@@ -360,21 +345,10 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
   }
 
   return (
-    <div
-      ref={barRef}
-      className={cn(
-        "rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-surface)] shadow-[var(--dash-shadow)]",
-        "p-3 sm:p-4"
-      )}
-    >
+    <div ref={barRef} className={cn("rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-surface)] shadow-[var(--dash-shadow)]", "p-3 sm:p-4")}>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div
-            className={cn(
-              "hidden sm:flex items-center rounded-xl border px-3 py-2 text-xs font-semibold",
-              "border-[var(--dash-border)] bg-[var(--dash-surface-2)] text-[var(--dash-muted)]"
-            )}
-          >
+          <div className={cn("hidden sm:flex items-center rounded-xl border px-3 py-2 text-xs font-semibold", "border-[var(--dash-border)] bg-[var(--dash-surface-2)] text-[var(--dash-muted)]")}>
             Data Operations
           </div>
 
@@ -418,9 +392,7 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
                 "border-[var(--dash-border)] bg-[var(--dash-surface)] text-[var(--dash-text)]",
                 "hover:bg-[var(--dash-surface-2)]",
                 "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dash-red-soft)]",
-                !supported
-                  ? "opacity-60 cursor-not-allowed hover:bg-[var(--dash-surface)]"
-                  : "cursor-pointer"
+                !supported ? "opacity-60 cursor-not-allowed hover:bg-[var(--dash-surface)]" : "cursor-pointer"
               )}
               aria-haspopup="menu"
               aria-expanded={open}
@@ -428,9 +400,7 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
               <SlidersHorizontal className="h-4 w-4 text-[var(--dash-muted)]" />
               <span>Filter by</span>
               {activeFilterCount > 0 && (
-                <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--dash-red-soft)] px-1.5 text-xs text-[var(--dash-red)]">
-                  {activeFilterCount}
-                </span>
+                <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--dash-red-soft)] px-1.5 text-xs text-[var(--dash-red)]">{activeFilterCount}</span>
               )}
               <ChevronDown className={cn("h-4 w-4 text-[var(--dash-muted)] transition-transform", open && "rotate-180")} />
             </button>
@@ -458,26 +428,20 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
                 >
                   <div className="grid gap-4 md:grid-cols-3">
                     <div className="space-y-2">
-                      <div className="text-xs font-semibold text-[var(--dash-muted)]">
-                        Status
-                      </div>
+                      <div className="text-xs font-semibold text-[var(--dash-muted)]">Status</div>
                       <FancySelect<StatusGroupKey>
                         value={statusGroup}
                         options={statusGroups.map((s) => ({
                           value: s.key,
                           label: s.label,
                         }))}
-                        onChange={(v) =>
-                          onUpdateQuery({ statusGroup: v || undefined })
-                        }
+                        onChange={(v) => onUpdateQuery({ statusGroup: v || undefined })}
                         placeholder="Select status"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <div className="text-xs font-semibold text-[var(--dash-muted)]">
-                        Employee Number
-                      </div>
+                      <div className="text-xs font-semibold text-[var(--dash-muted)]">Employee Number</div>
                       <FancySelect<"" | "true" | "false">
                         value={(hasEmployeeNumber as "" | "true" | "false") ?? ""}
                         options={[
@@ -485,20 +449,14 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
                           { value: "true", label: "Yes" },
                           { value: "false", label: "No" },
                         ]}
-                        onChange={(v) =>
-                          onUpdateQuery({ hasEmployeeNumber: v || undefined })
-                        }
+                        onChange={(v) => onUpdateQuery({ hasEmployeeNumber: v || undefined })}
                         placeholder="Select"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <div className="text-xs font-semibold text-[var(--dash-muted)]">
-                        Date field
-                      </div>
-                      <FancySelect<
-                        "created" | "submitted" | "approved" | "terminated" | "updated"
-                      >
+                      <div className="text-xs font-semibold text-[var(--dash-muted)]">Date field</div>
+                      <FancySelect<"created" | "submitted" | "approved" | "terminated" | "updated">
                         value={dateField}
                         options={[
                           { value: "created", label: "Created" },
@@ -515,16 +473,12 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
 
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <div className="space-y-1">
-                      <div className="text-xs font-semibold text-[var(--dash-muted)]">
-                        From
-                      </div>
+                      <div className="text-xs font-semibold text-[var(--dash-muted)]">From</div>
                       <div className="relative">
                         <input
                           type="date"
                           value={from}
-                          onChange={(e) =>
-                            onUpdateQuery({ from: e.target.value || undefined })
-                          }
+                          onChange={(e) => onUpdateQuery({ from: e.target.value || undefined })}
                           className={cn(
                             "w-full appearance-none rounded-xl border bg-[var(--dash-surface)] px-3 py-2 pr-10 text-sm",
                             "border-[var(--dash-border)] text-[var(--dash-text)]",
@@ -535,16 +489,12 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <div className="text-xs font-semibold text-[var(--dash-muted)]">
-                        To
-                      </div>
+                      <div className="text-xs font-semibold text-[var(--dash-muted)]">To</div>
                       <div className="relative">
                         <input
                           type="date"
                           value={to}
-                          onChange={(e) =>
-                            onUpdateQuery({ to: e.target.value || undefined })
-                          }
+                          onChange={(e) => onUpdateQuery({ to: e.target.value || undefined })}
                           className={cn(
                             "w-full appearance-none rounded-xl border bg-[var(--dash-surface)] px-3 py-2 pr-10 text-sm",
                             "border-[var(--dash-border)] text-[var(--dash-text)]",
@@ -560,10 +510,7 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
                     <button
                       type="button"
                       onClick={clearAll}
-                      className={cn(
-                        "rounded-xl border px-4 py-2 text-sm font-semibold transition",
-                        "border-[var(--dash-border)] text-[var(--dash-text)] hover:bg-[var(--dash-surface-2)]"
-                      )}
+                      className={cn("rounded-xl border px-4 py-2 text-sm font-semibold transition", "border-[var(--dash-border)] text-[var(--dash-text)] hover:bg-[var(--dash-surface-2)]")}
                     >
                       Clear all
                     </button>
@@ -574,7 +521,7 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
           </div>
         </div>
 
-        {/* Right side: subsidiary switcher + CTA */}
+        {/* Right side: subsidiary switcher + Export + CTA */}
         <div className="flex items-center justify-between gap-3 lg:justify-end">
           <div className="min-w-[168px]">
             <FancySelect<ESubsidiary>
@@ -587,6 +534,37 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
               placeholder="Select subsidiary"
             />
           </div>
+
+          {/* Export button */}
+          <button
+            type="button"
+            onClick={() => {
+              if (exportState.state === "ready") {
+                onDownloadExport(exportState.downloadUrl);
+                return;
+              }
+              if (exportState.state === "running") return;
+              onExport();
+            }}
+            disabled={!supported || exportState.state === "running"}
+            className={cn(
+              "rounded-full px-4 py-2 text-sm font-semibold transition",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300",
+              !supported || exportState.state === "running"
+                ? "bg-emerald-500/40 text-white/80 border border-emerald-400/40 cursor-not-allowed opacity-80"
+                : exportState.state === "ready"
+                ? "bg-emerald-600 text-white border border-emerald-600 hover:bg-emerald-700 cursor-pointer"
+                : exportState.state === "error"
+                ? "bg-emerald-500 text-white border border-emerald-500 hover:bg-emerald-600 cursor-pointer"
+                : "bg-emerald-500 text-white border border-emerald-500 hover:bg-emerald-600 cursor-pointer"
+            )}
+            title={exportState.state === "error" ? exportState.message : exportState.state === "ready" ? "Download export" : "Export"}
+          >
+            {exportState.state === "idle" && "Export"}
+            {exportState.state === "running" && (exportState.showProgress ? `Exporting (${Math.max(0, Math.min(100, Math.round(exportState.progressPercent)))}%)` : "Exporting…")}
+            {exportState.state === "ready" && "Download"}
+            {exportState.state === "error" && "Export"}
+          </button>
 
           <button
             type="button"
@@ -606,7 +584,7 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
           </button>
         </div>
       </div>
+      {exportState.state === "error" && <div className="mt-2 text-xs font-semibold text-[var(--dash-red)]">{exportState.message}</div>}
     </div>
   );
 }
-
