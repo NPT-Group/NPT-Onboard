@@ -126,16 +126,86 @@ function subsidiaryDisplayName(sub: ESubsidiary) {
   }
 }
 
-function buildDefaultExportFilename(args: { subsidiary: ESubsidiary; fromRaw: string | null; toRaw: string | null; format: "csv" | "xlsx" }) {
+function humanStatusLabelFromGroup(group: string | null): string | null {
+  if (!group) return null;
+  // Keep these short + HR-friendly
+  const map: Record<string, string> = {
+    pending: "Pending",
+    modificationRequested: "Mod Requested",
+    pendingReview: "Pending Review",
+    approved: "Approved",
+    manual: "Manual",
+    terminated: "Terminated",
+  };
+  return map[group] ?? null;
+}
+
+function humanStatusLabelFromStatuses(statuses: EOnboardingStatus[] | null): string | null {
+  if (!statuses?.length) return null;
+  if (statuses.length === 1) {
+    // Keep short labels. Adjust if your enum values are already pretty.
+    const s = statuses[0];
+    const map: Partial<Record<EOnboardingStatus, string>> = {
+      [EOnboardingStatus.InviteGenerated]: "Pending",
+      [EOnboardingStatus.ModificationRequested]: "Mod Requested",
+      [EOnboardingStatus.Submitted]: "Submitted",
+      [EOnboardingStatus.Resubmitted]: "Resubmitted",
+      [EOnboardingStatus.Approved]: "Approved",
+      [EOnboardingStatus.ManualPDFSent]: "Manual",
+      [EOnboardingStatus.Terminated]: "Terminated",
+    };
+    return map[s] ?? String(s);
+  }
+
+  // Multiple statuses chosen: keep minimal (don’t dump a long list)
+  return "Selected Statuses";
+}
+
+function buildDefaultExportFilename(args: {
+  subsidiary: ESubsidiary;
+  fromRaw: string | null;
+  toRaw: string | null;
+  format: "csv" | "xlsx";
+
+  // NEW: filter awareness
+  q: string | null;
+  method: EOnboardingMethod | null;
+  statuses: EOnboardingStatus[] | null;
+  statusGroup: string | null;
+  hasEmployeeNumber: boolean | null;
+  isCompleted: boolean | null;
+}) {
   const subsidiaryName = subsidiaryDisplayName(args.subsidiary);
 
   const from = args.fromRaw ? parseYmdToDate(args.fromRaw) : null;
   const to = args.toRaw ? parseYmdToDate(args.toRaw) : null;
 
-  const rangeLabel = from && to ? `${formatShortDate(from)} to ${formatShortDate(to)}` : from ? `From ${formatShortDate(from)}` : to ? `Up to ${formatShortDate(to)}` : "All Records";
+  const statusLabel = humanStatusLabelFromGroup(args.statusGroup) ?? humanStatusLabelFromStatuses(args.statuses);
 
-  // Final: "NPT India – Onboarding Report – Dec 1, 2025 to Dec 23, 2025.csv"
-  return sanitizeFilename(`NPT ${subsidiaryName} – Onboarding Report – ${rangeLabel}.${args.format}`);
+  const hasAnyFilter =
+    !!(args.q && args.q.trim()) ||
+    !!args.method ||
+    !!(args.statusGroup && args.statusGroup.trim()) ||
+    !!(args.statuses && args.statuses.length) ||
+    args.hasEmployeeNumber !== null ||
+    args.isCompleted !== null ||
+    !!from ||
+    !!to;
+
+  const rangeLabel = from && to ? `${formatShortDate(from)} to ${formatShortDate(to)}` : from ? `From ${formatShortDate(from)}` : to ? `Up to ${formatShortDate(to)}` : null;
+
+  // Keep it minimal:
+  // - If status label exists: "Approved Onboardings"
+  // - Else: "Onboarding Report"
+  const reportTitle = statusLabel ? `${statusLabel} Onboardings` : "Onboarding Report";
+
+  // Suffix:
+  // - If we have a date range, include it
+  // - Else if filtered, say "Filtered"
+  // - Else "All Records"
+  const suffix = rangeLabel ? rangeLabel : hasAnyFilter ? "Filtered" : "All Records";
+
+  return sanitizeFilename(`NPT ${subsidiaryName} – ${reportTitle} – ${suffix}.${args.format}`);
 }
 
 /**
@@ -227,7 +297,19 @@ export async function POST(req: NextRequest) {
           const withExt = /\.[a-z0-9]+$/i.test(provided) ? provided : `${provided}.${format}`;
           return sanitizeFilename(withExt);
         }
-        return buildDefaultExportFilename({ subsidiary, fromRaw, toRaw, format });
+        return buildDefaultExportFilename({
+          subsidiary,
+          fromRaw,
+          toRaw,
+          format,
+
+          q: (get("q") || "").trim() || null,
+          method: method ?? null,
+          statuses: statuses?.length ? statuses : null,
+          statusGroup: statusGroup || null,
+          hasEmployeeNumber,
+          isCompleted,
+        });
       })(),
 
       page: get("page"),
