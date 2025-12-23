@@ -159,9 +159,15 @@ function buildFilter(payload: Payload) {
   if (payload.method) filter.method = payload.method;
 
   if (payload.q && payload.q.trim()) {
-    const r = rx(payload.q.trim());
-    const qOr = { $or: [{ firstName: r }, { lastName: r }, { email: r }, { employeeNumber: r }] };
-    filter.$and = filter.$and ? [...filter.$and, qOr] : [qOr];
+    const tokens = payload.q.trim().split(/\s+/).filter(Boolean);
+
+    // Each token must match at least one of the fields (AND of ORs)
+    const tokenClauses = tokens.map((t) => {
+      const r = rx(t);
+      return { $or: [{ firstName: r }, { lastName: r }, { email: r }, { employeeNumber: r }] };
+    });
+
+    filter.$and = filter.$and ? [...filter.$and, ...tokenClauses] : tokenClauses;
   }
 
   // statuses vs statusGroup map (same as route)
