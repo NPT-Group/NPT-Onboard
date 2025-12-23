@@ -271,6 +271,13 @@ function headerLabel(k: keyof ExportRow) {
   }
 }
 
+function sanitizeFilename(name: string) {
+  return name
+    .replace(/[/\\?%*:|"<>]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function csvEscape(v: string): string {
   const needs = /[",\n]/.test(v);
   if (!needs) return v;
@@ -361,7 +368,13 @@ export const handler = async (event: any) => {
     await putStatus(jobId, status);
 
     const basePrefix = reportsBasePrefix();
-    const outKey = keyJoin(basePrefix, `${jobId}.${status.format}`);
+    const safeName = payload.filename && payload.filename.trim() ? sanitizeFilename(payload.filename.trim()) : `${jobId}.${status.format}`;
+
+    // Ensure extension matches the chosen format
+    const finalName = safeName.toLowerCase().endsWith(`.${status.format}`) ? safeName : `${safeName}.${status.format}`;
+
+    const outKey = keyJoin(basePrefix, finalName);
+
     const contentType = status.format === "xlsx" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" : "text/csv";
 
     // Build query with filter, sort, optional skip/limit

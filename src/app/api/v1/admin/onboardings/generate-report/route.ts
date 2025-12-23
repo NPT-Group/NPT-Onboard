@@ -84,6 +84,60 @@ type JobStatus = {
   errorMessage?: string | null;
 };
 
+function formatShortDate(d: Date) {
+  // e.g. "Dec 23, 2025" in Toronto time
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Toronto",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(d);
+}
+
+function parseYmdToDate(ymd: string): Date | null {
+  // Interpret YYYY-MM-DD as a date (no time). Good enough for display.
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd.trim());
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const da = Number(m[3]);
+  const dt = new Date(Date.UTC(y, mo - 1, da));
+  return Number.isNaN(dt.valueOf()) ? null : dt;
+}
+
+function sanitizeFilename(name: string) {
+  // remove characters that are annoying/illegal across OSes and S3 downloads
+  return name
+    .replace(/[/\\?%*:|"<>]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function subsidiaryDisplayName(sub: ESubsidiary) {
+  switch (sub) {
+    case ESubsidiary.INDIA:
+      return "India";
+    case ESubsidiary.CANADA:
+      return "Canada";
+    case ESubsidiary.USA:
+      return "US";
+    default:
+      return String(sub);
+  }
+}
+
+function buildDefaultExportFilename(args: { subsidiary: ESubsidiary; fromRaw: string | null; toRaw: string | null; format: "csv" | "xlsx" }) {
+  const subsidiaryName = subsidiaryDisplayName(args.subsidiary);
+
+  const from = args.fromRaw ? parseYmdToDate(args.fromRaw) : null;
+  const to = args.toRaw ? parseYmdToDate(args.toRaw) : null;
+
+  const rangeLabel = from && to ? `${formatShortDate(from)} to ${formatShortDate(to)}` : from ? `From ${formatShortDate(from)}` : to ? `Up to ${formatShortDate(to)}` : "All Records";
+
+  // Final: "NPT India – Onboarding Report – Dec 1, 2025 to Dec 23, 2025.csv"
+  return sanitizeFilename(`NPT ${subsidiaryName} – Onboarding Report – ${rangeLabel}.${args.format}`);
+}
+
 /**
  * Parse statuses from "status=Submitted,Approved" exactly like list route.
  */
@@ -165,7 +219,16 @@ export async function POST(req: NextRequest) {
       sortDir: (get("sortDir") as any) === "asc" ? "asc" : "desc",
 
       format,
-      filename: get("filename") || null,
+      // filename: client-provided wins; otherwise a human-friendly default
+      filename: (() => {
+        const provided = (get("filename") || "").trim();
+        if (provided) {
+          // If client forgets extension, add it
+          const withExt = /\.[a-z0-9]+$/i.test(provided) ? provided : `${provided}.${format}`;
+          return sanitizeFilename(withExt);
+        }
+        return buildDefaultExportFilename({ subsidiary, fromRaw, toRaw, format });
+      })(),
 
       page: get("page"),
       pageSize: get("pageSize"),
