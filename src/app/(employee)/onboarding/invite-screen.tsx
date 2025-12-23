@@ -38,7 +38,6 @@ export function OnboardingInviteScreen({ inviteToken }: Props) {
       <Navbar
         subsidiaryDisplayName={regionName}
         subsidiaryCode={resolvedSubsidiary}
-        helpEmail="hr@example.com"
       />
 
       {/* Main hero content */}

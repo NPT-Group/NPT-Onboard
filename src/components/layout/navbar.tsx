@@ -18,6 +18,7 @@ import Image from "next/image";
 import { ReactNode } from "react";
 import { ESubsidiary } from "@/types/shared.types";
 import { cn } from "@/lib/utils/cn";
+import { NEXT_PUBLIC_NPT_HR_EMAIL } from "@/config/publicEnv";
 
 type NavbarProps = {
   subsidiaryDisplayName: string;
@@ -33,7 +34,7 @@ export function Navbar({
   subsidiaryCode,
   centerSlot,
   rightSlot,
-  helpEmail = "hr@example.com",
+  helpEmail = NEXT_PUBLIC_NPT_HR_EMAIL,
   className,
 }: NavbarProps) {
   return (

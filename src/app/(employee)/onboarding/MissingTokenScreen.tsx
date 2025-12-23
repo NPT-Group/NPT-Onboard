@@ -14,7 +14,6 @@ export function MissingTokenScreen() {
       <Navbar
         subsidiaryDisplayName={regionName}
         subsidiaryCode={ESubsidiary.INDIA}
-        helpEmail="hr@example.com"
       />
 
       <main className="flex flex-1 items-center justify-center px-4 py-16 sm:px-6 lg:px-8">
