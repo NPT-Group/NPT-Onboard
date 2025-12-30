@@ -113,6 +113,11 @@ async function finalizeIndiaOnboardingAssets(onboardingId: string, payload: IInd
     const dest = makeEntityFinalPrefix(ns, onboardingId, ES3Folder.EMPLOYMENT_CERTIFICATES);
 
     for (const entry of form.employmentHistory) {
+      // Ensure employerReferenceCheck is always present (required field)
+      if (typeof entry.employerReferenceCheck !== "boolean") {
+        entry.employerReferenceCheck = false;
+      }
+
       if (entry.experienceCertificateFile) {
         const current = entry.experienceCertificateFile;
         const finalized = (await finalizeAssetWithCache(current, dest, cache, pushMoved)) || current;

@@ -339,6 +339,7 @@ export interface IEmploymentHistoryEntry {
   endDate: Date | string; // ISO
   reasonForLeaving: string;
   experienceCertificateFile?: IFileAsset | null;
+  employerReferenceCheck: boolean; // required - user confirms employer reference check permission
 }
 
 /**

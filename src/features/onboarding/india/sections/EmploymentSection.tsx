@@ -9,6 +9,7 @@ import {
 
 import type { IndiaOnboardingFormInput } from "../indiaFormSchema";
 import { RHFTextInput } from "../../common/RHFTextInput";
+import { RHFCheckbox } from "../../common/RHFCheckbox";
 import { FormField } from "../../common/FormField";
 import { cn } from "@/lib/utils/cn";
 import { ES3Folder, ES3Namespace } from "@/types/aws.types";
@@ -57,6 +58,7 @@ export function EmploymentSection({
         endDate: "",
         reasonForLeaving: "",
         experienceCertificateFile: null,
+        employerReferenceCheck: false,
       } as any);
     }
   };
@@ -237,15 +239,25 @@ export function EmploymentSection({
                     name={
                       `${prefix}.experienceCertificateFile` as FieldPath<IndiaOnboardingFormInput>
                     }
-                    label="Experience certificate"
-                    description="Upload a PDF experience certificate for this role (max 20MB)."
+                    label="Experience certificate (optional)"
+                    description="If you received any certification or experience certificate during this employment and wish to share it for credibility, you can attach it here at your preference. Upload a PDF file (max 20MB)."
                     namespace={ES3Namespace.ONBOARDINGS}
                     folder={ES3Folder.EMPLOYMENT_CERTIFICATES}
                     docId={docId}
                     disabled={isReadOnly}
                     dataField={`${prefix}.experienceCertificateFile`}
-                    placeholderLabel="Upload PDF experience certificate"
+                    placeholderLabel="Upload PDF experience certificate (optional)"
                     maxSizeMB={20}
+                  />
+                </div>
+
+                <div className="mt-4">
+                  <RHFCheckbox
+                    name={
+                      `${prefix}.employerReferenceCheck` as FieldPath<IndiaOnboardingFormInput>
+                    }
+                    label="I confirm that NPT can contact this employer for reference check"
+                    disabled={isReadOnly}
                   />
                 </div>
               </div>
@@ -263,6 +275,7 @@ export function EmploymentSection({
                   endDate: "",
                   reasonForLeaving: "",
                   experienceCertificateFile: null,
+                  employerReferenceCheck: false,
                 } as any)
               }
               disabled={isReadOnly || fields.length >= 3}

@@ -65,6 +65,11 @@ export const employmentHistoryEntrySchema = new Schema<IEmploymentHistoryEntry>(
     endDate: { type: Date, required: true },
     reasonForLeaving: { type: String, required: true },
     experienceCertificateFile: { type: fileAssetSchema, required: false },
+    employerReferenceCheck: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
   },
   { _id: false }
 );

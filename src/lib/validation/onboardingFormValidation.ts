@@ -250,6 +250,12 @@ function validateEmploymentHistoryEntry(entry: any, label: string) {
   vDate(entry.endDate, `${label}.endDate`);
   vString(entry.reasonForLeaving, `${label}.reasonForLeaving`);
 
+  vBoolean(entry.employerReferenceCheck, `${label}.employerReferenceCheck`);
+  vAssert(
+    entry.employerReferenceCheck === true,
+    "You must confirm that we can contact your employer for reference check"
+  );
+
   if (entry.experienceCertificateFile != null) {
     vPdfFile(entry.experienceCertificateFile, `${label}.experienceCertificateFile`);
   }

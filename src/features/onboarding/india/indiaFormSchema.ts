@@ -393,6 +393,9 @@ const employmentHistoryEntrySchema = z
     endDate: requiredDateString("End date is required.", "Enter a valid end date."),
     reasonForLeaving: requiredTrimmedString("Reason for leaving is required."),
     experienceCertificateFile: fileAssetSchema.nullable().optional(),
+    employerReferenceCheck: z.boolean().refine((v) => v === true, {
+      message: "You must confirm that we can contact your employer for reference check.",
+    }),
   })
   .superRefine((entry, ctx) => {
     // Industry-standard UX: prevent inverted ranges (backend doesn't enforce)

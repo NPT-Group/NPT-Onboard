@@ -30,6 +30,12 @@ export function normalizeIndiaFormDataForSubmit(values: IndiaOnboardingFormValue
   // to avoid accidental stale entries being submitted.
   if (form.hasPreviousEmployment === false) {
     form.employmentHistory = [];
+  } else if (Array.isArray(form.employmentHistory)) {
+    // Ensure employerReferenceCheck is always present for each entry (required field)
+    form.employmentHistory = form.employmentHistory.map((entry: any) => ({
+      ...entry,
+      employerReferenceCheck: typeof entry.employerReferenceCheck === "boolean" ? entry.employerReferenceCheck : false,
+    }));
   }
 
   // education strictness
