@@ -269,6 +269,17 @@ const indiaDriversLicenseSchema = z
         message: "Back of driver's license is required.",
       });
     }
+
+    // optional: range check once both dates are valid
+    const issue = val.issueDate ? new Date(val.issueDate).valueOf() : NaN;
+    const expiry = val.expiryDate ? new Date(val.expiryDate).valueOf() : NaN;
+    if (!Number.isNaN(issue) && !Number.isNaN(expiry) && expiry < issue) {
+      ctx.addIssue({
+        path: ["expiryDate"],
+        code: z.ZodIssueCode.custom,
+        message: "Expiry date must be on or after the issue date.",
+      });
+    }
   });
 
 const indiaGovernmentIdsSchema = z.object({

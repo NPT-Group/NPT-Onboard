@@ -97,6 +97,11 @@ function validatePassportDoc(passport: any, label: string) {
   vString(passport.passportNumber, `${label}.passportNumber`);
   validateIssueExpiryDates(passport, label, { required: true });
 
+  // Range check: expiry date must be on or after issue date
+  const issue = new Date(passport.issueDate).valueOf();
+  const expiry = new Date(passport.expiryDate).valueOf();
+  vAssert(expiry >= issue, `${label}.expiryDate must be on or after the issue date`);
+
   vAssert(passport.frontFile, `${label}.frontFile is required`);
   vAssert(passport.backFile, `${label}.backFile is required`);
   vPdfFile(passport.frontFile, `${label}.frontFile`);
@@ -107,6 +112,11 @@ function validateDriversLicenseDoc(dl: any, label: string) {
   vAssert(isObj(dl), `${label} is required`);
   vString(dl.licenseNumber, `${label}.licenseNumber`);
   validateIssueExpiryDates(dl, label, { required: true });
+
+  // Range check: expiry date must be on or after issue date
+  const issue = new Date(dl.issueDate).valueOf();
+  const expiry = new Date(dl.expiryDate).valueOf();
+  vAssert(expiry >= issue, `${label}.expiryDate must be on or after the issue date`);
 
   vAssert(dl.frontFile, `${label}.frontFile is required`);
   vAssert(dl.backFile, `${label}.backFile is required`);
