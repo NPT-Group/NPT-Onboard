@@ -6,13 +6,17 @@
     "dev": "next dev --turbo -p 3001",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint . --max-warnings=0"
+    "lint": "eslint . --max-warnings=0",
+    "zip:worker:onboardings": "node -e \"const fs=require('fs');fs.mkdirSync('.lambda-build',{recursive:true});try{fs.unlinkSync('.lambda-build/onboardingsReportWorker.zip')}catch{}\" && npx esbuild src/workers/onboardingsReportWorker.ts --bundle --platform=node --target=node20 --minify --legal-comments=none --outfile=.lambda-build/worker.js && (cd .lambda-build && npx bestzip onboardingsReportWorker.zip worker.js && rm -f worker.js)"
   },
   "dependencies": {
+    "@aws-sdk/client-lambda": "^3.957.0",
     "@aws-sdk/client-s3": "^3.946.0",
+    "@aws-sdk/lib-storage": "^3.957.0",
     "@aws-sdk/s3-request-presigner": "^3.946.0",
     "@azure/identity": "^4.13.0",
     "@hookform/resolvers": "^5.2.2",
+    "exceljs": "^4.4.0",
     "framer-motion": "^12.23.25",
     "lucide-react": "^0.556.0",
     "mongoose": "^9.0.1",
@@ -33,6 +37,8 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
+    "bestzip": "^2.2.1",
+    "esbuild": "^0.27.2",
     "eslint": "9.39.1",
     "eslint-config-next": "16.0.10",
     "eslint-plugin-react-hooks": "^7.0.1",

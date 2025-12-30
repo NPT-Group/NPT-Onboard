@@ -7,6 +7,7 @@ export const APP_AWS_BUCKET_NAME = process.env.APP_AWS_BUCKET_NAME!;
 export const APP_AWS_REGION = process.env.APP_AWS_REGION!;
 export const APP_AWS_ACCESS_KEY_ID = process.env.APP_AWS_ACCESS_KEY_ID!;
 export const APP_AWS_SECRET_ACCESS_KEY = process.env.APP_AWS_SECRET_ACCESS_KEY!;
+export const ONBOARDINGS_REPORTS_LAMBDA_NAME = process.env.ONBOARDINGS_REPORTS_LAMBDA_NAME!;
 export const NEXT_IMAGE_DOMAINS = process.env.NEXT_IMAGE_DOMAINS!;
 export const CRON_SECRET = process.env.CRON_SECRET!;
 export const AUTH_COOKIE_NAME = process.env.AUTH_COOKIE_NAME! || "";
