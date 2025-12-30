@@ -2,7 +2,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Download, FileDown, RefreshCcw, ShieldCheck, Wand2 } from "lucide-react";
+import { Download, FileDown, RefreshCcw, ShieldCheck, Wand2, Home } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import { cn } from "@/lib/utils/cn";
 import { approveOnboarding, getAdminOnboarding, getOnboardingAuditLogs, requestModification, terminateOnboarding, type AdminOnboardingListItem } from "@/lib/api/admin/onboardings";
@@ -13,6 +14,8 @@ import { EOnboardingActor, EOnboardingAuditAction, type TOnboardingAuditActor } 
 import { OnboardingProgress } from "@/components/dashboard/onboardings/OnboardingProgress";
 import { TerminateModal } from "@/components/dashboard/onboardings/TerminateModal";
 import { ApiError } from "@/lib/api/client";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 import { ApproveModal } from "@/components/dashboard/onboardings/ApproveModal";
 import { RequestModificationModal } from "@/components/dashboard/onboardings/RequestModificationModal";
@@ -245,6 +248,7 @@ function ApplicationFormPdfButton(props: { onboardingId: string; subsidiary: ESu
 }
 
 export function OnboardingDetailsClient({ onboardingId, initialOnboarding, initialError }: Props) {
+  const router = useRouter();
   const [onboarding, setOnboarding] = useState<any | null>(initialOnboarding);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(initialError);
@@ -264,6 +268,12 @@ export function OnboardingDetailsClient({ onboardingId, initialOnboarding, initi
   const [pdfError, setPdfError] = useState<string | null>(null);
 
   const loadSubmitActor = useCallback(async () => {
+    // Don't try to load audit logs if onboarding doesn't exist
+    if (!onboarding) {
+      setSubmitActor(null);
+      return;
+    }
+
     try {
       // Pull recent logs and infer "who completed" from latest SUBMITTED/RESUBMITTED event.
       const res = await getOnboardingAuditLogs({
@@ -287,7 +297,7 @@ export function OnboardingDetailsClient({ onboardingId, initialOnboarding, initi
       // Don't block the page on audit log fetch.
       setSubmitActor(null);
     }
-  }, [onboardingId]);
+  }, [onboardingId, onboarding]);
 
   const refresh = useCallback(async () => {
     setWorking("refresh");
@@ -307,8 +317,13 @@ export function OnboardingDetailsClient({ onboardingId, initialOnboarding, initi
   }, [onboardingId, loadSubmitActor]);
 
   useEffect(() => {
-    loadSubmitActor();
-  }, [loadSubmitActor]);
+    // Only load submit actor if onboarding exists
+    if (onboarding) {
+      loadSubmitActor();
+    } else {
+      setSubmitActor(null);
+    }
+  }, [loadSubmitActor, onboarding]);
 
   const head = onboarding as AdminOnboardingListItem | null;
   const fullName = useMemo(() => {
@@ -332,6 +347,31 @@ export function OnboardingDetailsClient({ onboardingId, initialOnboarding, initi
   const locationStr = joinLocation((head as any)?.locationAtSubmit ?? null);
   const tz = ((head as any)?.locationAtSubmit?.timezone as string | undefined) ?? undefined;
   const applicationDateTime = (head as any)?.submittedAt ?? (head as any)?.completedAt ?? (head as any)?.updatedAt ?? null;
+
+  // Show error UI when onboarding is missing or error exists
+  if (!onboarding || error) {
+    const errorMessage = error || "The application you are trying to view does not exist. It may have been deleted or the link is invalid.";
+
+    return (
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-surface)] shadow-[var(--dash-shadow)] p-8">
+          <Alert variant="error" title="Application Not Found" description={errorMessage} className="mb-6" />
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button variant="primary" onClick={() => router.push("/dashboard")} className="inline-flex items-center gap-2">
+              <Home className="h-4 w-4" />
+              Return to Dashboard
+            </Button>
+
+            <Button variant="secondary" onClick={refresh} disabled={loading} className="inline-flex items-center gap-2">
+              <RefreshCcw className={cn("h-4 w-4", loading && "animate-spin")} />
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

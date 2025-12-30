@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useFormContext, type FieldPath } from "react-hook-form";
+import { useEffect } from "react";
+import { useFormContext, useWatch, type FieldPath } from "react-hook-form";
 
 import type { IndiaOnboardingFormInput } from "../indiaFormSchema";
 import type { TOnboardingContext } from "@/types/onboarding.types";
@@ -53,36 +53,27 @@ export function PersonalInfoSection({
   const {
     register,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = useFormContext<IndiaOnboardingFormInput>();
 
   // Sync firstName/lastName/email from onboarding meta so they always match.
   useEffect(() => {
+    // Guard against null/undefined onboarding
+    if (!onboarding) return;
     setValue("personalInfo.firstName", onboarding.firstName ?? "");
     setValue("personalInfo.lastName", onboarding.lastName ?? "");
     setValue("personalInfo.email", onboarding.email ?? "");
   }, [onboarding, setValue]);
 
   const personalErrors = errors.personalInfo ?? {};
-  const genderValue = watch("personalInfo.gender");
-
-  // Local UI state for gender pill selection (decoupled from RHF internals)
-  const [localGender, setLocalGender] = useState<"male" | "female" | null>(
-    null
-  );
-
-  // Initialise localGender from whatever RHF currently has stored
-  useEffect(() => {
-    if (!genderValue) return;
-    const normalized = String(genderValue).trim().toLowerCase();
-
-    if (normalized.includes("male")) {
-      setLocalGender("male");
-    } else if (normalized.includes("female")) {
-      setLocalGender("female");
-    }
-  }, [genderValue]);
+  
+  // Use useWatch to subscribe to gender value changes - this triggers re-renders when value changes
+  // This is the EXACT same pattern used in EmploymentSection for hasPreviousEmployment toggle
+  const genderValue = useWatch({
+    control,
+    name: "personalInfo.gender",
+  }) as EGender | undefined;
 
   return (
     <div className="rounded-2xl px-4 py-6 shadow-sm sm:px-6 sm:py-7">
@@ -180,15 +171,15 @@ export function PersonalInfoSection({
               "border-slate-300"
             )}
           >
-            {(["male", "female"] as const).map((option, idx) => {
-              const isSelected = localGender === option;
+            {[
+              { value: EGender.MALE, label: "Male" },
+              { value: EGender.FEMALE, label: "Female" },
+            ].map((opt, idx) => {
+              // Direct comparison - EXACT same pattern as EmploymentSection
+              const isActive = genderValue === opt.value;
 
               const handleClick = () => {
-                setLocalGender(option);
-                const backendValue =
-                  option === "male" ? EGender.MALE : EGender.FEMALE;
-
-                setValue("personalInfo.gender", backendValue, {
+                setValue("personalInfo.gender", opt.value, {
                   shouldValidate: true,
                   shouldDirty: true,
                 });
@@ -196,21 +187,21 @@ export function PersonalInfoSection({
 
               return (
                 <button
-                  key={option}
+                  key={opt.label}
                   type="button"
                   disabled={isReadOnly}
                   onClick={handleClick}
                   className={cn(
-                    "w-full px-4 py-2 text-sm font-medium transition-all",
+                    "flex-1 min-w-0 px-4 py-2 text-sm font-medium transition-all",
                     idx > 0 && "border-l border-slate-300",
-                    isSelected
+                    isActive
                       ? "bg-slate-900 text-white"
                       : "bg-white text-slate-800 hover:bg-slate-50",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/70",
                     isReadOnly && "cursor-not-allowed opacity-75"
                   )}
                 >
-                  {option === "male" ? "Male" : "Female"}
+                  {opt.label}
                 </button>
               );
             })}

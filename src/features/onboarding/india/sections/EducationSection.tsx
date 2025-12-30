@@ -19,19 +19,12 @@ import { cn } from "@/lib/utils/cn";
 export const EDUCATION_FIELD_PATHS: FieldPath<IndiaOnboardingFormInput>[] = [
   "education.0.highestLevel",
   "education.0.schoolName",
-  "education.0.schoolLocation",
   "education.0.primaryYearCompleted",
   "education.0.highSchoolInstitutionName",
-  "education.0.highSchoolBoard",
-  "education.0.highSchoolStream",
   "education.0.highSchoolYearCompleted",
-  "education.0.highSchoolGradeOrPercentage",
   "education.0.institutionName",
-  "education.0.universityOrBoard",
-  "education.0.fieldOfStudy",
   "education.0.startYear",
   "education.0.endYear",
-  "education.0.gradeOrCgpa",
 ];
 
 type EducationSectionProps = {
@@ -161,41 +154,27 @@ export function EducationSection({ isReadOnly }: EducationSectionProps) {
     if (level === EEducationLevel.PRIMARY_SCHOOL) {
       // Clear high school + diploma/bachelor+ fields
       clear("education.0.highSchoolInstitutionName");
-      clear("education.0.highSchoolBoard");
-      clear("education.0.highSchoolStream");
       clear("education.0.highSchoolYearCompleted");
-      clear("education.0.highSchoolGradeOrPercentage");
 
       clear("education.0.institutionName");
-      clear("education.0.universityOrBoard");
-      clear("education.0.fieldOfStudy");
       clear("education.0.startYear");
       clear("education.0.endYear");
-      clear("education.0.gradeOrCgpa");
     } else if (level === EEducationLevel.HIGH_SCHOOL) {
       // Clear primary + diploma/bachelor+ fields
       clear("education.0.schoolName");
-      clear("education.0.schoolLocation");
       clear("education.0.primaryYearCompleted");
 
       clear("education.0.institutionName");
-      clear("education.0.universityOrBoard");
-      clear("education.0.fieldOfStudy");
       clear("education.0.startYear");
       clear("education.0.endYear");
-      clear("education.0.gradeOrCgpa");
     } else {
       // Diploma / Bachelor / Masters / Doctorate / Other
       // Clear primary + high school fields
       clear("education.0.schoolName");
-      clear("education.0.schoolLocation");
       clear("education.0.primaryYearCompleted");
 
       clear("education.0.highSchoolInstitutionName");
-      clear("education.0.highSchoolBoard");
-      clear("education.0.highSchoolStream");
       clear("education.0.highSchoolYearCompleted");
-      clear("education.0.highSchoolGradeOrPercentage");
     }
   }, [highestLevel, setValue]);
 
@@ -230,11 +209,6 @@ export function EducationSection({ isReadOnly }: EducationSectionProps) {
               label="School name"
               disabled={isReadOnly}
             />
-            <RHFTextInput
-              name="education.0.schoolLocation"
-              label="School location (city, state)"
-              disabled={isReadOnly}
-            />
             <NumberField
               name="education.0.primaryYearCompleted"
               label="Year completed"
@@ -253,16 +227,6 @@ export function EducationSection({ isReadOnly }: EducationSectionProps) {
               label="High school / secondary institution name"
               disabled={isReadOnly}
             />
-            <RHFTextInput
-              name="education.0.highSchoolBoard"
-              label="Board / curriculum"
-              disabled={isReadOnly}
-            />
-            <RHFTextInput
-              name="education.0.highSchoolStream"
-              label="Stream (e.g. Science, Commerce, Arts)"
-              disabled={isReadOnly}
-            />
             <NumberField
               name="education.0.highSchoolYearCompleted"
               label="Year completed"
@@ -271,56 +235,32 @@ export function EducationSection({ isReadOnly }: EducationSectionProps) {
               max={2100}
               disabled={isReadOnly}
             />
-            <RHFTextInput
-              name="education.0.highSchoolGradeOrPercentage"
-              label="Final grade / percentage"
-              disabled={isReadOnly}
-            />
           </div>
         )}
 
         {highestLevel &&
           highestLevel !== EEducationLevel.PRIMARY_SCHOOL &&
           highestLevel !== EEducationLevel.HIGH_SCHOOL && (
-            <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <RHFTextInput
-                  name="education.0.institutionName"
-                  label="Institution name"
-                  disabled={isReadOnly}
-                />
-                <RHFTextInput
-                  name="education.0.universityOrBoard"
-                  label="University / board"
-                  disabled={isReadOnly}
-                />
-              </div>
+            <div className="grid gap-4 sm:grid-cols-2">
               <RHFTextInput
-                name="education.0.fieldOfStudy"
-                label="Field of study"
+                name="education.0.institutionName"
+                label="College / University name"
                 disabled={isReadOnly}
               />
-              <div className="grid gap-4 sm:grid-cols-2">
-                <NumberField
-                  name="education.0.startYear"
-                  label="Start year"
-                  placeholder="e.g. 2018"
-                  min={1900}
-                  max={2100}
-                  disabled={isReadOnly}
-                />
-                <NumberField
-                  name="education.0.endYear"
-                  label="Year completed / expected"
-                  placeholder="e.g. 2022"
-                  min={1900}
-                  max={2100}
-                  disabled={isReadOnly}
-                />
-              </div>
-              <RHFTextInput
-                name="education.0.gradeOrCgpa"
-                label="Final grade / CGPA"
+              <NumberField
+                name="education.0.startYear"
+                label="Start year"
+                placeholder="e.g. 2018"
+                min={1900}
+                max={2100}
+                disabled={isReadOnly}
+              />
+              <NumberField
+                name="education.0.endYear"
+                label="Year completed / expected"
+                placeholder="e.g. 2022"
+                min={1900}
+                max={2100}
                 disabled={isReadOnly}
               />
             </div>

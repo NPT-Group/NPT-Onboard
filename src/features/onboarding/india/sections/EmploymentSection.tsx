@@ -9,6 +9,7 @@ import {
 
 import type { IndiaOnboardingFormInput } from "../indiaFormSchema";
 import { RHFTextInput } from "../../common/RHFTextInput";
+import { RHFCheckbox } from "../../common/RHFCheckbox";
 import { FormField } from "../../common/FormField";
 import { cn } from "@/lib/utils/cn";
 import { ES3Folder, ES3Namespace } from "@/types/aws.types";
@@ -57,6 +58,7 @@ export function EmploymentSection({
         endDate: "",
         reasonForLeaving: "",
         experienceCertificateFile: null,
+        employerReferenceCheck: false,
       } as any);
     }
   };
@@ -153,7 +155,7 @@ export function EmploymentSection({
       </div>
 
       {hasPreviousEmployment === false && (
-        <div className="mb-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-4 text-xs text-slate-600">
+        <div className="mb-4 rounded-xl border border-dashed border-slate-200 bg-white px-4 py-4 text-xs text-slate-600 dark:border-slate-500 dark:bg-slate-700/50 dark:text-slate-200">
           You indicated that you don&apos;t have previous employment. You can
           still continue your onboarding without adding any roles.
         </div>
@@ -237,15 +239,25 @@ export function EmploymentSection({
                     name={
                       `${prefix}.experienceCertificateFile` as FieldPath<IndiaOnboardingFormInput>
                     }
-                    label="Experience certificate"
-                    description="Upload a PDF experience certificate for this role (max 20MB)."
+                    label="Experience certificate (optional)"
+                    description="If you received any certification or experience certificate during this employment and wish to share it for credibility, you can attach it here at your preference. Upload a PDF file (max 20MB)."
                     namespace={ES3Namespace.ONBOARDINGS}
                     folder={ES3Folder.EMPLOYMENT_CERTIFICATES}
                     docId={docId}
                     disabled={isReadOnly}
                     dataField={`${prefix}.experienceCertificateFile`}
-                    placeholderLabel="Upload PDF experience certificate"
+                    placeholderLabel="Upload PDF experience certificate (optional)"
                     maxSizeMB={20}
+                  />
+                </div>
+
+                <div className="mt-4">
+                  <RHFCheckbox
+                    name={
+                      `${prefix}.employerReferenceCheck` as FieldPath<IndiaOnboardingFormInput>
+                    }
+                    label="I confirm that NPT can contact this employer for reference check"
+                    disabled={isReadOnly}
                   />
                 </div>
               </div>
@@ -263,6 +275,7 @@ export function EmploymentSection({
                   endDate: "",
                   reasonForLeaving: "",
                   experienceCertificateFile: null,
+                  employerReferenceCheck: false,
                 } as any)
               }
               disabled={isReadOnly || fields.length >= 3}

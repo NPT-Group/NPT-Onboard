@@ -65,6 +65,11 @@ export const employmentHistoryEntrySchema = new Schema<IEmploymentHistoryEntry>(
     endDate: { type: Date, required: true },
     reasonForLeaving: { type: String, required: true },
     experienceCertificateFile: { type: fileAssetSchema, required: false },
+    employerReferenceCheck: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
   },
   { _id: false }
 );
@@ -78,21 +83,14 @@ export const educationDetailsSchema = new Schema<IEducationDetails>(
     },
 
     schoolName: String,
-    schoolLocation: String,
     primaryYearCompleted: Number,
 
     highSchoolInstitutionName: String,
-    highSchoolBoard: String,
-    highSchoolStream: String,
     highSchoolYearCompleted: Number,
-    highSchoolGradeOrPercentage: String,
 
     institutionName: String,
-    universityOrBoard: String,
-    fieldOfStudy: String,
     startYear: Number,
     endYear: Number,
-    gradeOrCgpa: String,
   },
   { _id: false }
 );

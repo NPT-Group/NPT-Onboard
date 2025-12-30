@@ -6,12 +6,22 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { ESubsidiary } from "@/types/shared.types";
 import { ApiError } from "@/lib/api/client";
-import { getAdminOnboardings, resendOnboardingInvite, terminateOnboarding, type AdminOnboardingListItem, generateOnboardingsReport, getOnboardingsReportStatus } from "@/lib/api/admin/onboardings";
+import {
+  getAdminOnboardings,
+  resendOnboardingInvite,
+  terminateOnboarding,
+  type AdminOnboardingListItem,
+  generateOnboardingsReport,
+  getOnboardingsReportStatus,
+} from "@/lib/api/admin/onboardings";
 
 import { TerminateModal } from "@/components/dashboard/onboardings/TerminateModal";
 import { InviteEmployeeModal } from "@/components/dashboard/onboardings/InviteEmployeeModal";
 import { OnboardingsDataGrid } from "@/components/dashboard/onboardings/OnboardingsDataGrid";
-import { DataOperationsBar, type StatusGroupKey } from "@/components/dashboard/onboardings/DataOperationsBar";
+import {
+  DataOperationsBar,
+  type StatusGroupKey,
+} from "@/components/dashboard/onboardings/DataOperationsBar";
 
 const PAGE_SIZE = 20;
 
@@ -21,13 +31,30 @@ export function DashboardHomeClient() {
 
   const page = Math.max(1, Number(sp.get("page") ?? "1") || 1);
   const q = sp.get("q") ?? "";
-  const subsidiary = (sp.get("subsidiary") as ESubsidiary | null) ?? ESubsidiary.INDIA;
+  const subsidiary =
+    (sp.get("subsidiary") as ESubsidiary | null) ?? ESubsidiary.INDIA;
   const statusGroupRaw = sp.get("statusGroup") ?? "";
-  const statusGroupAllowed: readonly StatusGroupKey[] = ["", "pending", "modificationRequested", "pendingReview", "approved", "manual"] as const;
-  const statusGroup = statusGroupAllowed.includes(statusGroupRaw as StatusGroupKey) ? (statusGroupRaw as StatusGroupKey) : "";
+  const statusGroupAllowed: readonly StatusGroupKey[] = [
+    "",
+    "pending",
+    "modificationRequested",
+    "pendingReview",
+    "approved",
+    "manual",
+  ] as const;
+  const statusGroup = statusGroupAllowed.includes(
+    statusGroupRaw as StatusGroupKey
+  )
+    ? (statusGroupRaw as StatusGroupKey)
+    : "";
   const hasEmployeeNumber = sp.get("hasEmployeeNumber") ?? "";
 
-  const dateField = (sp.get("dateField") ?? "created") as "created" | "submitted" | "approved" | "terminated" | "updated";
+  const dateField = (sp.get("dateField") ?? "created") as
+    | "created"
+    | "submitted"
+    | "approved"
+    | "terminated"
+    | "updated";
   const from = sp.get("from") ?? "";
   const to = sp.get("to") ?? "";
 
@@ -40,13 +67,21 @@ export function DashboardHomeClient() {
   const [reloadNonce, setReloadNonce] = useState(0);
 
   const [terminateOpen, setTerminateOpen] = useState(false);
-  const [selected, setSelected] = useState<AdminOnboardingListItem | null>(null);
+  const [selected, setSelected] = useState<AdminOnboardingListItem | null>(
+    null
+  );
   const [inviteOpen, setInviteOpen] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
 
-  type ExportUiState = { state: "idle" } | { state: "running"; showProgress: boolean; progressPercent: number } | { state: "ready"; downloadUrl: string } | { state: "error"; message: string };
+  type ExportUiState =
+    | { state: "idle" }
+    | { state: "running"; showProgress: boolean; progressPercent: number }
+    | { state: "ready"; downloadUrl: string }
+    | { state: "error"; message: string };
 
-  const [exportState, setExportState] = useState<ExportUiState>({ state: "idle" });
+  const [exportState, setExportState] = useState<ExportUiState>({
+    state: "idle",
+  });
 
   useEffect(() => {
     // Any change to export-relevant filters invalidates previous export result.
@@ -120,7 +155,10 @@ export function DashboardHomeClient() {
           subsidiary,
           q: q || undefined,
           statusGroup: statusGroup || undefined,
-          hasEmployeeNumber: hasEmployeeNumber === "true" || hasEmployeeNumber === "false" ? (hasEmployeeNumber as "true" | "false") : undefined,
+          hasEmployeeNumber:
+            hasEmployeeNumber === "true" || hasEmployeeNumber === "false"
+              ? (hasEmployeeNumber as "true" | "false")
+              : undefined,
           dateField,
           from: from || undefined,
           to: to || undefined,
@@ -132,7 +170,9 @@ export function DashboardHomeClient() {
         if (cancelled) return;
         setItems(res.items);
         // Backend meta uses `totalPages` (not `pages`)
-        setPages(Number.isFinite(res.meta.totalPages) ? res.meta.totalPages : 1);
+        setPages(
+          Number.isFinite(res.meta.totalPages) ? res.meta.totalPages : 1
+        );
         setTotal(res.meta.total);
       } catch (e) {
         if (cancelled) return;
@@ -146,7 +186,18 @@ export function DashboardHomeClient() {
     return () => {
       cancelled = true;
     };
-  }, [reloadNonce, isSupportedSubsidiary, subsidiary, q, statusGroup, hasEmployeeNumber, dateField, from, to, page]);
+  }, [
+    reloadNonce,
+    isSupportedSubsidiary,
+    subsidiary,
+    q,
+    statusGroup,
+    hasEmployeeNumber,
+    dateField,
+    from,
+    to,
+    page,
+  ]);
 
   async function copyLink(url?: string) {
     if (!url) return;
@@ -177,11 +228,17 @@ export function DashboardHomeClient() {
     if (!isSupportedSubsidiary) return;
     if (exportState.state === "running") return;
 
-    setExportState({ state: "running", showProgress: false, progressPercent: 0 });
+    setExportState({
+      state: "running",
+      showProgress: false,
+      progressPercent: 0,
+    });
 
     // After 1s, only then show progress (if still running)
     const showTimer = window.setTimeout(() => {
-      setExportState((prev) => (prev.state === "running" ? { ...prev, showProgress: true } : prev));
+      setExportState((prev) =>
+        prev.state === "running" ? { ...prev, showProgress: true } : prev
+      );
     }, 1000);
 
     let pollId: number | null = null;
@@ -193,7 +250,10 @@ export function DashboardHomeClient() {
         subsidiary,
         q: q || undefined,
         statusGroup: statusGroup || undefined,
-        hasEmployeeNumber: hasEmployeeNumber === "true" || hasEmployeeNumber === "false" ? (hasEmployeeNumber as "true" | "false") : undefined,
+        hasEmployeeNumber:
+          hasEmployeeNumber === "true" || hasEmployeeNumber === "false"
+            ? (hasEmployeeNumber as "true" | "false")
+            : undefined,
         dateField,
         from: from || undefined,
         to: to || undefined,
@@ -222,7 +282,10 @@ export function DashboardHomeClient() {
 
           const url = s.downloadUrl;
           if (!url) {
-            setExportState({ state: "error", message: "Export completed but no download URL was provided." });
+            setExportState({
+              state: "error",
+              message: "Export completed but no download URL was provided.",
+            });
             return;
           }
 
@@ -241,7 +304,9 @@ export function DashboardHomeClient() {
           if (prev.state !== "running") return prev;
           return {
             ...prev,
-            progressPercent: Number.isFinite(s.progressPercent) ? s.progressPercent : prev.progressPercent,
+            progressPercent: Number.isFinite(s.progressPercent)
+              ? s.progressPercent
+              : prev.progressPercent,
           };
         });
       };
@@ -252,7 +317,10 @@ export function DashboardHomeClient() {
         void pollOnce();
       }, 1000);
     } catch (e: any) {
-      const msg = typeof e?.message === "string" && e.message.trim().length ? e.message : "Server error. Please try again.";
+      const msg =
+        typeof e?.message === "string" && e.message.trim().length
+          ? e.message
+          : "Server error. Please try again.";
       setExportState({ state: "error", message: msg });
     } finally {
       window.clearTimeout(showTimer);
@@ -304,9 +372,14 @@ export function DashboardHomeClient() {
 
       {!isSupportedSubsidiary ? (
         <div className="rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-surface)] p-6 shadow-[var(--dash-shadow)]">
-          <div className="text-lg font-semibold">{subsidiary === ESubsidiary.CANADA ? "NPT Canada will be implemented in V2." : "NPT US will be implemented in V2."}</div>
+          <div className="text-lg font-semibold">
+            {subsidiary === ESubsidiary.CANADA
+              ? "NPT Canada will be implemented in V2."
+              : "NPT US will be implemented in V2."}
+          </div>
           <div className="mt-2 text-sm text-[var(--dash-muted)]">
-            Switch back to <span className="font-semibold">NPT India</span> to view and manage onboardings in V1.
+            Switch back to <span className="font-semibold">NPT India</span> to
+            view and manage onboardings in V1.
           </div>
         </div>
       ) : (
@@ -343,7 +416,9 @@ export function DashboardHomeClient() {
       <TerminateModal
         open={terminateOpen}
         onClose={() => setTerminateOpen(false)}
-        employeeLabel={selected ? `${selected.firstName} ${selected.lastName}` : ""}
+        employeeLabel={
+          selected ? `${selected.firstName} ${selected.lastName}` : ""
+        }
         onConfirm={async (payload) => {
           if (!selected) return;
           await terminateOnboarding(selected.id, payload);
@@ -352,7 +427,12 @@ export function DashboardHomeClient() {
         }}
       />
 
-      <InviteEmployeeModal open={inviteOpen} onClose={() => setInviteOpen(false)} subsidiary={subsidiary} onCreated={() => setReloadNonce((n) => n + 1)} />
+      <InviteEmployeeModal
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        subsidiary={subsidiary}
+        onCreated={() => setReloadNonce((n) => n + 1)}
+      />
     </div>
   );
 }

@@ -84,15 +84,15 @@ export function IndiaOnboardingForm({ onboarding, isReadOnly, currentIndex, onSt
 
     // Education conditional requirements (superRefine):
     if (p === "education.*.schoolName") return highestEducationLevel === EEducationLevel.PRIMARY_SCHOOL;
-    if (p === "education.*.primaryYearCompleted") return highestEducationLevel === EEducationLevel.PRIMARY_SCHOOL;
+    // primaryYearCompleted is optional for primary school
     if (p === "education.*.highSchoolInstitutionName") return highestEducationLevel === EEducationLevel.HIGH_SCHOOL;
-    if (p === "education.*.highSchoolYearCompleted") return highestEducationLevel === EEducationLevel.HIGH_SCHOOL;
+    // highSchoolYearCompleted is optional for high school
 
     // For diploma/bachelor/masters/doctorate/other
     const isHigherEd =
       highestEducationLevel != null && highestEducationLevel !== "" && highestEducationLevel !== EEducationLevel.PRIMARY_SCHOOL && highestEducationLevel !== EEducationLevel.HIGH_SCHOOL;
     if (p === "education.*.institutionName") return Boolean(isHigherEd);
-    if (p === "education.*.fieldOfStudy") return Boolean(isHigherEd);
+    // startYear is optional
     if (p === "education.*.endYear") return Boolean(isHigherEd);
 
     return isIndiaRequiredField(path);

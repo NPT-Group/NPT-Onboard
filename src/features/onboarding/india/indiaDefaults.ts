@@ -14,7 +14,66 @@ function toYmd(value: unknown): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function buildIndiaDefaultValuesFromOnboarding(onboarding: TOnboardingContext, today: string): DeepPartial<IndiaOnboardingFormInput> {
+export function buildIndiaDefaultValuesFromOnboarding(onboarding: TOnboardingContext | null | undefined, today: string): DeepPartial<IndiaOnboardingFormInput> {
+  // Guard against null/undefined onboarding (e.g., when record is deleted)
+  if (!onboarding) {
+    // Return empty defaults when onboarding doesn't exist
+    // This prevents runtime errors and allows the UI to show appropriate error messages
+    return {
+      personalInfo: {
+        firstName: "",
+        lastName: "",
+        email: "",
+        gender: "" as any,
+        dateOfBirth: "",
+        canProvideProofOfAge: false,
+        residentialAddress: {
+          addressLine1: "",
+          city: "",
+          state: "",
+          postalCode: "",
+          fromDate: "",
+          toDate: "",
+        },
+        phoneHome: undefined,
+        phoneMobile: "",
+        emergencyContactName: "",
+        emergencyContactNumber: "",
+        reference1Name: "",
+        reference1PhoneNumber: "",
+        reference2Name: "",
+        reference2PhoneNumber: "",
+        hasConsentToContactReferencesOrEmergencyContact: false,
+      },
+      governmentIds: {
+        aadhaar: { aadhaarNumber: "", file: undefined as any },
+        panCard: { panNumber: "", file: undefined as any },
+        passport: undefined,
+        driversLicense: undefined,
+      },
+      education: [{ highestLevel: "" as any }],
+      hasPreviousEmployment: undefined as any,
+      employmentHistory: [],
+      bankDetails: {
+        bankName: "",
+        branchName: "",
+        accountHolderName: "",
+        accountNumber: "",
+        ifscCode: "",
+        upiId: undefined,
+        voidCheque: undefined,
+      },
+      declaration: {
+        hasAcceptedDeclaration: false,
+        declarationDate: today,
+        signature: {
+          file: undefined as any,
+          signedAt: today,
+        },
+      },
+    };
+  }
+
   const existing = (onboarding as any).indiaFormData as any | undefined;
 
   // If this is a modification request, we want to prefill the last submitted data.
@@ -81,6 +140,7 @@ export function buildIndiaDefaultValuesFromOnboarding(onboarding: TOnboardingCon
             ...e,
             startDate: toYmd(e?.startDate),
             endDate: toYmd(e?.endDate),
+            employerReferenceCheck: typeof e?.employerReferenceCheck === "boolean" ? e.employerReferenceCheck : false,
           }))
         : [],
       bankDetails: {
