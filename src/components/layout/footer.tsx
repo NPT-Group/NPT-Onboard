@@ -1,11 +1,11 @@
 /**
  * Footer Component
- * 
+ *
  * Global footer component displayed at the bottom of application pages.
  * Displays copyright information and platform branding.
- * 
+ *
  * @fileoverview Footer layout component for the NPT Onboarding application.
- * 
+ *
  * @component
  * @example
  * <Footer />
@@ -15,15 +15,15 @@
 
 /**
  * Footer Component
- * 
+ *
  * Renders a dark-themed footer with copyright information and platform description.
  * The footer automatically updates the copyright year based on the current date.
- * 
+ *
  * Design:
  * - Dark background (#1D1D1F) for contrast with main content
  * - Centered text layout
  * - Two-line layout: copyright and platform description
- * 
+ *
  * @returns {JSX.Element} Footer element with copyright and branding information
  */
 export function Footer() {
@@ -35,7 +35,7 @@ export function Footer() {
           © {new Date().getFullYear()} NPT Group of Companies. All rights
           reserved.
         </p>
-        
+
         {/* Platform branding/subtitle */}
         <p className="mt-1 text-[11px]">
           NPT Onboarding — Secure Employee Onboarding Platform
