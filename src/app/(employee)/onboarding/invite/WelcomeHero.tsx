@@ -21,7 +21,7 @@ export const WelcomeHero: React.FC<WelcomeHeroProps> = ({
       <div className="relative z-10 mx-auto flex max-w-2xl flex-col items-center text-center">
         {/* Top label: Subsidiary and page identifier */}
         <p className="text-[11px] font-semibold tracking-[0.26em] text-slate-500">
-          {content.name.toUpperCase()} • EMPLOYEE ONBOARDING
+          {content.name.toUpperCase()} • Onboardly
         </p>
 
         {/* Main heading with brand pill */}

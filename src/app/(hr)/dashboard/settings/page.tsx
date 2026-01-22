@@ -16,9 +16,24 @@ export default function SettingsPage() {
     description: string;
     Icon: any;
   }> = [
-    { mode: "light", title: "Light", description: "Clean and bright", Icon: Sun },
-    { mode: "dark", title: "Dark", description: "Easy on the eyes", Icon: Moon },
-    { mode: "system", title: "System", description: "Follows your OS", Icon: Laptop },
+    {
+      mode: "light",
+      title: "Light",
+      description: "Clean and bright",
+      Icon: Sun,
+    },
+    {
+      mode: "dark",
+      title: "Dark",
+      description: "Easy on the eyes",
+      Icon: Moon,
+    },
+    {
+      mode: "system",
+      title: "System",
+      description: "Follows your OS",
+      Icon: Laptop,
+    },
   ];
 
   return (
@@ -28,7 +43,7 @@ export default function SettingsPage() {
         <div
           className={cn(
             "flex h-11 w-11 items-center justify-center rounded-2xl",
-            "bg-[var(--dash-red-soft)] text-[var(--dash-red)]"
+            "bg-[var(--dash-red-soft)] text-[var(--dash-red)]",
           )}
         >
           <SettingsIcon className="h-5 w-5" />
@@ -46,12 +61,12 @@ export default function SettingsPage() {
       <section
         className={cn(
           "rounded-3xl border p-6 shadow-[var(--dash-shadow)]",
-          "border-[var(--dash-border)] bg-[var(--dash-surface)]"
+          "border-[var(--dash-border)] bg-[var(--dash-surface)]",
         )}
       >
-        <h2 className="text-lg font-semibold">About NPT Onboard</h2>
+        <h2 className="text-lg font-semibold">About Onboardly</h2>
         <p className="mt-3 text-sm leading-relaxed text-[var(--dash-muted)]">
-          NPT Onboard is the secure onboarding platform for NPT subsidiaries,
+          Onboardly is the secure onboarding platform for Employee subsidiaries,
           designed to streamline employee onboarding with a modern, accessible
           interface.
         </p>
@@ -68,7 +83,7 @@ export default function SettingsPage() {
       <section
         className={cn(
           "rounded-3xl border p-6 shadow-[var(--dash-shadow)]",
-          "border-[var(--dash-border)] bg-[var(--dash-surface)]"
+          "border-[var(--dash-border)] bg-[var(--dash-surface)]",
         )}
       >
         <h2 className="text-lg font-semibold">Appearance</h2>
@@ -90,7 +105,7 @@ export default function SettingsPage() {
                   "hover:bg-[var(--dash-surface-2)]",
                   "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dash-red-soft)]",
                   active &&
-                    "bg-[var(--dash-red-soft)] border-[var(--dash-red-soft)]"
+                    "bg-[var(--dash-red-soft)] border-[var(--dash-red-soft)]",
                 )}
                 aria-pressed={active}
               >
@@ -99,13 +114,15 @@ export default function SettingsPage() {
                     "flex h-12 w-12 items-center justify-center rounded-2xl border",
                     "border-[var(--dash-border)] bg-[var(--dash-surface)]",
                     active &&
-                      "border-[var(--dash-red-soft)] bg-[var(--dash-surface)]"
+                      "border-[var(--dash-red-soft)] bg-[var(--dash-surface)]",
                   )}
                 >
                   <Icon
                     className={cn(
                       "h-5 w-5",
-                      active ? "text-[var(--dash-red)]" : "text-[var(--dash-muted)]"
+                      active
+                        ? "text-[var(--dash-red)]"
+                        : "text-[var(--dash-muted)]",
                     )}
                   />
                 </div>
@@ -124,4 +141,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-

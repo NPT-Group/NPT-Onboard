@@ -86,22 +86,22 @@ export const OtpModal: React.FC<OtpModalProps> = ({
           setOtpError(
             retryAfter
               ? `You requested a code too recently. Please wait ${retryAfter} seconds and try again.`
-              : "You requested a code too recently. Please try again shortly."
+              : "You requested a code too recently. Please try again shortly.",
           );
         } else if (err.status === 429 && reason === "OTP_LOCKED") {
           setOtpError(
-            "Too many attempts have been made for this link. Please try again later or contact NPT HR."
+            "Too many attempts have been made for this link. Please try again later or contact HR.",
           );
         } else {
           setOtpError(
             err.status === 400 || err.status === 404
-              ? "This onboarding link is invalid or has expired. Please contact NPT HR for a new invitation."
-              : err.message || "Something went wrong while sending the code."
+              ? "This onboarding link is invalid or has expired. Please contact HR for a new invitation."
+              : err.message || "Something went wrong while sending the code.",
           );
         }
       } else {
         setOtpError(
-          "Unexpected error while sending the code. Please try again."
+          "Unexpected error while sending the code. Please try again.",
         );
       }
 
@@ -118,7 +118,7 @@ export const OtpModal: React.FC<OtpModalProps> = ({
     try {
       const { onboardingContext } = await verifyOnboardingOtp(
         inviteToken,
-        otp.trim()
+        otp.trim(),
       );
 
       setOtpStep("verified");
@@ -128,30 +128,31 @@ export const OtpModal: React.FC<OtpModalProps> = ({
         const reason = err.meta && (err.meta as any).reason;
 
         if (err.status === 400 && reason === "OTP_NOT_ISSUED") {
-          setOtpError("No active verification code found. Please request a new code.");
-          setOtp("");
-        } else
-        if (err.status === 400 && reason === "OTP_EXPIRED") {
           setOtpError(
-            "This verification code has expired. Please request a new code."
+            "No active verification code found. Please request a new code.",
+          );
+          setOtp("");
+        } else if (err.status === 400 && reason === "OTP_EXPIRED") {
+          setOtpError(
+            "This verification code has expired. Please request a new code.",
           );
           setOtp("");
         } else if (err.status === 400 && reason === "OTP_INVALID") {
           setOtpError(
-            "The verification code you entered is incorrect. Please try again."
+            "The verification code you entered is incorrect. Please try again.",
           );
         } else if (err.status === 429 && reason === "OTP_LOCKED") {
           setOtpError(
-            "Too many incorrect attempts. This onboarding has been temporarily locked. Please try again later or contact NPT HR."
+            "Too many incorrect attempts. This onboarding has been temporarily locked. Please try again later or contact HR.",
           );
         } else {
           setOtpError(
-            err.message || "Unable to verify the code. Please try again."
+            err.message || "Unable to verify the code. Please try again.",
           );
         }
       } else {
         setOtpError(
-          "Unexpected error while verifying the code. Please try again."
+          "Unexpected error while verifying the code. Please try again.",
         );
       }
 
@@ -168,7 +169,7 @@ export const OtpModal: React.FC<OtpModalProps> = ({
           to <span className="font-medium">{email}</span>
         </>
       ) : null,
-    [email]
+    [email],
   );
 
   const sendLabel = email ? "Resend code" : "Send verification code";
@@ -177,7 +178,7 @@ export const OtpModal: React.FC<OtpModalProps> = ({
     <Modal
       open={open}
       onClose={onClose}
-      ariaLabel="Verify your NPT onboarding invitation"
+      ariaLabel="Verify your onboarding invitation"
     >
       {/* Modal Header: Title and close button */}
       <div className="relative flex items-center justify-center pb-1">
@@ -202,8 +203,8 @@ export const OtpModal: React.FC<OtpModalProps> = ({
       {!isVerifiedStep ? (
         <form onSubmit={handleVerifyOtp} className="mt-4 space-y-4">
           <p className="text-sm text-slate-600 text-center">
-            Enter your 6-digit verification code{emailDisplay}. If you don&apos;t have a code,
-            request one below.
+            Enter your 6-digit verification code{emailDisplay}. If you
+            don&apos;t have a code, request one below.
           </p>
 
           {/* OTP Input Field */}
@@ -252,8 +253,7 @@ export const OtpModal: React.FC<OtpModalProps> = ({
 
       {/* Footer text: Contact information for help */}
       <p className="mt-4 text-xs text-slate-400 text-center">
-        If you believe you received this email in error, please contact NPT HR
-        {" "}
+        If you believe you received this email in error, please contact HR{" "}
         directly at{" "}
         <a
           href={`mailto:${NEXT_PUBLIC_NPT_HR_EMAIL}`}

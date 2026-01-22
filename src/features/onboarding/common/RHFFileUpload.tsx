@@ -69,7 +69,10 @@ export function RHFFileUpload({
   // Be resilient: some persisted assets may not include `url` (we can always presign via `s3Key`).
   const hasAsset = Boolean(asset?.s3Key);
 
-  const errorMessage = getFieldState(name as any, formState).error?.message?.toString();
+  const errorMessage = getFieldState(
+    name as any,
+    formState,
+  ).error?.message?.toString();
   const hasError = Boolean(errorMessage);
 
   const isPdf =
@@ -175,7 +178,7 @@ export function RHFFileUpload({
           <div
             className={cn(
               "mt-1 relative grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border bg-white px-4 py-3",
-              hasError ? "border-red-500" : "border-slate-300"
+              hasError ? "border-red-500" : "border-slate-300",
             )}
           >
             <div className="flex h-10 w-8 items-center justify-center rounded-md bg-red-50 border border-red-200 text-xs font-semibold text-red-700">
@@ -202,7 +205,9 @@ export function RHFFileUpload({
             <button
               type="button"
               onClick={handleRemove}
-              disabled={disabled || status === "uploading" || status === "deleting"}
+              disabled={
+                disabled || status === "uploading" || status === "deleting"
+              }
               className="shrink-0 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs hover:bg-red-600 disabled:opacity-60"
               aria-label="Remove uploaded document"
             >
@@ -216,7 +221,9 @@ export function RHFFileUpload({
             mode="pdf"
             showPdfGuidance
             accept={accept}
-            disabled={disabled || status === "uploading" || status === "deleting"}
+            disabled={
+              disabled || status === "uploading" || status === "deleting"
+            }
             className="w-full"
           />
         )}

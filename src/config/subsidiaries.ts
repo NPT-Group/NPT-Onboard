@@ -2,18 +2,18 @@
 import { ESubsidiary } from "@/types/shared.types";
 
 type SubsidiaryContent = {
-  name: string; // e.g. "NPT India"
-  groupName: string; // e.g. "NPT Group"
+  name: string; // e.g. "Onboardly India"
+  groupName: string; // e.g. "Onboardly Group"
   description: string; // short paragraph
   needs: string[]; // bullet list
 };
 
 export const subsidiaryContent: Record<ESubsidiary, SubsidiaryContent> = {
   [ESubsidiary.INDIA]: {
-    name: "NPT India",
-    groupName: "NPT Group",
+    name: "Onboardly India",
+    groupName: "Onboardly ",
     description:
-      "NPT Group is a global logistics and technology company focused on reliability, service excellence, and innovation. Our India division supports operations, customer service, dispatch, software development, and corporate services.",
+      "We help organizations welcome employees the right way from their first interaction. Our onboarding platform removes friction from paperwork, compliance, and setup. So teams can focus on people, not processes.",
     needs: [
       "Government ID (Aadhaar, PAN, or equivalent)",
       "Bank account details and IFSC code",
@@ -22,10 +22,10 @@ export const subsidiaryContent: Record<ESubsidiary, SubsidiaryContent> = {
   },
 
   [ESubsidiary.CANADA]: {
-    name: "NPT Canada",
-    groupName: "NPT Group",
+    name: "Onboardly Canada",
+    groupName: "Onboardly",
     description:
-      "NPT Canada supports regional logistics, transport operations, compliance, and fleet management for the North American region.",
+      "We help organizations welcome employees the right way from their first interaction. Our onboarding platform removes friction from paperwork, compliance, and setup. So teams can focus on people, not processes.",
     needs: [
       "Government ID (Driver's Licence, PR Card, or Work Permit)",
       "SIN (securely encrypted and never stored in plain text)",
@@ -35,10 +35,10 @@ export const subsidiaryContent: Record<ESubsidiary, SubsidiaryContent> = {
   },
 
   [ESubsidiary.USA]: {
-    name: "NPT USA",
-    groupName: "NPT Group",
+    name: "Onboardly USA",
+    groupName: "Onboardly Group",
     description:
-      "NPT USA manages domestic logistics, operations, and driver onboarding across the United States.",
+      "We help organizations welcome employees the right way from their first interaction. Our onboarding platform removes friction from paperwork, compliance, and setup. So teams can focus on people, not processes.",
     needs: [
       "Government ID (State ID, Driver's Licence, or Passport)",
       "SSN (encrypted at rest)",

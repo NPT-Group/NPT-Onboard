@@ -43,7 +43,7 @@ export function DashboardHomeClient() {
     "manual",
   ] as const;
   const statusGroup = statusGroupAllowed.includes(
-    statusGroupRaw as StatusGroupKey
+    statusGroupRaw as StatusGroupKey,
   )
     ? (statusGroupRaw as StatusGroupKey)
     : "";
@@ -68,7 +68,7 @@ export function DashboardHomeClient() {
 
   const [terminateOpen, setTerminateOpen] = useState(false);
   const [selected, setSelected] = useState<AdminOnboardingListItem | null>(
-    null
+    null,
   );
   const [inviteOpen, setInviteOpen] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
@@ -124,7 +124,7 @@ export function DashboardHomeClient() {
       if (!("page" in next)) nextSp.set("page", "1");
       router.replace(`/dashboard?${nextSp.toString()}`);
     },
-    [router, sp]
+    [router, sp],
   );
 
   // Debounced search
@@ -171,7 +171,7 @@ export function DashboardHomeClient() {
         setItems(res.items);
         // Backend meta uses `totalPages` (not `pages`)
         setPages(
-          Number.isFinite(res.meta.totalPages) ? res.meta.totalPages : 1
+          Number.isFinite(res.meta.totalPages) ? res.meta.totalPages : 1,
         );
         setTotal(res.meta.total);
       } catch (e) {
@@ -237,7 +237,7 @@ export function DashboardHomeClient() {
     // After 1s, only then show progress (if still running)
     const showTimer = window.setTimeout(() => {
       setExportState((prev) =>
-        prev.state === "running" ? { ...prev, showProgress: true } : prev
+        prev.state === "running" ? { ...prev, showProgress: true } : prev,
       );
     }, 1000);
 
@@ -374,12 +374,13 @@ export function DashboardHomeClient() {
         <div className="rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-surface)] p-6 shadow-[var(--dash-shadow)]">
           <div className="text-lg font-semibold">
             {subsidiary === ESubsidiary.CANADA
-              ? "NPT Canada will be implemented in V2."
-              : "NPT US will be implemented in V2."}
+              ? "Onboardly Canada will be implemented in V2."
+              : "Onboardly US will be implemented in V2."}
           </div>
           <div className="mt-2 text-sm text-[var(--dash-muted)]">
-            Switch back to <span className="font-semibold">NPT India</span> to
-            view and manage onboardings in V1.
+            Switch back to{" "}
+            <span className="font-semibold">Onboardly India</span> to view and
+            manage onboardings in V1.
           </div>
         </div>
       ) : (

@@ -42,7 +42,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     : "/dashboard/terminated";
 
   // Detect onboarding detail routes to switch sidebar to "Application" mode.
-  const onboardingMatch = pathname.match(/^\/dashboard\/onboardings\/([^/]+)(?:\/(audit-logs))?$/);
+  const onboardingMatch = pathname.match(
+    /^\/dashboard\/onboardings\/([^/]+)(?:\/(audit-logs))?$/,
+  );
   const onboardingId = onboardingMatch?.[1] ?? null;
   // Keep "Application mode" even when navigating to global pages (like Settings)
   // by preserving context via `?onboardingId=` in the URL.
@@ -75,7 +77,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         },
         {
           label: "SYSTEM",
-          items: [{ href: "/dashboard/settings", label: "Settings", Icon: Settings }],
+          items: [
+            { href: "/dashboard/settings", label: "Settings", Icon: Settings },
+          ],
         },
       ]
     : [
@@ -88,24 +92,33 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         },
         {
           label: "SYSTEM",
-          items: [{ href: "/dashboard/settings", label: "Settings", Icon: Settings }],
+          items: [
+            { href: "/dashboard/settings", label: "Settings", Icon: Settings },
+          ],
         },
       ];
 
   function isActive(href: string) {
     if (href === "/dashboard") return pathname === "/dashboard";
-    if (href === "/dashboard/terminated") return pathname === "/dashboard/terminated";
-    if (href === "/dashboard/settings") return pathname === "/dashboard/settings";
+    if (href === "/dashboard/terminated")
+      return pathname === "/dashboard/terminated";
+    if (href === "/dashboard/settings")
+      return pathname === "/dashboard/settings";
 
     // Mutually-exclusive active state between details and audit logs.
-    if (contextOnboardingId && href === `/dashboard/onboardings/${contextOnboardingId}`) {
+    if (
+      contextOnboardingId &&
+      href === `/dashboard/onboardings/${contextOnboardingId}`
+    ) {
       return pathname === `/dashboard/onboardings/${contextOnboardingId}`;
     }
     if (
       contextOnboardingId &&
       href === `/dashboard/onboardings/${contextOnboardingId}/audit-logs`
     ) {
-      return pathname === `/dashboard/onboardings/${contextOnboardingId}/audit-logs`;
+      return (
+        pathname === `/dashboard/onboardings/${contextOnboardingId}/audit-logs`
+      );
     }
 
     return false;
@@ -137,7 +150,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                     "cursor-pointer",
                     active
                       ? "bg-[var(--dash-red-soft)] text-[var(--dash-text)]"
-                      : "text-[var(--dash-muted)] hover:bg-[var(--dash-surface-2)]"
+                      : "text-[var(--dash-muted)] hover:bg-[var(--dash-surface-2)]",
                   )}
                   title={label}
                 >
@@ -168,7 +181,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 "h-9 w-9",
                 "border-[var(--dash-border)] bg-[var(--dash-surface)] text-[var(--dash-muted)]",
                 "hover:bg-[var(--dash-surface-2)]",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dash-red-soft)]"
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dash-red-soft)]",
               )}
               aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
               transition={{ duration: 0.18, ease: "easeOut" }}
@@ -183,8 +196,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             {/* Desktop logo */}
             <div className="flex items-center gap-3">
               <Image
-                src="/assets/logos/NPTlogo.png"
-                alt="NPT"
+                src="/assets/logos/Logo.png"
+                alt="Onboardly"
                 width={0}
                 height={0}
                 sizes="100vw"
@@ -205,7 +218,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       <aside
         className={cn(
           "hidden xl:block fixed left-0 top-16 bottom-0 border-r w-72",
-          "border-[var(--dash-border)] bg-[var(--dash-surface)]"
+          "border-[var(--dash-border)] bg-[var(--dash-surface)]",
         )}
       >
         {sidebarNav}
@@ -251,7 +264,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   <ChevronLeft className="h-5 w-5" />
                 </button>
               </div>
-              <div className="h-[calc(100%-4rem)] overflow-auto">{sidebarNav}</div>
+              <div className="h-[calc(100%-4rem)] overflow-auto">
+                {sidebarNav}
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -259,5 +274,3 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
-
-

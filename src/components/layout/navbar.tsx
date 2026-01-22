@@ -44,7 +44,7 @@ export function Navbar({
         "bg-white/80 backdrop-blur-sm",
         "shadow-[0_1px_8px_rgba(15,23,42,0.03)]",
         "transition-colors transition-shadow duration-200",
-        className
+        className,
       )}
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -53,8 +53,8 @@ export function Navbar({
           {/* Left: Logo + subsidiary */}
           <div className="flex flex-none items-center gap-3">
             <Image
-              src="/assets/logos/NPTlogo.png"
-              alt="NPT Group Logo"
+              src="/assets/logos/Logo.png"
+              alt="Onboardly Logo"
               width={0}
               height={0}
               sizes="100vw"

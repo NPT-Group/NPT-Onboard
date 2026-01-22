@@ -27,7 +27,9 @@ export function TerminatedClient() {
   const q = sp.get("q") ?? "";
   const subsidiaryFromUrl = sp.get("subsidiary") as ESubsidiary | null;
 
-  const [subsidiary, setSubsidiary] = useState<ESubsidiary | null>(subsidiaryFromUrl);
+  const [subsidiary, setSubsidiary] = useState<ESubsidiary | null>(
+    subsidiaryFromUrl,
+  );
 
   // Resolve subsidiary from URL → localStorage → null (requires home selection).
   useEffect(() => {
@@ -42,7 +44,9 @@ export function TerminatedClient() {
     }
 
     try {
-      const saved = localStorage.getItem("dash_subsidiary") as ESubsidiary | null;
+      const saved = localStorage.getItem(
+        "dash_subsidiary",
+      ) as ESubsidiary | null;
       if (saved) {
         setSubsidiary(saved);
       } else {
@@ -65,7 +69,9 @@ export function TerminatedClient() {
 
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [selected, setSelected] = useState<AdminOnboardingListItem | null>(null);
+  const [selected, setSelected] = useState<AdminOnboardingListItem | null>(
+    null,
+  );
 
   const employeeLabel = useMemo(() => {
     if (!selected) return "";
@@ -82,7 +88,7 @@ export function TerminatedClient() {
       if (!("page" in next)) nextSp.set("page", "1");
       router.replace(`/dashboard/terminated?${nextSp.toString()}`);
     },
-    [router, sp]
+    [router, sp],
   );
 
   // If subsidiary was resolved from storage, keep URL canonical (no switcher on this page).
@@ -142,7 +148,9 @@ export function TerminatedClient() {
         });
         if (cancelled) return;
         setItems(res.items);
-        setPages(Number.isFinite(res.meta.totalPages) ? res.meta.totalPages : 1);
+        setPages(
+          Number.isFinite(res.meta.totalPages) ? res.meta.totalPages : 1,
+        );
         setTotal(res.meta.total);
       } catch (e) {
         if (cancelled) return;
@@ -195,9 +203,13 @@ export function TerminatedClient() {
 
       {!isSupportedSubsidiary ? (
         <div className="rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-surface)] p-6 shadow-[var(--dash-shadow)]">
-          <div className="text-lg font-semibold">This subsidiary will be implemented in V2.</div>
+          <div className="text-lg font-semibold">
+            This subsidiary will be implemented in V2.
+          </div>
           <div className="mt-2 text-sm text-[var(--dash-muted)]">
-            Switch back to <span className="font-semibold">NPT India</span> on Home to manage terminated onboardings in V1.
+            Switch back to{" "}
+            <span className="font-semibold">Onboardly India</span> on Home to
+            manage terminated onboardings in V1.
           </div>
         </div>
       ) : (
@@ -247,5 +259,3 @@ export function TerminatedClient() {
     </div>
   );
 }
-
-

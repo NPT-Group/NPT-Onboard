@@ -8,7 +8,13 @@ import { Calendar, ChevronDown, Search, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { ESubsidiary } from "@/types/shared.types";
 
-export type StatusGroupKey = "" | "pending" | "modificationRequested" | "pendingReview" | "approved" | "manual";
+export type StatusGroupKey =
+  | ""
+  | "pending"
+  | "modificationRequested"
+  | "pendingReview"
+  | "approved"
+  | "manual";
 
 const statusGroups: Array<{ key: StatusGroupKey; label: string }> = [
   // No status filter selected by default → show all.
@@ -21,9 +27,9 @@ const statusGroups: Array<{ key: StatusGroupKey; label: string }> = [
 ];
 
 const subsidiaryOptions: Array<{ value: ESubsidiary; label: string }> = [
-  { value: ESubsidiary.INDIA, label: "NPT India" },
-  { value: ESubsidiary.CANADA, label: "NPT Canada" },
-  { value: ESubsidiary.USA, label: "NPT US" },
+  { value: ESubsidiary.INDIA, label: "Onboardly India" },
+  { value: ESubsidiary.CANADA, label: "Onboardly Canada" },
+  { value: ESubsidiary.USA, label: "Onboardly US" },
 ];
 
 function clamp(n: number, min: number, max: number) {
@@ -44,9 +50,15 @@ function FancySelect<T extends string>({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
-  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [pos, setPos] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
 
-  const activeLabel = value ? options.find((o) => o.value === value)?.label ?? String(value) : "";
+  const activeLabel = value
+    ? (options.find((o) => o.value === value)?.label ?? String(value))
+    : "";
 
   function compute() {
     const btn = buttonRef.current;
@@ -55,7 +67,11 @@ function FancySelect<T extends string>({
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const margin = 12;
-    const desiredWidth = Math.min(Math.max(280, rect.width), 420, vw - margin * 2);
+    const desiredWidth = Math.min(
+      Math.max(280, rect.width),
+      420,
+      vw - margin * 2,
+    );
     const left = clamp(rect.left, margin, vw - desiredWidth - margin);
     const top = clamp(rect.bottom + 8, margin, vh - margin);
     setPos({ top, left, width: desiredWidth });
@@ -101,20 +117,35 @@ function FancySelect<T extends string>({
           "w-full inline-flex items-center justify-between gap-3 rounded-xl border px-3 py-2 text-sm font-semibold transition cursor-pointer",
           "border-[var(--dash-border)] bg-[var(--dash-surface)] text-[var(--dash-text)]",
           "hover:bg-[var(--dash-surface-2)]",
-          "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dash-red-soft)]"
+          "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dash-red-soft)]",
         )}
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <span className={cn("truncate text-left", !activeLabel && "text-[var(--dash-muted)]")}>{activeLabel || placeholder}</span>
-        <ChevronDown className={cn("h-4 w-4 shrink-0 text-[var(--dash-muted)] transition-transform", open && "rotate-180")} />
+        <span
+          className={cn(
+            "truncate text-left",
+            !activeLabel && "text-[var(--dash-muted)]",
+          )}
+        >
+          {activeLabel || placeholder}
+        </span>
+        <ChevronDown
+          className={cn(
+            "h-4 w-4 shrink-0 text-[var(--dash-muted)] transition-transform",
+            open && "rotate-180",
+          )}
+        />
       </button>
 
       <AnimatePresence>
         {open && pos && (
           <motion.div
             role="listbox"
-            className={cn("fixed z-[60] rounded-2xl border p-3", "border-[var(--dash-border)] bg-[var(--dash-surface-2)] shadow-[var(--dash-shadow)]")}
+            className={cn(
+              "fixed z-[60] rounded-2xl border p-3",
+              "border-[var(--dash-border)] bg-[var(--dash-surface-2)] shadow-[var(--dash-shadow)]",
+            )}
             style={{
               top: pos.top,
               left: pos.left,
@@ -143,7 +174,7 @@ function FancySelect<T extends string>({
                       "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dash-red-soft)]",
                       active
                         ? "border-[var(--dash-red-soft)] bg-[var(--dash-red-soft)] text-[var(--dash-text)]"
-                        : "border-[var(--dash-border)] bg-[var(--dash-surface)] text-[var(--dash-muted)] hover:bg-[var(--dash-surface-2)]"
+                        : "border-[var(--dash-border)] bg-[var(--dash-surface)] text-[var(--dash-muted)] hover:bg-[var(--dash-surface-2)]",
                     )}
                     role="option"
                     aria-selected={active}
@@ -166,7 +197,11 @@ type DataOperationsBarBaseProps = {
   supported?: boolean;
 };
 
-type ExportUiState = { state: "idle" } | { state: "running"; showProgress: boolean; progressPercent: number } | { state: "ready"; downloadUrl: string } | { state: "error"; message: string };
+type ExportUiState =
+  | { state: "idle" }
+  | { state: "running"; showProgress: boolean; progressPercent: number }
+  | { state: "ready"; downloadUrl: string }
+  | { state: "error"; message: string };
 
 type DataOperationsBarHomeProps = DataOperationsBarBaseProps & {
   variant: "home";
@@ -192,7 +227,9 @@ type DataOperationsBarTerminatedProps = DataOperationsBarBaseProps & {
   variant: "terminated";
 };
 
-export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperationsBarTerminatedProps) {
+export function DataOperationsBar(
+  props: DataOperationsBarHomeProps | DataOperationsBarTerminatedProps,
+) {
   const { searchDraft, onSearchDraft, supported = true } = props;
 
   // Terminated page: Search-only bar (no filters, subsidiary switcher, or invite button).
@@ -206,17 +243,23 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
               <input
                 value={searchDraft}
                 onChange={(e) => onSearchDraft(e.target.value)}
-                placeholder={supported ? "Search terminated onboardings…" : "Search…"}
+                placeholder={
+                  supported ? "Search terminated onboardings…" : "Search…"
+                }
                 className={cn(
                   "w-full rounded-xl border bg-[var(--dash-surface)] px-10 py-2 text-sm font-medium text-[var(--dash-text)] transition",
                   "border-[var(--dash-border)]",
                   "placeholder:text-[var(--dash-muted)]",
-                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dash-red-soft)]"
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dash-red-soft)]",
                 )}
               />
             </div>
 
-            {!supported && <div className="text-xs text-[var(--dash-muted)]">Terminated view is only available for supported subsidiaries.</div>}
+            {!supported && (
+              <div className="text-xs text-[var(--dash-muted)]">
+                Terminated view is only available for supported subsidiaries.
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -265,7 +308,9 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
     // Mobile: align to the bar so the dropdown starts right after the bar.
     // Desktop/tablet: align dropdown's RIGHT edge to the bar's RIGHT edge
     // for a clean, consistent end alignment.
-    const desiredWidth = isMobile ? Math.min(vw - margin * 2, barRect?.width ?? vw - margin * 2) : Math.min(720, vw - margin * 2);
+    const desiredWidth = isMobile
+      ? Math.min(vw - margin * 2, barRect?.width ?? vw - margin * 2)
+      : Math.min(720, vw - margin * 2);
 
     let left: number;
     if (isMobile) {
@@ -277,7 +322,7 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
       left = right - desiredWidth;
     }
 
-    const baseTop = isMobile ? barRect?.bottom ?? rect.bottom : rect.bottom;
+    const baseTop = isMobile ? (barRect?.bottom ?? rect.bottom) : rect.bottom;
     const top = clamp(baseTop + gap, margin, vh - margin); // y is further constrained by maxHeight + overflow
 
     setPopover({ top, left, width: desiredWidth });
@@ -345,10 +390,21 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
   }
 
   return (
-    <div ref={barRef} className={cn("rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-surface)] shadow-[var(--dash-shadow)]", "p-3 sm:p-4")}>
+    <div
+      ref={barRef}
+      className={cn(
+        "rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-surface)] shadow-[var(--dash-shadow)]",
+        "p-3 sm:p-4",
+      )}
+    >
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div className={cn("hidden sm:flex items-center rounded-xl border px-3 py-2 text-xs font-semibold", "border-[var(--dash-border)] bg-[var(--dash-surface-2)] text-[var(--dash-muted)]")}>
+          <div
+            className={cn(
+              "hidden sm:flex items-center rounded-xl border px-3 py-2 text-xs font-semibold",
+              "border-[var(--dash-border)] bg-[var(--dash-surface-2)] text-[var(--dash-muted)]",
+            )}
+          >
             Data Operations
           </div>
 
@@ -365,7 +421,7 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
                 "border-[var(--dash-border)] text-[var(--dash-text)]",
                 "placeholder:text-[var(--dash-muted)]",
                 "focus:outline-none focus:ring-2 focus:ring-[var(--dash-red-soft)]",
-                !supported && "opacity-60 cursor-not-allowed"
+                !supported && "opacity-60 cursor-not-allowed",
               )}
             />
           </div>
@@ -392,7 +448,9 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
                 "border-[var(--dash-border)] bg-[var(--dash-surface)] text-[var(--dash-text)]",
                 "hover:bg-[var(--dash-surface-2)]",
                 "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dash-red-soft)]",
-                !supported ? "opacity-60 cursor-not-allowed hover:bg-[var(--dash-surface)]" : "cursor-pointer"
+                !supported
+                  ? "opacity-60 cursor-not-allowed hover:bg-[var(--dash-surface)]"
+                  : "cursor-pointer",
               )}
               aria-haspopup="menu"
               aria-expanded={open}
@@ -400,9 +458,16 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
               <SlidersHorizontal className="h-4 w-4 text-[var(--dash-muted)]" />
               <span>Filter by</span>
               {activeFilterCount > 0 && (
-                <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--dash-red-soft)] px-1.5 text-xs text-[var(--dash-red)]">{activeFilterCount}</span>
+                <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--dash-red-soft)] px-1.5 text-xs text-[var(--dash-red)]">
+                  {activeFilterCount}
+                </span>
               )}
-              <ChevronDown className={cn("h-4 w-4 text-[var(--dash-muted)] transition-transform", open && "rotate-180")} />
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 text-[var(--dash-muted)] transition-transform",
+                  open && "rotate-180",
+                )}
+              />
             </button>
 
             <AnimatePresence>
@@ -412,7 +477,7 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
                   className={cn(
                     // Use a fixed, viewport-clamped popover for perfect responsiveness.
                     "fixed z-50 rounded-2xl border p-4",
-                    "border-[var(--dash-border)] bg-[var(--dash-surface-2)] shadow-[var(--dash-shadow)]"
+                    "border-[var(--dash-border)] bg-[var(--dash-surface-2)] shadow-[var(--dash-shadow)]",
                   )}
                   style={{
                     top: popover.top,
@@ -428,35 +493,53 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
                 >
                   <div className="grid gap-4 md:grid-cols-3">
                     <div className="space-y-2">
-                      <div className="text-xs font-semibold text-[var(--dash-muted)]">Status</div>
+                      <div className="text-xs font-semibold text-[var(--dash-muted)]">
+                        Status
+                      </div>
                       <FancySelect<StatusGroupKey>
                         value={statusGroup}
                         options={statusGroups.map((s) => ({
                           value: s.key,
                           label: s.label,
                         }))}
-                        onChange={(v) => onUpdateQuery({ statusGroup: v || undefined })}
+                        onChange={(v) =>
+                          onUpdateQuery({ statusGroup: v || undefined })
+                        }
                         placeholder="Select status"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <div className="text-xs font-semibold text-[var(--dash-muted)]">Employee Number</div>
+                      <div className="text-xs font-semibold text-[var(--dash-muted)]">
+                        Employee Number
+                      </div>
                       <FancySelect<"" | "true" | "false">
-                        value={(hasEmployeeNumber as "" | "true" | "false") ?? ""}
+                        value={
+                          (hasEmployeeNumber as "" | "true" | "false") ?? ""
+                        }
                         options={[
                           { value: "", label: "All" },
                           { value: "true", label: "Yes" },
                           { value: "false", label: "No" },
                         ]}
-                        onChange={(v) => onUpdateQuery({ hasEmployeeNumber: v || undefined })}
+                        onChange={(v) =>
+                          onUpdateQuery({ hasEmployeeNumber: v || undefined })
+                        }
                         placeholder="Select"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <div className="text-xs font-semibold text-[var(--dash-muted)]">Date field</div>
-                      <FancySelect<"created" | "submitted" | "approved" | "terminated" | "updated">
+                      <div className="text-xs font-semibold text-[var(--dash-muted)]">
+                        Date field
+                      </div>
+                      <FancySelect<
+                        | "created"
+                        | "submitted"
+                        | "approved"
+                        | "terminated"
+                        | "updated"
+                      >
                         value={dateField}
                         options={[
                           { value: "created", label: "Created" },
@@ -473,32 +556,40 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
 
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <div className="space-y-1">
-                      <div className="text-xs font-semibold text-[var(--dash-muted)]">From</div>
+                      <div className="text-xs font-semibold text-[var(--dash-muted)]">
+                        From
+                      </div>
                       <div className="relative">
                         <input
                           type="date"
                           value={from}
-                          onChange={(e) => onUpdateQuery({ from: e.target.value || undefined })}
+                          onChange={(e) =>
+                            onUpdateQuery({ from: e.target.value || undefined })
+                          }
                           className={cn(
                             "w-full appearance-none rounded-xl border bg-[var(--dash-surface)] px-3 py-2 pr-10 text-sm",
                             "border-[var(--dash-border)] text-[var(--dash-text)]",
-                            "focus:outline-none focus:ring-2 focus:ring-[var(--dash-red-soft)]"
+                            "focus:outline-none focus:ring-2 focus:ring-[var(--dash-red-soft)]",
                           )}
                         />
                         <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--dash-muted)]" />
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <div className="text-xs font-semibold text-[var(--dash-muted)]">To</div>
+                      <div className="text-xs font-semibold text-[var(--dash-muted)]">
+                        To
+                      </div>
                       <div className="relative">
                         <input
                           type="date"
                           value={to}
-                          onChange={(e) => onUpdateQuery({ to: e.target.value || undefined })}
+                          onChange={(e) =>
+                            onUpdateQuery({ to: e.target.value || undefined })
+                          }
                           className={cn(
                             "w-full appearance-none rounded-xl border bg-[var(--dash-surface)] px-3 py-2 pr-10 text-sm",
                             "border-[var(--dash-border)] text-[var(--dash-text)]",
-                            "focus:outline-none focus:ring-2 focus:ring-[var(--dash-red-soft)]"
+                            "focus:outline-none focus:ring-2 focus:ring-[var(--dash-red-soft)]",
                           )}
                         />
                         <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--dash-muted)]" />
@@ -510,7 +601,10 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
                     <button
                       type="button"
                       onClick={clearAll}
-                      className={cn("rounded-xl border px-4 py-2 text-sm font-semibold transition", "border-[var(--dash-border)] text-[var(--dash-text)] hover:bg-[var(--dash-surface-2)]")}
+                      className={cn(
+                        "rounded-xl border px-4 py-2 text-sm font-semibold transition",
+                        "border-[var(--dash-border)] text-[var(--dash-text)] hover:bg-[var(--dash-surface-2)]",
+                      )}
                     >
                       Clear all
                     </button>
@@ -553,15 +647,24 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
               !supported || exportState.state === "running"
                 ? "bg-emerald-500/40 text-white/80 border border-emerald-400/40 cursor-not-allowed opacity-80"
                 : exportState.state === "ready"
-                ? "bg-emerald-600 text-white border border-emerald-600 hover:bg-emerald-700 cursor-pointer"
-                : exportState.state === "error"
-                ? "bg-emerald-500 text-white border border-emerald-500 hover:bg-emerald-600 cursor-pointer"
-                : "bg-emerald-500 text-white border border-emerald-500 hover:bg-emerald-600 cursor-pointer"
+                  ? "bg-emerald-600 text-white border border-emerald-600 hover:bg-emerald-700 cursor-pointer"
+                  : exportState.state === "error"
+                    ? "bg-emerald-500 text-white border border-emerald-500 hover:bg-emerald-600 cursor-pointer"
+                    : "bg-emerald-500 text-white border border-emerald-500 hover:bg-emerald-600 cursor-pointer",
             )}
-            title={exportState.state === "error" ? exportState.message : exportState.state === "ready" ? "Download export" : "Export"}
+            title={
+              exportState.state === "error"
+                ? exportState.message
+                : exportState.state === "ready"
+                  ? "Download export"
+                  : "Export"
+            }
           >
             {exportState.state === "idle" && "Export"}
-            {exportState.state === "running" && (exportState.showProgress ? `Exporting (${Math.max(0, Math.min(100, Math.round(exportState.progressPercent)))}%)` : "Exporting…")}
+            {exportState.state === "running" &&
+              (exportState.showProgress
+                ? `Exporting (${Math.max(0, Math.min(100, Math.round(exportState.progressPercent)))}%)`
+                : "Exporting…")}
             {exportState.state === "ready" && "Download"}
             {exportState.state === "error" && "Export"}
           </button>
@@ -577,14 +680,18 @@ export function DataOperationsBar(props: DataOperationsBarHomeProps | DataOperat
               "rounded-full px-4 py-2 text-sm font-semibold transition",
               canSendInvite
                 ? "bg-[var(--dash-red)] text-white hover:opacity-95 cursor-pointer"
-                : "bg-[var(--dash-surface-2)] text-[var(--dash-muted)] border border-[var(--dash-border)] cursor-not-allowed opacity-70"
+                : "bg-[var(--dash-surface-2)] text-[var(--dash-muted)] border border-[var(--dash-border)] cursor-not-allowed opacity-70",
             )}
           >
             Send Invite
           </button>
         </div>
       </div>
-      {exportState.state === "error" && <div className="mt-2 text-xs font-semibold text-[var(--dash-red)]">{exportState.message}</div>}
+      {exportState.state === "error" && (
+        <div className="mt-2 text-xs font-semibold text-[var(--dash-red)]">
+          {exportState.message}
+        </div>
+      )}
     </div>
   );
 }

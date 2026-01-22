@@ -11,7 +11,7 @@ type DashboardThemeContextValue = {
 };
 
 const DashboardThemeContext = createContext<DashboardThemeContextValue | null>(
-  null
+  null,
 );
 
 const STORAGE_KEY = "npt.dashboard.theme.mode";
@@ -21,7 +21,7 @@ function setThemeCookie(mode: DashboardThemeMode) {
   try {
     // 1 year, Lax so it works across reloads without being overly permissive.
     document.cookie = `${COOKIE_KEY}=${encodeURIComponent(
-      mode
+      mode,
     )}; path=/; max-age=31536000; samesite=lax`;
   } catch {
     // ignore
@@ -39,7 +39,9 @@ function resolveTheme(mode: DashboardThemeMode): "light" | "dark" {
 export function useDashboardTheme() {
   const ctx = React.useContext(DashboardThemeContext);
   if (!ctx) {
-    throw new Error("useDashboardTheme must be used within DashboardThemeProvider");
+    throw new Error(
+      "useDashboardTheme must be used within DashboardThemeProvider",
+    );
   }
   return ctx;
 }
@@ -53,7 +55,7 @@ export function DashboardThemeProvider({
 }) {
   const [mode, setMode] = useState<DashboardThemeMode>(initialMode ?? "system");
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() =>
-    resolveTheme(initialMode ?? "system")
+    resolveTheme(initialMode ?? "system"),
   );
 
   // Load persisted mode once
@@ -111,7 +113,7 @@ export function DashboardThemeProvider({
         setThemeCookie(next);
       },
     }),
-    [mode, resolvedTheme]
+    [mode, resolvedTheme],
   );
 
   return (
@@ -122,4 +124,3 @@ export function DashboardThemeProvider({
     </DashboardThemeContext.Provider>
   );
 }
-
