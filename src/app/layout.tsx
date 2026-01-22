@@ -26,9 +26,9 @@ export const metadata: Metadata = {
   description:
     "Secure employee onboarding platform for NPT subsidiaries. Complete your onboarding, upload required documents, and track your submission status.",
   icons: {
-    icon: "/assets/logos/NPTlogo.png",
-    shortcut: "/assets/logos/NPTlogo.png",
-    apple: "/assets/logos/NPTlogo.png",
+    icon: "/assets/logos/NPTlogofavicon.png",
+    shortcut: "/assets/logos/NPTlogofavicon.png",
+    apple: "/assets/logos/NPTlogofavicon.png",
   },
   openGraph: {
     type: "website",

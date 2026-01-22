@@ -1,9 +1,7 @@
 // src/lib/pdf/application-form/mappers/npt-india-application-form.mapper.ts
 
 import type { PDFForm } from "pdf-lib";
-
 import { EEducationLevel, EGender, type IIndiaOnboardingFormData } from "@/types/onboarding.types";
-
 import { ENptIndiaApplicationFormFields as F, type NptIndiaApplicationFormPayload } from "./npt-india-application-form.types";
 
 type MaybeDate = Date | string | undefined | null;
@@ -23,8 +21,10 @@ function fmtDateDMY(date: MaybeDate): string {
 }
 
 function fmtYear(n?: number | null): string {
-  if (!n || !Number.isFinite(n)) return "";
-  return String(Math.trunc(n));
+  if (n == null) return "";
+  const x = Number(n);
+  if (!Number.isFinite(x)) return "";
+  return String(Math.trunc(x));
 }
 
 function safeStr(v: any): string {
@@ -35,20 +35,34 @@ function boolFileExists(file?: any | null): boolean {
   return Boolean(file?.s3Key || file?.url);
 }
 
-/* -------------------------------------------------------------------------- */
-/* Builder                                                                     */
-/* -------------------------------------------------------------------------- */
+function digitsOnly(v?: string | null): string {
+  const s = safeStr(v);
+  return s.replace(/\D+/g, "");
+}
 
 /**
- * Builds a payload where keys exactly match PDF form field names.
- *
- * IMPORTANT: Order of sections/comments mirrors the PDF layout:
- * - Page 1: Checklist / Instructions (no fields)
- * - Page 2: Personal Info & Banking (Personal Info -> Residential Address -> Contact -> ID Info -> Banking Info)
- * - Page 3: Education
- * - Page 4: Employment History (Previously employed? -> Employment Entry 1..3)
- * - Page 5: Submission Info (Declaration)
+ * NEW TEMPLATE: phone fields are split into (AAA) and BBBBBBB.
+ * - We take the last 10 digits (handles +91, etc.)
+ * - If < 10 digits, we best-effort: first 3 as area, rest as remaining.
  */
+function splitPhone(phone?: string | null): { area: string; rest: string } {
+  const d = digitsOnly(phone);
+  if (!d) return { area: "", rest: "" };
+
+  const ten = d.length > 10 ? d.slice(-10) : d;
+  const area = ten.slice(0, Math.min(3, ten.length));
+  const rest = ten.length > 3 ? ten.slice(3) : "";
+  return { area, rest };
+}
+
+function fullName(first?: string, last?: string): string {
+  return [safeStr(first), safeStr(last)].filter(Boolean).join(" ").trim();
+}
+
+/* -------------------------------------------------------------------------- */
+/* Builder                                                                    */
+/* -------------------------------------------------------------------------- */
+
 export function buildNptIndiaApplicationFormPayload(formData: IIndiaOnboardingFormData): NptIndiaApplicationFormPayload {
   const payload: NptIndiaApplicationFormPayload = {};
 
@@ -59,32 +73,21 @@ export function buildNptIndiaApplicationFormPayload(formData: IIndiaOnboardingFo
   const dec = formData.declaration;
 
   /* ======================================================================== */
-  /* Page 1: Checklist / Instructions                                         */
-  /* ======================================================================== */
-  // No fillable fields on this page.
-
-  /* ======================================================================== */
-  /* Page 2: Personal Info & Banking                                          */
+  /* Page 2: Personal Details / Address / Contact / Govt ID                    */
   /* ======================================================================== */
 
-  /* ----------------------------- Personal Info ---------------------------- */
-
-  payload[F.FIRST_NAME] = safeStr(p.firstName);
-  payload[F.LAST_NAME] = safeStr(p.lastName);
+  payload[F.FULL_NAME] = fullName(p.firstName, p.lastName);
   payload[F.EMAIL] = safeStr(p.email);
 
-  // Gender (checkboxes)
-  payload[F.GENDER_MALE] = p.gender === EGender.MALE;
-  payload[F.GENDER_FEMALE] = p.gender === EGender.FEMALE;
+  // Gender
+  payload[F.GENDER] = p.gender === EGender.MALE ? "Male" : "Female";
 
   payload[F.DATE_OF_BIRTH] = fmtDateDMY(p.dateOfBirth);
 
-  // Proof of Age Available (Yes/No)
-  payload[F.PROOF_OF_AGE_YES] = !!p.canProvideProofOfAge;
-  payload[F.PROOF_OF_AGE_NO] = !p.canProvideProofOfAge;
+  // proof of age is a text field
+  payload[F.PROOF_OF_AGE] = p.canProvideProofOfAge ? "Yes" : "No";
 
-  /* --------------------------- Residential Address ------------------------ */
-
+  // Residential address
   payload[F.ADDRESS_LINE_1] = safeStr(p.residentialAddress?.addressLine1);
   payload[F.CITY] = safeStr(p.residentialAddress?.city);
   payload[F.STATE] = safeStr(p.residentialAddress?.state);
@@ -92,29 +95,177 @@ export function buildNptIndiaApplicationFormPayload(formData: IIndiaOnboardingFo
   payload[F.ADDRESS_FROM] = fmtDateDMY(p.residentialAddress?.fromDate);
   payload[F.ADDRESS_TO] = fmtDateDMY(p.residentialAddress?.toDate);
 
-  /* ---------------------------- Contact Number ---------------------------- */
+  // Contact numbers (split)
+  const home = splitPhone(p.phoneHome);
+  payload[F.PHONE_HOME_AREA] = home.area;
+  payload[F.PHONE_HOME_REST] = home.rest;
 
-  payload[F.PHONE_HOME] = safeStr(p.phoneHome);
-  payload[F.PHONE_MOBILE] = safeStr(p.phoneMobile);
+  const mobile = splitPhone(p.phoneMobile);
+  payload[F.PHONE_MOBILE_AREA] = mobile.area;
+  payload[F.PHONE_MOBILE_REST] = mobile.rest;
+
   payload[F.EMERGENCY_CONTACT_NAME] = safeStr(p.emergencyContactName);
-  payload[F.EMERGENCY_CONTACT_PHONE] = safeStr(p.emergencyContactNumber);
+  const emer = splitPhone(p.emergencyContactNumber);
+  payload[F.EMERGENCY_PHONE_AREA] = emer.area;
+  payload[F.EMERGENCY_PHONE_REST] = emer.rest;
 
-  /* -------------------------------- ID Info ------------------------------ */
+  payload[F.REFERENCE1_NAME] = safeStr(p.reference1Name);
+  const r1 = splitPhone(p.reference1PhoneNumber);
+  payload[F.REFERENCE1_PHONE_AREA] = r1.area;
+  payload[F.REFERENCE1_PHONE_REST] = r1.rest;
 
+  payload[F.REFERENCE2_NAME] = safeStr(p.reference2Name);
+  const r2 = splitPhone(p.reference2PhoneNumber);
+  payload[F.REFERENCE2_PHONE_AREA] = r2.area;
+  payload[F.REFERENCE2_PHONE_REST] = r2.rest;
+
+  // checkbox -> boolean (worker will draw checkmark image)
+  payload[F.CONSENT_TO_CONTACT] = !!p.hasConsentToContactReferencesOrEmergencyContact;
+
+  // Government IDs
   payload[F.AADHAAR_NUMBER] = safeStr(g.aadhaar?.aadhaarNumber);
   payload[F.AADHAAR_CARD_ATTACHED] = boolFileExists(g.aadhaar?.file);
 
-  // PAN Number line exists on PDF; if your schema doesn't store the number, leave blank.
-  payload[F.PAN_NUMBER] = "";
+  payload[F.PAN_NUMBER] = safeStr(g.panCard?.panNumber);
   payload[F.PAN_CARD_ATTACHED] = boolFileExists(g.panCard?.file);
 
+  payload[F.PASSPORT_NUMBER] = safeStr(g.passport?.passportNumber);
+  payload[F.PASSPORT_ISSUE_DATE] = fmtDateDMY(g.passport?.issueDate);
+  payload[F.PASSPORT_EXPIRY_DATE] = fmtDateDMY(g.passport?.expiryDate);
   payload[F.PASSPORT_FRONT_ATTACHED] = boolFileExists(g.passport?.frontFile);
   payload[F.PASSPORT_BACK_ATTACHED] = boolFileExists(g.passport?.backFile);
 
-  payload[F.LICENSE_BACK_ATTACHED] = boolFileExists(g.driversLicense?.backFile);
+  payload[F.LICENSE_NUMBER] = safeStr(g.driversLicense?.licenseNumber);
+  payload[F.LICENSE_ISSUE_DATE] = fmtDateDMY(g.driversLicense?.issueDate);
+  payload[F.LICENSE_EXPIRY_DATE] = fmtDateDMY(g.driversLicense?.expiryDate);
   payload[F.LICENSE_FRONT_ATTACHED] = boolFileExists(g.driversLicense?.frontFile);
+  payload[F.LICENSE_BACK_ATTACHED] = boolFileExists(g.driversLicense?.backFile);
 
-  /* ------------------------------ Banking Info ---------------------------- */
+  /* ======================================================================== */
+  /* Page 3: Education                                                        */
+  /* ======================================================================== */
+
+  const level = edu?.highestLevel;
+
+  payload[F.EDU_PRIMARY_SCHOOL] = level === EEducationLevel.PRIMARY_SCHOOL;
+  payload[F.EDU_HIGH_SCHOOL] = level === EEducationLevel.HIGH_SCHOOL;
+  payload[F.EDU_DIPLOMA] = level === EEducationLevel.DIPLOMA;
+  payload[F.EDU_BACHELORS] = level === EEducationLevel.BACHELORS;
+  payload[F.EDU_MASTERS] = level === EEducationLevel.MASTERS;
+  payload[F.EDU_DOCTORATE] = level === EEducationLevel.DOCTORATE;
+  payload[F.EDU_OTHER] = level === EEducationLevel.OTHER;
+
+  payload[F.EDU_OTHER_TEXT] = "";
+
+  payload[F.PRIMARY_SCHOOL_NAME] = safeStr(edu?.schoolName);
+  payload[F.PRIMARY_YEAR_COMPLETED] = fmtYear(edu?.primaryYearCompleted);
+
+  payload[F.HIGH_SCHOOL_NAME] = safeStr(edu?.highSchoolInstitutionName);
+  payload[F.HIGH_SCHOOL_YEAR_COMPLETED] = fmtYear(edu?.highSchoolYearCompleted);
+
+  payload[F.COLLEGE_UNIVERSITY_NAME] = safeStr(edu?.institutionName);
+  payload[F.START_YEAR] = fmtYear(edu?.startYear);
+  payload[F.YEAR_COMPLETED_OR_EXPECTED] = fmtYear(edu?.endYear);
+
+  /* ======================================================================== */
+  /* Page 4: Employment History                                               */
+  /* ======================================================================== */
+
+  const hasPrevEmployment = !!formData.hasPreviousEmployment;
+  const jobs = Array.isArray(formData.employmentHistory) ? formData.employmentHistory : [];
+
+  const setEmployment = (
+    idx: number,
+    fields: {
+      na: F;
+      org: F;
+      role: F;
+      start: F;
+      end: F;
+      reason: F;
+      refYes: F;
+      refNo: F;
+      certYes: F;
+      certNo: F;
+    }
+  ) => {
+    const e: any = jobs[idx]; // employerReferenceCheck not in onboarding.types.ts yet
+
+    if (!hasPrevEmployment || !e) {
+      payload[fields.na] = true;
+
+      payload[fields.org] = "";
+      payload[fields.role] = "";
+      payload[fields.start] = "";
+      payload[fields.end] = "";
+      payload[fields.reason] = "";
+
+      payload[fields.refYes] = false;
+      payload[fields.refNo] = false;
+      payload[fields.certYes] = false;
+      payload[fields.certNo] = false;
+      return;
+    }
+
+    payload[fields.na] = false;
+
+    payload[fields.org] = safeStr(e.organizationName);
+    payload[fields.role] = safeStr(e.designation);
+    payload[fields.start] = fmtDateDMY(e.startDate);
+    payload[fields.end] = fmtDateDMY(e.endDate);
+    payload[fields.reason] = safeStr(e.reasonForLeaving);
+
+    const refOk = !!e.employerReferenceCheck;
+    payload[fields.refYes] = refOk;
+    payload[fields.refNo] = !refOk;
+
+    const hasCert = boolFileExists(e.experienceCertificateFile);
+    payload[fields.certYes] = hasCert;
+    payload[fields.certNo] = !hasCert;
+  };
+
+  setEmployment(0, {
+    na: F.EMP1_NA,
+    org: F.EMP1_ORG_NAME,
+    role: F.EMP1_ROLE,
+    start: F.EMP1_START_DATE,
+    end: F.EMP1_END_DATE,
+    reason: F.EMP1_REASON_FOR_LEAVING,
+    refYes: F.EMP1_REF_CHECK_YES,
+    refNo: F.EMP1_REF_CHECK_NO,
+    certYes: F.EMP1_EXP_CERT_YES,
+    certNo: F.EMP1_EXP_CERT_NO,
+  });
+
+  setEmployment(1, {
+    na: F.EMP2_NA,
+    org: F.EMP2_ORG_NAME,
+    role: F.EMP2_ROLE,
+    start: F.EMP2_START_DATE,
+    end: F.EMP2_END_DATE,
+    reason: F.EMP2_REASON_FOR_LEAVING,
+    refYes: F.EMP2_REF_CHECK_YES,
+    refNo: F.EMP2_REF_CHECK_NO,
+    certYes: F.EMP2_EXP_CERT_YES,
+    certNo: F.EMP2_EXP_CERT_NO,
+  });
+
+  setEmployment(2, {
+    na: F.EMP3_NA,
+    org: F.EMP3_ORG_NAME,
+    role: F.EMP3_ROLE,
+    start: F.EMP3_START_DATE,
+    end: F.EMP3_END_DATE,
+    reason: F.EMP3_REASON_FOR_LEAVING,
+    refYes: F.EMP3_REF_CHECK_YES,
+    refNo: F.EMP3_REF_CHECK_NO,
+    certYes: F.EMP3_EXP_CERT_YES,
+    certNo: F.EMP3_EXP_CERT_NO,
+  });
+
+  /* ======================================================================== */
+  /* Page 5: Banking + Declaration                                             */
+  /* ======================================================================== */
 
   payload[F.BANK_NAME] = safeStr(bank.bankName);
   payload[F.BRANCH_NAME] = safeStr(bank.branchName);
@@ -127,149 +278,7 @@ export function buildNptIndiaApplicationFormPayload(formData: IIndiaOnboardingFo
   payload[F.VOID_CHEQUE_ATTACHED_YES] = hasVoid;
   payload[F.VOID_CHEQUE_ATTACHED_NO] = !hasVoid;
 
-  /* ======================================================================== */
-  /* Page 3: Education                                                         */
-  /* ======================================================================== */
-
-  /* ---------------------- Choose your Highest Qualification ---------------- */
-
-  const level = edu?.highestLevel;
-
-  payload[F.EDU_PRIMARY_SCHOOL] = level === EEducationLevel.PRIMARY_SCHOOL;
-  payload[F.EDU_HIGH_SCHOOL] = level === EEducationLevel.HIGH_SCHOOL;
-  payload[F.EDU_DIPLOMA] = level === EEducationLevel.DIPLOMA;
-  payload[F.EDU_BACHELORS] = level === EEducationLevel.BACHELORS;
-  payload[F.EDU_MASTERS] = level === EEducationLevel.MASTERS;
-  payload[F.EDU_DOCTORATE] = level === EEducationLevel.DOCTORATE;
-  payload[F.EDU_OTHER] = level === EEducationLevel.OTHER;
-
-  // If OTHER, schema currently doesn’t store the free-text; keep blank (or wire later).
-  payload[F.EDU_OTHER_TEXT] = "";
-
-  /* -------------------- Block A: Primary School (only) -------------------- */
-
-  payload[F.PRIMARY_SCHOOL_NAME] = safeStr(edu?.schoolName);
-  payload[F.PRIMARY_SCHOOL_LOCATION] = safeStr(edu?.schoolLocation);
-  payload[F.PRIMARY_YEAR_COMPLETED] = fmtYear(edu?.primaryYearCompleted);
-
-  /* ----------------- Block B: High School/Secondary (only) ---------------- */
-
-  payload[F.HIGH_SCHOOL_NAME] = safeStr(edu?.highSchoolInstitutionName);
-  payload[F.HIGH_SCHOOL_BOARD] = safeStr(edu?.highSchoolBoard);
-  payload[F.HIGH_SCHOOL_YEAR_COMPLETED] = fmtYear(edu?.highSchoolYearCompleted);
-  payload[F.HIGH_SCHOOL_STREAM] = safeStr(edu?.highSchoolStream);
-  payload[F.HIGH_SCHOOL_GRADE] = safeStr(edu?.highSchoolGradeOrPercentage);
-
-  /* -------- Block C: Diploma/Bachelor/Master/Doctorate/Other (only) -------- */
-
-  payload[F.INSTITUTION_NAME] = safeStr(edu?.institutionName);
-  payload[F.UNIVERSITY_OR_BOARD] = safeStr(edu?.universityOrBoard);
-  payload[F.FIELD_OF_STUDY] = safeStr(edu?.fieldOfStudy);
-  payload[F.START_YEAR] = fmtYear(edu?.startYear);
-  payload[F.END_YEAR] = fmtYear(edu?.endYear);
-  payload[F.GRADE_OR_PERCENTAGE] = safeStr(edu?.gradeOrCgpa);
-
-  /* ======================================================================== */
-  /* Page 4: Employment History                                               */
-  /* ======================================================================== */
-
-  /* -------------------------- Previously Employed? ------------------------- */
-
-  const hasPrevEmployment = !!formData.hasPreviousEmployment;
-  payload[F.PREVIOUSLY_EMPLOYED_YES] = hasPrevEmployment;
-  payload[F.PREVIOUSLY_EMPLOYED_NO] = !hasPrevEmployment;
-
-  /* --------------------------- Employment Entries -------------------------- */
-
-  const jobs = Array.isArray(formData.employmentHistory) ? formData.employmentHistory : [];
-
-  const setEmployment = (
-    idx: number,
-    fields: {
-      org: F;
-      role: F;
-      start: F;
-      end: F;
-      reason: F;
-      yes: F;
-      no: F;
-    }
-  ) => {
-    // If user indicates no prior employment, force blanks.
-    if (!hasPrevEmployment) {
-      payload[fields.org] = "";
-      payload[fields.role] = "";
-      payload[fields.start] = "";
-      payload[fields.end] = "";
-      payload[fields.reason] = "";
-      payload[fields.yes] = false;
-      payload[fields.no] = true;
-      return;
-    }
-
-    const e = jobs[idx];
-    if (!e) {
-      payload[fields.org] = "";
-      payload[fields.role] = "";
-      payload[fields.start] = "";
-      payload[fields.end] = "";
-      payload[fields.reason] = "";
-      payload[fields.yes] = false;
-      payload[fields.no] = true;
-      return;
-    }
-
-    payload[fields.org] = safeStr(e.organizationName);
-    payload[fields.role] = safeStr(e.designation);
-    payload[fields.start] = fmtDateDMY(e.startDate);
-    payload[fields.end] = fmtDateDMY(e.endDate);
-    payload[fields.reason] = safeStr(e.reasonForLeaving);
-
-    const hasCert = boolFileExists(e.experienceCertificateFile);
-    payload[fields.yes] = hasCert;
-    payload[fields.no] = !hasCert;
-  };
-
-  // Employment Entry 1
-  setEmployment(0, {
-    org: F.EMP1_ORG_NAME,
-    role: F.EMP1_ROLE,
-    start: F.EMP1_START_DATE,
-    end: F.EMP1_END_DATE,
-    reason: F.EMP1_REASON_FOR_LEAVING,
-    yes: F.EMP1_EXP_CERT_YES,
-    no: F.EMP1_EXP_CERT_NO,
-  });
-
-  // Employment Entry 2
-  setEmployment(1, {
-    org: F.EMP2_ORG_NAME,
-    role: F.EMP2_ROLE,
-    start: F.EMP2_START_DATE,
-    end: F.EMP2_END_DATE,
-    reason: F.EMP2_REASON_FOR_LEAVING,
-    yes: F.EMP2_EXP_CERT_YES,
-    no: F.EMP2_EXP_CERT_NO,
-  });
-
-  // Employment Entry 3
-  setEmployment(2, {
-    org: F.EMP3_ORG_NAME,
-    role: F.EMP3_ROLE,
-    start: F.EMP3_START_DATE,
-    end: F.EMP3_END_DATE,
-    reason: F.EMP3_REASON_FOR_LEAVING,
-    yes: F.EMP3_EXP_CERT_YES,
-    no: F.EMP3_EXP_CERT_NO,
-  });
-
-  /* ======================================================================== */
-  /* Page 5: Submission Info (Declaration)                                    */
-  /* ======================================================================== */
-
   payload[F.DECLARATION_ACCEPTED] = !!dec?.hasAcceptedDeclaration;
-
-  // Date shown on PDF; signature image itself is drawn separately in the route.
   payload[F.DECLARATION_DATE] = fmtDateDMY(dec?.declarationDate || dec?.signature?.signedAt);
 
   return payload;
@@ -277,32 +286,16 @@ export function buildNptIndiaApplicationFormPayload(formData: IIndiaOnboardingFo
 
 /* -------------------------------------------------------------------------- */
 /* Apply payload to pdf-lib form                                              */
+/* - strings => setText                                                       */
+/* - booleans => ignored here (worker draws checkmark image)                   */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Apply payload to pdf-lib form.
- * - booleans -> checkboxes (check/uncheck)
- * - strings  -> text fields
- *
- * Missing/mismatched fields are ignored (helps during template iteration).
- */
 export function applyNptIndiaApplicationFormPayloadToForm(form: PDFForm, payload: NptIndiaApplicationFormPayload): void {
   for (const [name, value] of Object.entries(payload)) {
     if (value == null) continue;
+    if (typeof value === "boolean") continue;
 
     try {
-      if (typeof value === "boolean") {
-        try {
-          const cb = form.getCheckBox(name);
-          if (value) cb.check();
-          else cb.uncheck();
-          cb.updateAppearances();
-          continue;
-        } catch {
-          // Not a checkbox; fall through to try text.
-        }
-      }
-
       const tf = form.getTextField(name);
       tf.setText(String(value));
     } catch {

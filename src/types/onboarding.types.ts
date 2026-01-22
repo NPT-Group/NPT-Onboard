@@ -317,23 +317,16 @@ export interface IEducationDetails {
 
   // Primary school fields (used only if highestLevel = PrimarySchool)
   schoolName?: string; // required
-  schoolLocation?: string; // optional
-  primaryYearCompleted?: number; // required
+  primaryYearCompleted?: number; // optional
 
   // High school fields (used only if highestLevel = HighSchoolSecondary)
   highSchoolInstitutionName?: string; // required
-  highSchoolBoard?: string; // optional
-  highSchoolStream?: string; // optional
-  highSchoolYearCompleted?: number; // required
-  highSchoolGradeOrPercentage?: string; // optional
+  highSchoolYearCompleted?: number; // optional
 
   // Diploma / Bachelor / Master / PhD / Other (used only if highestLevel = Diploma, Bachelors, Masters, Doctorate, Other)
   institutionName?: string; // required
-  universityOrBoard?: string; // optional
-  fieldOfStudy?: string; // required
   startYear?: number; // optional
   endYear?: number; // required
-  gradeOrCgpa?: string; // optional
 }
 
 /**
@@ -346,6 +339,7 @@ export interface IEmploymentHistoryEntry {
   endDate: Date | string; // ISO
   reasonForLeaving: string;
   experienceCertificateFile?: IFileAsset | null;
+  employerReferenceCheck: boolean; // required - user confirms employer reference check permission
 }
 
 /**

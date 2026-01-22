@@ -28,6 +28,7 @@ function findFirstEmploymentErrorPath(
       "endDate",
       "reasonForLeaving",
       "experienceCertificateFile",
+      "employerReferenceCheck",
     ];
     for (let i = 0; i < arr.length; i++) {
       const row = arr[i];

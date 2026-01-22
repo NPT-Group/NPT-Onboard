@@ -1,127 +1,143 @@
-import { NextRequest, NextResponse } from "next/server";
-import path from "node:path";
-import fs from "node:fs/promises";
-import { isValidObjectId } from "mongoose";
-import { PDFDocument } from "pdf-lib";
+import { NextRequest } from "next/server";
+import { v4 as uuidv4 } from "uuid";
 
 import connectDB from "@/lib/utils/connectDB";
 import { guard } from "@/lib/utils/auth/authUtils";
-import { errorResponse } from "@/lib/utils/apiResponse";
+import { successResponse, errorResponse } from "@/lib/utils/apiResponse";
 
-import { OnboardingModel } from "@/mongoose/models/Onboarding";
+import { APP_AWS_BUCKET_NAME, APP_AWS_REGION, APP_AWS_ACCESS_KEY_ID, APP_AWS_SECRET_ACCESS_KEY, APPLICATION_FORM_PDF_LAMBDA_NAME } from "@/config/env";
+
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
+
+import { isValidObjectId } from "mongoose";
+import { keyJoin } from "@/lib/utils/s3Helper";
+import { S3_TEMP_FOLDER } from "@/constants/aws";
+import { AppError } from "@/types/api.types";
 import { ESubsidiary } from "@/types/shared.types";
 
-import { loadImageBytesFromAsset } from "@/lib/utils/s3Helper";
-import { drawPdfImage } from "@/lib/pdf/utils/drawPdfImage";
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-import { buildNptIndiaApplicationFormPayload, applyNptIndiaApplicationFormPayloadToForm } from "@/lib/pdf/application-form/mappers/npt-india-application-form.mapper";
-import { ENptIndiaApplicationFormFields as F } from "@/lib/pdf/application-form/mappers/npt-india-application-form.types";
+const s3 = new S3Client({
+  region: APP_AWS_REGION,
+  credentials: { accessKeyId: APP_AWS_ACCESS_KEY_ID, secretAccessKey: APP_AWS_SECRET_ACCESS_KEY },
+});
 
-/**
- * GET /api/v1/admin/onboardings/[id]/filled-pdf/application-form
- *
- * Generates a filled Hiring Application PDF for an onboarding record.
- *
- * Access:
- *  - Admin only
- *
- * Requirements:
- *  - `subsidiary` query param is required
- *  - Currently supported subsidiary: INDIA only
- *  - `subsidiary` must match `onboarding.subsidiary`
- *  - `onboarding.isFormComplete === true`
- *  - `onboarding.indiaFormData` must be present
- *
- * Output:
- *  - application/pdf (inline)
- *  - Filled and flattened NPT India Hiring Application form
- */
-export const GET = async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+const lambda = new LambdaClient({
+  region: APP_AWS_REGION,
+  credentials: { accessKeyId: APP_AWS_ACCESS_KEY_ID, secretAccessKey: APP_AWS_SECRET_ACCESS_KEY },
+});
+
+type JobState = "PENDING" | "RUNNING" | "DONE" | "ERROR";
+type JobStatus = {
+  state: JobState;
+  progressPercent: number;
+
+  startedAt: string | null;
+  updatedAt: string;
+
+  downloadKey: string | null;
+  downloadUrl: string | null;
+
+  errorMessage?: string | null;
+};
+
+type Payload = {
+  jobId: string;
+  requestedAt: string;
+
+  onboardingId: string;
+  subsidiary: ESubsidiary;
+  filename: string | null; // optional desired filename (without path)
+};
+
+function reportsBasePrefix() {
+  return keyJoin(S3_TEMP_FOLDER, "onboardings", "application-form-pdf");
+}
+function statusKeyFor(jobId: string) {
+  return keyJoin(reportsBasePrefix(), `${jobId}.json`);
+}
+
+function sanitizeFilename(name: string) {
+  return name
+    .replace(/[/\\?%*:|"<>]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await connectDB();
     await guard();
 
+    if (!APPLICATION_FORM_PDF_LAMBDA_NAME) throw new AppError(500, "APPLICATION_FORM_PDF_LAMBDA_NAME not configured");
+
     const { id: onboardingId } = await params;
-    if (!isValidObjectId(onboardingId)) return errorResponse(400, "Not a valid onboarding ID");
+    if (!isValidObjectId(onboardingId)) throw new AppError(400, "Not a valid onboarding ID");
 
-    const subsidiaryRaw = req.nextUrl.searchParams.get("subsidiary");
-    if (!subsidiaryRaw) return errorResponse(400, "subsidiary is required");
+    const url = new URL(req.url);
+    const subsidiaryRaw = url.searchParams.get("subsidiary");
+    if (!subsidiaryRaw) throw new AppError(400, "subsidiary is required");
 
-    if (!Object.values(ESubsidiary).includes(subsidiaryRaw as ESubsidiary)) {
-      return errorResponse(400, "Invalid subsidiary");
-    }
+    if (!Object.values(ESubsidiary).includes(subsidiaryRaw as ESubsidiary)) throw new AppError(400, "Invalid subsidiary");
     const subsidiary = subsidiaryRaw as ESubsidiary;
 
+    // India-only for this feature (matches your current filled-pdf route)
     if (subsidiary !== ESubsidiary.INDIA) {
-      return errorResponse(400, "Filled application form PDF is only supported for INDIA subsidiary");
+      throw new AppError(400, "Filled application form bundle PDF is only supported for INDIA subsidiary");
     }
 
-    // IMPORTANT: do NOT use .lean() here, we need getters/virtuals (decryption getters).
-    const onboardingDoc = await OnboardingModel.findById(onboardingId);
-    if (!onboardingDoc) return errorResponse(404, "Onboarding not found");
+    // Optional filename
+    const filenameRaw = url.searchParams.get("filename");
+    const filename = filenameRaw ? sanitizeFilename(filenameRaw) : null;
 
-    // Ensure caller-provided subsidiary matches record
-    if (onboardingDoc.subsidiary !== subsidiary) {
-      return errorResponse(400, "subsidiary does not match onboarding.subsidiary");
+    const jobId = `job-${uuidv4()}`;
+
+    const initialStatus: JobStatus = {
+      state: "PENDING",
+      progressPercent: 0,
+      startedAt: null,
+      updatedAt: new Date().toISOString(),
+      downloadKey: null,
+      downloadUrl: null,
+      errorMessage: null,
+    };
+
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: APP_AWS_BUCKET_NAME,
+        Key: statusKeyFor(jobId),
+        Body: JSON.stringify(initialStatus),
+        ContentType: "application/json",
+      })
+    );
+
+    const payload: Payload = {
+      jobId,
+      requestedAt: new Date().toISOString(),
+      onboardingId,
+      subsidiary,
+      filename,
+    };
+
+    const invokeRes = await lambda.send(
+      new InvokeCommand({
+        FunctionName: APPLICATION_FORM_PDF_LAMBDA_NAME,
+        InvocationType: "RequestResponse",
+        Payload: new TextEncoder().encode(JSON.stringify(payload)),
+      })
+    );
+
+    if (invokeRes.FunctionError) {
+      const errText = invokeRes.Payload ? new TextDecoder().decode(invokeRes.Payload) : "";
+      throw new AppError(500, `Lambda PDF generation failed: ${invokeRes.FunctionError}${errText ? ` — ${errText}` : ""}`);
     }
 
-    if (!onboardingDoc.isFormComplete) {
-      return errorResponse(400, "Cannot generate filled PDF: form is not marked complete (isFormComplete=false)");
-    }
+    const statusUrl = `/api/v1/admin/onboardings/${onboardingId}/filled-pdf/application-form/status?jobId=${jobId}&subsidiary=${subsidiary}`;
 
-    // Convert using schema getters/virtuals so encryptedStringField getters run
-    const onboarding = onboardingDoc.toObject({ getters: true, virtuals: true }) as any;
-
-    const formData = onboarding.indiaFormData;
-    if (!formData) return errorResponse(400, "indiaFormData is missing");
-
-    /* ----------------------------- Load template ------------------------- */
-
-    const pdfPath = path.join(process.cwd(), "src/lib/pdf/application-form/templates/npt-india-application-form-fillable.pdf");
-    const pdfBytes = await fs.readFile(pdfPath);
-
-    const pdfDoc = await PDFDocument.load(pdfBytes);
-    const form = pdfDoc.getForm();
-    const pages = pdfDoc.getPages();
-
-    /* ----------------------------- Fill fields --------------------------- */
-
-    const payload = buildNptIndiaApplicationFormPayload(formData);
-    applyNptIndiaApplicationFormPayloadToForm(form, payload);
-
-    /* ---------------------------- Draw signature ------------------------- */
-    try {
-      const sigAsset = formData.declaration?.signature?.file;
-      const sigBytes = await loadImageBytesFromAsset(sigAsset);
-
-      await drawPdfImage({
-        pdfDoc,
-        form,
-        page: pages[4], // declaration page
-        fieldName: F.DECLARATION_SIGNATURE,
-        imageBytes: sigBytes,
-        width: 140,
-        height: 30,
-        yOffset: 0,
-      });
-    } catch (e) {
-      console.warn("Application form signature draw failed:", e);
-    }
-
-    form.flatten();
-
-    const out = await pdfDoc.save();
-    const arrayBuffer = out.buffer.slice(out.byteOffset, out.byteOffset + out.byteLength) as ArrayBuffer;
-
-    return new NextResponse(arrayBuffer, {
-      status: 200,
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": 'inline; filename="npt-india-application-form-filled.pdf"',
-      },
-    });
-  } catch (err) {
-    console.error("application-form/filled-pdf error:", err);
+    return successResponse(200, "PDF bundle job started", { jobId, statusUrl });
+  } catch (err: any) {
     return errorResponse(err);
   }
-};
+}

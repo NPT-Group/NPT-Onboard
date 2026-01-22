@@ -30,6 +30,12 @@ export function normalizeIndiaFormDataForSubmit(values: IndiaOnboardingFormValue
   // to avoid accidental stale entries being submitted.
   if (form.hasPreviousEmployment === false) {
     form.employmentHistory = [];
+  } else if (Array.isArray(form.employmentHistory)) {
+    // Ensure employerReferenceCheck is always present for each entry (required field)
+    form.employmentHistory = form.employmentHistory.map((entry: any) => ({
+      ...entry,
+      employerReferenceCheck: typeof entry.employerReferenceCheck === "boolean" ? entry.employerReferenceCheck : false,
+    }));
   }
 
   // education strictness
@@ -39,10 +45,7 @@ export function normalizeIndiaFormDataForSubmit(values: IndiaOnboardingFormValue
 
     // Backend rejects optional-but-empty strings; normalize common optional fields.
     // (Required fields remain required by frontend validation before submit.)
-    ["schoolLocation", "highSchoolBoard", "highSchoolStream", "highSchoolGradeOrPercentage", "universityOrBoard", "gradeOrCgpa"].forEach((k) => {
-      e[k] = toUndef(e[k]);
-      if (e[k] === undefined) delete e[k];
-    });
+    // No optional string fields to normalize for higher education
 
     const del = (k: string) => {
       if (k in e) delete e[k];
@@ -51,21 +54,15 @@ export function normalizeIndiaFormDataForSubmit(values: IndiaOnboardingFormValue
     if (level === EEducationLevel.PRIMARY_SCHOOL) {
       [
         "highSchoolInstitutionName",
-        "highSchoolBoard",
-        "highSchoolStream",
         "highSchoolYearCompleted",
-        "highSchoolGradeOrPercentage",
         "institutionName",
-        "universityOrBoard",
-        "fieldOfStudy",
         "startYear",
         "endYear",
-        "gradeOrCgpa",
       ].forEach(del);
     } else if (level === EEducationLevel.HIGH_SCHOOL) {
-      ["schoolName", "schoolLocation", "primaryYearCompleted", "institutionName", "universityOrBoard", "fieldOfStudy", "startYear", "endYear", "gradeOrCgpa"].forEach(del);
+      ["schoolName", "primaryYearCompleted", "institutionName", "startYear", "endYear"].forEach(del);
     } else if (level) {
-      ["schoolName", "schoolLocation", "primaryYearCompleted", "highSchoolInstitutionName", "highSchoolBoard", "highSchoolStream", "highSchoolYearCompleted", "highSchoolGradeOrPercentage"].forEach(
+      ["schoolName", "primaryYearCompleted", "highSchoolInstitutionName", "highSchoolYearCompleted"].forEach(
         del
       );
     }

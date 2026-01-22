@@ -97,6 +97,11 @@ function validatePassportDoc(passport: any, label: string) {
   vString(passport.passportNumber, `${label}.passportNumber`);
   validateIssueExpiryDates(passport, label, { required: true });
 
+  // Range check: expiry date must be on or after issue date
+  const issue = new Date(passport.issueDate).valueOf();
+  const expiry = new Date(passport.expiryDate).valueOf();
+  vAssert(expiry >= issue, `${label}.expiryDate must be on or after the issue date`);
+
   vAssert(passport.frontFile, `${label}.frontFile is required`);
   vAssert(passport.backFile, `${label}.backFile is required`);
   vPdfFile(passport.frontFile, `${label}.frontFile`);
@@ -107,6 +112,11 @@ function validateDriversLicenseDoc(dl: any, label: string) {
   vAssert(isObj(dl), `${label} is required`);
   vString(dl.licenseNumber, `${label}.licenseNumber`);
   validateIssueExpiryDates(dl, label, { required: true });
+
+  // Range check: expiry date must be on or after issue date
+  const issue = new Date(dl.issueDate).valueOf();
+  const expiry = new Date(dl.expiryDate).valueOf();
+  vAssert(expiry >= issue, `${label}.expiryDate must be on or after the issue date`);
 
   vAssert(dl.frontFile, `${label}.frontFile is required`);
   vAssert(dl.backFile, `${label}.backFile is required`);
@@ -183,50 +193,38 @@ function validateEducationEntry(entry: any, label: string) {
   if (level === EEducationLevel.PRIMARY_SCHOOL) {
     // Primary
     vString(entry.schoolName, `${label}.schoolName`);
-    vOptionalString(entry.schoolLocation, `${label}.schoolLocation`);
-    vNumber(entry.primaryYearCompleted, `${label}.primaryYearCompleted`);
+    // primaryYearCompleted is optional for primary school
+    if (entry.primaryYearCompleted != null) {
+      vNumber(entry.primaryYearCompleted, `${label}.primaryYearCompleted`);
+    }
 
     // Disallow high-school and diploma/bachelor+ fields
     disallow(entry.highSchoolInstitutionName, `${label}.highSchoolInstitutionName`);
-    disallow(entry.highSchoolBoard, `${label}.highSchoolBoard`);
-    disallow(entry.highSchoolStream, `${label}.highSchoolStream`);
     disallow(entry.highSchoolYearCompleted, `${label}.highSchoolYearCompleted`);
-    disallow(entry.highSchoolGradeOrPercentage, `${label}.highSchoolGradeOrPercentage`);
 
     disallow(entry.institutionName, `${label}.institutionName`);
-    disallow(entry.universityOrBoard, `${label}.universityOrBoard`);
-    disallow(entry.fieldOfStudy, `${label}.fieldOfStudy`);
     disallow(entry.startYear, `${label}.startYear`);
     disallow(entry.endYear, `${label}.endYear`);
-    disallow(entry.gradeOrCgpa, `${label}.gradeOrCgpa`);
   } else if (level === EEducationLevel.HIGH_SCHOOL) {
     // High school
     vString(entry.highSchoolInstitutionName, `${label}.highSchoolInstitutionName`);
-    vOptionalString(entry.highSchoolBoard, `${label}.highSchoolBoard`);
-    vOptionalString(entry.highSchoolStream, `${label}.highSchoolStream`);
-    vNumber(entry.highSchoolYearCompleted, `${label}.highSchoolYearCompleted`);
-    vOptionalString(entry.highSchoolGradeOrPercentage, `${label}.highSchoolGradeOrPercentage`);
+    // highSchoolYearCompleted is optional for high school
+    if (entry.highSchoolYearCompleted != null) {
+      vNumber(entry.highSchoolYearCompleted, `${label}.highSchoolYearCompleted`);
+    }
 
     // Disallow primary and diploma/bachelor+ fields
     disallow(entry.schoolName, `${label}.schoolName`);
-    disallow(entry.schoolLocation, `${label}.schoolLocation`);
     disallow(entry.primaryYearCompleted, `${label}.primaryYearCompleted`);
 
     disallow(entry.institutionName, `${label}.institutionName`);
-    disallow(entry.universityOrBoard, `${label}.universityOrBoard`);
-    disallow(entry.fieldOfStudy, `${label}.fieldOfStudy`);
     disallow(entry.startYear, `${label}.startYear`);
     disallow(entry.endYear, `${label}.endYear`);
-    disallow(entry.gradeOrCgpa, `${label}.gradeOrCgpa`);
   } else {
     // Diploma / Bachelor / Masters / Doctorate / Other
 
     // Required core fields
     vString(entry.institutionName, `${label}.institutionName`);
-    vString(entry.fieldOfStudy, `${label}.fieldOfStudy`);
-
-    // Optional metadata
-    vOptionalString(entry.universityOrBoard, `${label}.universityOrBoard`);
 
     // Dates: endYear required, startYear optional but must be a number when present
     if (entry.startYear != null) {
@@ -234,19 +232,12 @@ function validateEducationEntry(entry: any, label: string) {
     }
     vNumber(entry.endYear, `${label}.endYear`);
 
-    // Grades/GPA optional
-    vOptionalString(entry.gradeOrCgpa, `${label}.gradeOrCgpa`);
-
     // Disallow primary + high-school-specific fields
     disallow(entry.schoolName, `${label}.schoolName`);
-    disallow(entry.schoolLocation, `${label}.schoolLocation`);
     disallow(entry.primaryYearCompleted, `${label}.primaryYearCompleted`);
 
     disallow(entry.highSchoolInstitutionName, `${label}.highSchoolInstitutionName`);
-    disallow(entry.highSchoolBoard, `${label}.highSchoolBoard`);
-    disallow(entry.highSchoolStream, `${label}.highSchoolStream`);
     disallow(entry.highSchoolYearCompleted, `${label}.highSchoolYearCompleted`);
-    disallow(entry.highSchoolGradeOrPercentage, `${label}.highSchoolGradeOrPercentage`);
   }
 }
 
@@ -268,6 +259,12 @@ function validateEmploymentHistoryEntry(entry: any, label: string) {
   vDate(entry.startDate, `${label}.startDate`);
   vDate(entry.endDate, `${label}.endDate`);
   vString(entry.reasonForLeaving, `${label}.reasonForLeaving`);
+
+  vBoolean(entry.employerReferenceCheck, `${label}.employerReferenceCheck`);
+  vAssert(
+    entry.employerReferenceCheck === true,
+    "You must confirm that we can contact your employer for reference check"
+  );
 
   if (entry.experienceCertificateFile != null) {
     vPdfFile(entry.experienceCertificateFile, `${label}.experienceCertificateFile`);

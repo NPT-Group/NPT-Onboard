@@ -42,7 +42,7 @@ function findFirstEmploymentErrorPath(errs: any): string | null {
   if (!arr) return null;
   if (arr?.message) return "employmentHistory";
   if (Array.isArray(arr)) {
-    const order = ["organizationName", "designation", "startDate", "endDate", "reasonForLeaving", "experienceCertificateFile"];
+    const order = ["organizationName", "designation", "startDate", "endDate", "reasonForLeaving", "experienceCertificateFile", "employerReferenceCheck"];
     for (let i = 0; i < priorLengthSafe(arr); i++) {
       const row = arr[i];
       if (!row) continue;
@@ -143,7 +143,15 @@ export function HrOnboardingEditForm({
     return defs;
   }, []);
 
-  const defaultValues = useMemo(() => buildIndiaDefaultValuesFromOnboarding(onboarding as any, today), [onboarding, today]);
+  // Guard against null/undefined onboarding - return empty defaults to prevent runtime errors
+  const defaultValues = useMemo(() => {
+    if (!onboarding) {
+      // Return empty defaults when onboarding is null/undefined
+      // This prevents runtime errors and allows parent component to show error UI
+      return buildIndiaDefaultValuesFromOnboarding(null, today);
+    }
+    return buildIndiaDefaultValuesFromOnboarding(onboarding as any, today);
+  }, [onboarding, today]);
 
   const methods = useForm<IndiaOnboardingFormInput, unknown, IndiaOnboardingFormValues>({
     resolver: zodResolver(indiaOnboardingFormSchema),
@@ -179,14 +187,14 @@ export function HrOnboardingEditForm({
   const isRequired = (path: string): boolean => {
     const p = String(path).replace(/\.\d+(?=\.|$)/g, ".*");
     if (p === "education.*.schoolName") return highestEducationLevel === EEducationLevel.PRIMARY_SCHOOL;
-    if (p === "education.*.primaryYearCompleted") return highestEducationLevel === EEducationLevel.PRIMARY_SCHOOL;
+    // primaryYearCompleted is optional for primary school
     if (p === "education.*.highSchoolInstitutionName") return highestEducationLevel === EEducationLevel.HIGH_SCHOOL;
-    if (p === "education.*.highSchoolYearCompleted") return highestEducationLevel === EEducationLevel.HIGH_SCHOOL;
+    // highSchoolYearCompleted is optional for high school
 
     const isHigherEd =
       highestEducationLevel != null && highestEducationLevel !== "" && highestEducationLevel !== EEducationLevel.PRIMARY_SCHOOL && highestEducationLevel !== EEducationLevel.HIGH_SCHOOL;
     if (p === "education.*.institutionName") return Boolean(isHigherEd);
-    if (p === "education.*.fieldOfStudy") return Boolean(isHigherEd);
+    // startYear is optional
     if (p === "education.*.endYear") return Boolean(isHigherEd);
 
     return isIndiaRequiredField(path);

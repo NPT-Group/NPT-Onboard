@@ -4,6 +4,23 @@ import tseslint from "typescript-eslint";
 import reactHooks from "eslint-plugin-react-hooks";
 
 export default [
+  // Global ignores (Flat config replaces .eslintignore)
+  {
+    ignores: [
+      ".next/**",
+      "node_modules/**",
+
+      // Ignore build/packaging scripts + lambda artifacts
+      "scripts/**",
+      ".lambda-build/**",
+
+      // optional: common artifacts
+      "dist/**",
+      "build/**",
+      "coverage/**",
+    ],
+  },
+
   js.configs.recommended,
 
   // TypeScript (non-typechecked, fast)
@@ -17,7 +34,7 @@ export default [
     },
   },
 
-  // Project overrides (keeps parity with your previous .eslintrc rules)
+  // Project overrides
   {
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
@@ -33,10 +50,4 @@ export default [
       "@next/next/no-img-element": "off",
     },
   },
-
-  // Ignore generated/build artifacts
-  {
-    ignores: [".next/**", "node_modules/**"],
-  },
 ];
-
