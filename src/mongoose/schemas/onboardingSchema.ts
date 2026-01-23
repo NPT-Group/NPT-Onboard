@@ -12,7 +12,7 @@ const onboardingInviteSchema = new Schema<IOnboardingInvite>(
     expiresAt: { type: Date, required: true },
     lastSentAt: { type: Date, required: true },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const onboardingOtpSchema = new Schema<IOnboardingOtp>(
@@ -23,7 +23,7 @@ const onboardingOtpSchema = new Schema<IOnboardingOtp>(
     lockedAt: { type: Date },
     lastSentAt: { type: Date, required: true },
   },
-  { _id: false }
+  { _id: false },
 );
 
 export const onboardingSchema = new Schema<TOnboarding>(
@@ -95,6 +95,10 @@ export const onboardingSchema = new Schema<TOnboarding>(
     completedAt: { type: Date },
     approvedAt: { type: Date },
     terminatedAt: { type: Date },
+    lastStatusBeforeTermination: {
+      type: String,
+      enum: Object.values(EOnboardingStatus),
+    },
 
     // per-subsidiary formData fields
     indiaFormData: { type: indiaOnboardingFormDataSchema, required: false },
@@ -105,7 +109,7 @@ export const onboardingSchema = new Schema<TOnboarding>(
     timestamps: { createdAt: "createdAt", updatedAt: "updatedAt" },
     toJSON: { virtuals: true, getters: true },
     toObject: { virtuals: true, getters: true },
-  }
+  },
 );
 
 // per-subsidiary uniqueness of employeeNumber
@@ -116,7 +120,7 @@ onboardingSchema.index(
     partialFilterExpression: {
       employeeNumber: { $type: "string" },
     },
-  }
+  },
 );
 
 /* -------------------------------------------------------------------------- */
