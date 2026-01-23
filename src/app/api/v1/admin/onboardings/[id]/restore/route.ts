@@ -65,10 +65,11 @@ export const POST = async (_req: NextRequest, { params }: { params: Promise<{ id
     const prevTerminationReason = onboarding.terminationReason;
     const prevTerminatedAt = onboarding.terminatedAt;
 
-    const newStatus = inferRestoreStatus(onboarding);
+    const newStatus = onboarding.lastStatusBeforeTermination ?? inferRestoreStatus(onboarding);
     const now = new Date();
 
     onboarding.status = newStatus;
+    onboarding.lastStatusBeforeTermination = undefined;
     onboarding.terminationType = undefined;
     onboarding.terminationReason = undefined;
     onboarding.terminatedAt = undefined;

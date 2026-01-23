@@ -24,6 +24,13 @@ export enum EOnboardingStatus {
   ModificationRequested = "ModificationRequested",
   Submitted = "Submitted",
   Resubmitted = "Resubmitted",
+
+  // NEW (Contracts & Policies phase)
+  DETAILS_CONFIRMED = "DetailsConfirmed",
+  CONTRACT_SENT = "ContractSent",
+  CONTRACT_SUBMITTED = "ContractSubmitted",
+
+  // Terminal
   Approved = "Approved",
   Terminated = "Terminated",
 }
@@ -434,6 +441,7 @@ export interface IOnboardingBase {
   completedAt?: Date | string;
   approvedAt?: Date | string;
   terminatedAt?: Date | string;
+  lastStatusBeforeTermination?: EOnboardingStatus; // status right before setting Terminated
 }
 
 /**

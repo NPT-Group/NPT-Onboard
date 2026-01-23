@@ -58,6 +58,7 @@ export const POST = async (req: NextRequest, { params }: { params: Promise<{ id:
     const prevStatus = onboarding.status;
     const now = new Date();
 
+    onboarding.lastStatusBeforeTermination = prevStatus;
     onboarding.status = EOnboardingStatus.Terminated;
     onboarding.terminationType = terminationType;
     onboarding.terminationReason = terminationReason;
