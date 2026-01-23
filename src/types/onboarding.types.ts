@@ -24,6 +24,13 @@ export enum EOnboardingStatus {
   ModificationRequested = "ModificationRequested",
   Submitted = "Submitted",
   Resubmitted = "Resubmitted",
+
+  // NEW (Contracts & Policies phase)
+  DETAILS_CONFIRMED = "DETAILS_CONFIRMED",
+  CONTRACT_SENT = "CONTRACT_SENT",
+  CONTRACT_SUBMITTED = "CONTRACT_SUBMITTED",
+
+  // Terminal
   Approved = "Approved",
   Terminated = "Terminated",
 }
