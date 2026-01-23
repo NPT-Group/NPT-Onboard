@@ -102,6 +102,10 @@ export async function approveOnboarding(id: string, body: { employeeNumber?: str
   return postJson<typeof body, { onboarding: any }>(`/api/v1/admin/onboardings/${id}/approve`, body);
 }
 
+export async function confirmDetailsOnboarding(id: string) {
+  return postJson<undefined, { onboarding: any }>(`/api/v1/admin/onboardings/${id}/confirm-details`, undefined);
+}
+
 export async function requestModification(id: string, body: { message: string }) {
   return postJson<typeof body, { onboarding: any }>(`/api/v1/admin/onboardings/${id}/request-modification`, body);
 }

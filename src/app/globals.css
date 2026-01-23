@@ -150,6 +150,20 @@ input[type="radio"] {
   --dash-red-2: #e4494d;
   --dash-red-soft: rgba(195, 28, 32, 0.10);
 
+  /* Status colors (Apple-inspired progression) */
+  /* Blue progression: lighter for earlier states, darker for later states */
+  --dash-blue-light: #5AC8FA; /* Lighter blue for Submitted/Resubmitted */
+  --dash-blue-light-soft: rgba(90, 200, 250, 0.10);
+  --dash-blue: #007AFF; /* Darker blue for Details Confirmed */
+  --dash-blue-soft: rgba(0, 122, 255, 0.10);
+  /* Indigo progression: lighter for earlier states, darker for later states */
+  --dash-indigo-light: #818CF8; /* Lighter indigo for Contract Sent */
+  --dash-indigo-light-soft: rgba(129, 140, 248, 0.10);
+  --dash-indigo: #6366F1; /* Darker indigo for Contract Submitted */
+  --dash-indigo-soft: rgba(99, 102, 241, 0.10);
+  --dash-teal: #5AC8FA;
+  --dash-teal-soft: rgba(90, 200, 250, 0.10);
+
   /* Make generic Modal component match dashboard automatically */
   --app-overlay: rgba(2, 6, 23, 0.36);
   --app-modal-surface: var(--dash-surface);
@@ -172,6 +186,20 @@ input[type="radio"] {
   --dash-red: #ff3b3f;
   --dash-red-2: #ff4d4f;
   --dash-red-soft: rgba(255, 59, 63, 0.16);
+
+  /* Status colors (Apple-inspired progression, dark mode optimized) */
+  /* Blue progression: lighter for earlier states, darker for later states */
+  --dash-blue-light: #64D2FF; /* Lighter blue for Submitted/Resubmitted */
+  --dash-blue-light-soft: rgba(100, 210, 255, 0.16);
+  --dash-blue: #0A84FF; /* Darker blue for Details Confirmed */
+  --dash-blue-soft: rgba(10, 132, 255, 0.16);
+  /* Indigo progression: lighter for earlier states, darker for later states */
+  --dash-indigo-light: #818CF8; /* Lighter indigo for Contract Sent */
+  --dash-indigo-light-soft: rgba(129, 140, 248, 0.16);
+  --dash-indigo: #6366F1; /* Darker indigo for Contract Submitted */
+  --dash-indigo-soft: rgba(99, 102, 241, 0.16);
+  --dash-teal: #64D2FF;
+  --dash-teal-soft: rgba(100, 210, 255, 0.16);
 
   --app-overlay: rgba(0, 0, 0, 0.62);
   --app-modal-surface: var(--dash-surface);
@@ -204,6 +232,20 @@ html[data-dash-theme="dark"] .dashboard-root {
   --dash-red: #ff3b3f;
   --dash-red-2: #ff4d4f;
   --dash-red-soft: rgba(255, 59, 63, 0.16);
+
+  /* Status colors (Apple-inspired progression, dark mode optimized) */
+  /* Blue progression: lighter for earlier states, darker for later states */
+  --dash-blue-light: #64D2FF; /* Lighter blue for Submitted/Resubmitted */
+  --dash-blue-light-soft: rgba(100, 210, 255, 0.16);
+  --dash-blue: #0A84FF; /* Darker blue for Details Confirmed */
+  --dash-blue-soft: rgba(10, 132, 255, 0.16);
+  /* Indigo progression: lighter for earlier states, darker for later states */
+  --dash-indigo-light: #818CF8; /* Lighter indigo for Contract Sent */
+  --dash-indigo-light-soft: rgba(129, 140, 248, 0.16);
+  --dash-indigo: #6366F1; /* Darker indigo for Contract Submitted */
+  --dash-indigo-soft: rgba(99, 102, 241, 0.16);
+  --dash-teal: #64D2FF;
+  --dash-teal-soft: rgba(100, 210, 255, 0.16);
 
   --app-overlay: rgba(0, 0, 0, 0.62);
   --app-modal-surface: var(--dash-surface);

@@ -6,7 +6,7 @@ import { Download, FileDown, RefreshCcw, ShieldCheck, Wand2, Home } from "lucide
 import { useRouter } from "next/navigation";
 
 import { cn } from "@/lib/utils/cn";
-import { approveOnboarding, getAdminOnboarding, getOnboardingAuditLogs, requestModification, terminateOnboarding, type AdminOnboardingListItem } from "@/lib/api/admin/onboardings";
+import { confirmDetailsOnboarding, getAdminOnboarding, getOnboardingAuditLogs, requestModification, terminateOnboarding, type AdminOnboardingListItem } from "@/lib/api/admin/onboardings";
 import { EOnboardingMethod, EOnboardingStatus } from "@/types/onboarding.types";
 import { ESubsidiary } from "@/types/shared.types";
 import { EOnboardingActor, EOnboardingAuditAction, type TOnboardingAuditActor } from "@/types/onboardingAuditLog.types";
@@ -62,8 +62,10 @@ function joinLocation(loc?: { city?: string; region?: string; country?: string }
 }
 
 function statusAllowsApprove(status: EOnboardingStatus, isFormComplete: boolean) {
+  // "Confirm Details" button should only show for Submitted/Resubmitted statuses
+  // Once DETAILS_CONFIRMED, this button should be hidden (contract flow will handle next steps)
   if (!isFormComplete) return false;
-  return status !== EOnboardingStatus.Approved && status !== EOnboardingStatus.Terminated;
+  return status === EOnboardingStatus.Submitted || status === EOnboardingStatus.Resubmitted;
 }
 
 function statusAllowsModification(method: EOnboardingMethod, status: EOnboardingStatus, isFormComplete: boolean) {
@@ -484,7 +486,7 @@ export function OnboardingDetailsClient({ onboardingId, initialOnboarding, initi
                         )}
                       >
                         <ShieldCheck className="h-4 w-4" />
-                        Approve
+                        Approve details
                       </button>
                     )}
 
@@ -540,10 +542,13 @@ export function OnboardingDetailsClient({ onboardingId, initialOnboarding, initi
         open={approveOpen}
         onClose={() => setApproveOpen(false)}
         employeeLabel={fullName}
-        onConfirm={async (employeeNumber) => {
+        variant="confirmDetails"
+        onConfirm={async () => {
+          // confirmDetails variant doesn't need employeeNumber parameter
           setWorking("approve");
           try {
-            await approveOnboarding(onboardingId, { employeeNumber });
+            // Phase A finalization: confirm details only (Contracts & Policies comes next)
+            await confirmDetailsOnboarding(onboardingId);
             await refresh();
           } finally {
             setWorking(null);
