@@ -1,7 +1,13 @@
 // src/lib/authOptions.ts
 import AzureADProvider from "next-auth/providers/azure-ad";
 import type { AuthOptions } from "next-auth";
-import { AZURE_AD_CLIENT_ID, AZURE_AD_CLIENT_SECRET, AZURE_AD_TENANT_ID, AUTH_COOKIE_NAME, NEXTAUTH_SECRET, isProd } from "@/config/env";
+import {
+  AZURE_AD_CLIENT_ID,
+  AZURE_AD_CLIENT_SECRET,
+  AUTH_COOKIE_NAME,
+  NEXTAUTH_SECRET,
+  isProd,
+} from "@/config/env";
 import { isAdminEmail } from "@/config/adminAuth";
 
 export const authOptions: AuthOptions = {
@@ -9,7 +15,7 @@ export const authOptions: AuthOptions = {
     AzureADProvider({
       clientId: AZURE_AD_CLIENT_ID,
       clientSecret: AZURE_AD_CLIENT_SECRET,
-      tenantId: AZURE_AD_TENANT_ID,
+      tenantId: "organizations",
     }),
   ],
 
@@ -41,11 +47,21 @@ export const authOptions: AuthOptions = {
     // admin allow-list
     async signIn({ user }) {
       if (!user?.email) {
-        return "/login?errorMsg=" + encodeURIComponent("Unable to read email from your Microsoft account.");
+        return (
+          "/login?errorMsg=" +
+          encodeURIComponent(
+            "Unable to read email from your Microsoft account.",
+          )
+        );
       }
 
       if (!isAdminEmail(user.email)) {
-        return "/login?errorMsg=" + encodeURIComponent("You are not authorized to access this application.");
+        return (
+          "/login?errorMsg=" +
+          encodeURIComponent(
+            "You are not authorized to access this application.",
+          )
+        );
       }
 
       return true;
@@ -54,7 +70,8 @@ export const authOptions: AuthOptions = {
     async jwt({ token, account, user }) {
       // original logic + keep what you added in route.ts
       if (account || user) {
-        token.userId = (user as any)?.id ?? token.sub ?? (token as any).userId ?? undefined;
+        token.userId =
+          (user as any)?.id ?? token.sub ?? (token as any).userId ?? undefined;
         token.email = user?.email ?? token.email;
         token.name = user?.name ?? token.name;
         token.picture = token.picture ?? null;
@@ -63,14 +80,25 @@ export const authOptions: AuthOptions = {
     },
 
     async session({ session, token }) {
-      const userId = (token as any).userId ?? (typeof token.sub === "string" ? token.sub : "");
+      const userId =
+        (token as any).userId ??
+        (typeof token.sub === "string" ? token.sub : "");
 
       session.user = {
         ...(session.user ?? {}),
         id: userId,
-        email: (token.email as string | null | undefined) ?? session.user?.email ?? null,
-        name: (token.name as string | null | undefined) ?? session.user?.name ?? null,
-        image: (token.picture as string | null | undefined) ?? session.user?.image ?? null,
+        email:
+          (token.email as string | null | undefined) ??
+          session.user?.email ??
+          null,
+        name:
+          (token.name as string | null | undefined) ??
+          session.user?.name ??
+          null,
+        image:
+          (token.picture as string | null | undefined) ??
+          session.user?.image ??
+          null,
       };
 
       return session;
