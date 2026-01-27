@@ -25,11 +25,18 @@ function isValidEmail(v: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
 
-export function InviteEmployeeModal({ open, onClose, subsidiary, onCreated }: Props) {
+export function InviteEmployeeModal({
+  open,
+  onClose,
+  subsidiary,
+  onCreated,
+}: Props) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [method, setMethod] = useState<EOnboardingMethod>(EOnboardingMethod.DIGITAL);
+  const [method, setMethod] = useState<EOnboardingMethod>(
+    EOnboardingMethod.DIGITAL,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -81,21 +88,26 @@ export function InviteEmployeeModal({ open, onClose, subsidiary, onCreated }: Pr
       ariaLabel="Invite employee"
       className={cn(
         "max-w-lg border",
-        "border-[var(--dash-border)] bg-[var(--dash-surface)] text-[var(--dash-text)] shadow-[var(--dash-shadow)]"
+        "border-[var(--dash-border)] bg-[var(--dash-surface)] text-[var(--dash-text)] shadow-[var(--dash-shadow)]",
       )}
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-lg font-semibold tracking-tight">Invite Employee</div>
+          <div className="text-lg font-semibold tracking-tight">
+            Invite Employee
+          </div>
           <div className="mt-1 text-sm text-[var(--dash-muted)]">
-            Creates an onboarding under the selected subsidiary and sends the employee an email.
+            Creates an onboarding under the selected subsidiary and sends the
+            employee an email.
           </div>
         </div>
       </div>
 
       {error && (
         <div className="mt-4 rounded-xl border border-[var(--dash-red-soft)] bg-[var(--dash-red-soft)] p-3 text-sm text-[var(--dash-text)]">
-          <div className="font-semibold text-[var(--dash-red)]">Couldn’t send invite</div>
+          <div className="font-semibold text-[var(--dash-red)]">
+            Couldn’t send invite
+          </div>
           <div className="mt-1 text-[var(--dash-muted)]">{error}</div>
         </div>
       )}
@@ -118,9 +130,9 @@ export function InviteEmployeeModal({ open, onClose, subsidiary, onCreated }: Pr
               className={cn(
                 "w-full rounded-xl border bg-[var(--dash-surface)] py-2 pl-10 pr-3 text-sm",
                 "border-[var(--dash-border)] text-[var(--dash-text)]",
-                "focus:outline-none focus:ring-2 focus:ring-[var(--dash-red-soft)]"
+                "focus:outline-none focus:ring-2 focus:ring-[var(--dash-red-soft)]",
               )}
-              placeholder="e.g. Faruq"
+              placeholder="e.g. John"
               autoComplete="section-invite given-name"
               autoFocus
             />
@@ -144,9 +156,9 @@ export function InviteEmployeeModal({ open, onClose, subsidiary, onCreated }: Pr
               className={cn(
                 "w-full rounded-xl border bg-[var(--dash-surface)] py-2 pl-10 pr-3 text-sm",
                 "border-[var(--dash-border)] text-[var(--dash-text)]",
-                "focus:outline-none focus:ring-2 focus:ring-[var(--dash-red-soft)]"
+                "focus:outline-none focus:ring-2 focus:ring-[var(--dash-red-soft)]",
               )}
-              placeholder="e.g. Atanda"
+              placeholder="e.g. Doe"
               autoComplete="section-invite family-name"
             />
           </div>
@@ -170,7 +182,7 @@ export function InviteEmployeeModal({ open, onClose, subsidiary, onCreated }: Pr
             className={cn(
               "w-full rounded-xl border bg-[var(--dash-surface)] py-2 pl-10 pr-3 text-sm",
               "border-[var(--dash-border)] text-[var(--dash-text)]",
-              "focus:outline-none focus:ring-2 focus:ring-[var(--dash-red-soft)]"
+              "focus:outline-none focus:ring-2 focus:ring-[var(--dash-red-soft)]",
             )}
             placeholder="name@company.com"
             autoComplete="section-invite email"
@@ -178,12 +190,16 @@ export function InviteEmployeeModal({ open, onClose, subsidiary, onCreated }: Pr
           />
         </div>
         {email.trim().length > 0 && !isValidEmail(email.trim()) && (
-          <div className="text-xs text-[var(--dash-red-2)]">Enter a valid email address.</div>
+          <div className="text-xs text-[var(--dash-red-2)]">
+            Enter a valid email address.
+          </div>
         )}
       </div>
 
       <div className="mt-5">
-        <div className="text-xs font-semibold text-[var(--dash-muted)]">Method</div>
+        <div className="text-xs font-semibold text-[var(--dash-muted)]">
+          Method
+        </div>
         <div className="mt-2 grid gap-3 sm:grid-cols-2">
           <button
             type="button"
@@ -193,13 +209,14 @@ export function InviteEmployeeModal({ open, onClose, subsidiary, onCreated }: Pr
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dash-red-soft)]",
               method === EOnboardingMethod.DIGITAL
                 ? "border-[var(--dash-red-soft)] bg-[var(--dash-red-soft)]"
-                : "border-[var(--dash-border)] bg-[var(--dash-surface)] hover:bg-[var(--dash-surface-2)]"
+                : "border-[var(--dash-border)] bg-[var(--dash-surface)] hover:bg-[var(--dash-surface-2)]",
             )}
             aria-pressed={method === EOnboardingMethod.DIGITAL}
           >
             <div className="text-sm font-semibold">Digital Form</div>
             <div className="mt-1 text-xs text-[var(--dash-muted)]">
-              Employee receives a secure invite link and completes the form in-app.
+              Employee receives a secure invite link and completes the form
+              in-app.
             </div>
           </button>
 
@@ -211,13 +228,14 @@ export function InviteEmployeeModal({ open, onClose, subsidiary, onCreated }: Pr
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dash-red-soft)]",
               method === EOnboardingMethod.MANUAL
                 ? "border-[var(--dash-red-soft)] bg-[var(--dash-red-soft)]"
-                : "border-[var(--dash-border)] bg-[var(--dash-surface)] hover:bg-[var(--dash-surface-2)]"
+                : "border-[var(--dash-border)] bg-[var(--dash-surface)] hover:bg-[var(--dash-surface-2)]",
             )}
             aria-pressed={method === EOnboardingMethod.MANUAL}
           >
             <div className="text-sm font-semibold">Manual PDF Flow</div>
             <div className="mt-1 text-xs text-[var(--dash-muted)]">
-              Employee receives a blank PDF template and instructions to email HR.
+              Employee receives a blank PDF template and instructions to email
+              HR.
             </div>
           </button>
         </div>
@@ -231,7 +249,7 @@ export function InviteEmployeeModal({ open, onClose, subsidiary, onCreated }: Pr
           className={cn(
             "rounded-xl border px-4 py-2 text-sm font-semibold transition",
             "border-[var(--dash-border)] text-[var(--dash-text)] hover:bg-[var(--dash-surface-2)]",
-            submitting && "opacity-60 cursor-not-allowed"
+            submitting && "opacity-60 cursor-not-allowed",
           )}
         >
           Cancel
@@ -244,7 +262,7 @@ export function InviteEmployeeModal({ open, onClose, subsidiary, onCreated }: Pr
             "rounded-xl px-4 py-2 text-sm font-semibold transition",
             canSubmit
               ? "bg-[var(--dash-red)] text-white hover:opacity-95"
-              : "bg-[var(--dash-surface-2)] text-[var(--dash-muted)] border border-[var(--dash-border)] cursor-not-allowed opacity-70"
+              : "bg-[var(--dash-surface-2)] text-[var(--dash-muted)] border border-[var(--dash-border)] cursor-not-allowed opacity-70",
           )}
         >
           {submitting ? "Sending…" : "Send"}
@@ -253,5 +271,3 @@ export function InviteEmployeeModal({ open, onClose, subsidiary, onCreated }: Pr
     </Modal>
   );
 }
-
-
