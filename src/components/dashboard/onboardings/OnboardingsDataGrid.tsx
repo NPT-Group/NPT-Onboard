@@ -38,6 +38,9 @@ export function OnboardingsDataGrid({
   onTerminate,
   onResendInvite,
   resendingId,
+  selectedIds = [],
+  onToggleSelect,
+  onBulkTerminateSelected,
 }: {
   items: AdminOnboardingListItem[];
   loading: boolean;
@@ -51,11 +54,35 @@ export function OnboardingsDataGrid({
   onTerminate: (item: AdminOnboardingListItem) => void;
   onResendInvite: (id: string) => void;
   resendingId?: string | null;
+  selectedIds?: string[];
+  onToggleSelect?: (item: AdminOnboardingListItem) => void;
+  onBulkTerminateSelected?: () => void;
 }) {
   const hasAnyInviteTimer = useMemo(
     () => items.some((it) => it.inviteExpiresAt != null),
     [items]
   );
+
+  const selectionCount = selectedIds.length;
+  const selectionActive = selectionCount > 0;
+
+  // Only non-terminated onboardings are selectable for bulk actions.
+  const selectableIds = useMemo(
+    () =>
+      items
+        .filter((it) => it.status !== EOnboardingStatus.Terminated)
+        .map((it) => it.id),
+    [items]
+  );
+  const selectableOnPageCount = selectableIds.length;
+  const selectedOnPageCount = selectableIds.filter((id) =>
+    selectedIds.includes(id)
+  ).length;
+  const allSelectedOnPage =
+    selectableOnPageCount > 0 &&
+    selectedOnPageCount === selectableOnPageCount;
+  const someSelectedOnPage =
+    selectedOnPageCount > 0 && !allSelectedOnPage;
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
   useEffect(() => {
@@ -77,17 +104,93 @@ export function OnboardingsDataGrid({
       <div className="rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-surface)] shadow-[var(--dash-shadow)] overflow-hidden">
         {/* Top summary row (before table header) */}
         <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-[var(--dash-border)]">
-          <div className="text-xs font-semibold text-[var(--dash-muted)]">
-            {loading ? (
-              "Loading…"
-            ) : error ? (
-              "—"
-            ) : (
-              `${total} result(s)`
+          <div className="flex items-center gap-3 text-xs font-semibold text-[var(--dash-muted)]">
+            {/* Select-all checkbox (Outlook-style) */}
+            {selectableOnPageCount > 0 && onToggleSelect && (
+              <button
+                type="button"
+                onClick={() => {
+                  // Toggle selection for all selectable rows on the current page
+                  // by delegating to the row-level toggle handler.
+                  if (allSelectedOnPage) {
+                    // Currently all selectable rows are selected → unselect them.
+                    items.forEach((it) => {
+                      if (
+                        it.status !== EOnboardingStatus.Terminated &&
+                        selectedIds.includes(it.id)
+                      ) {
+                        onToggleSelect(it);
+                      }
+                    });
+                  } else {
+                    // Not all selected → select every selectable row that isn't already selected.
+                    items.forEach((it) => {
+                      if (
+                        it.status !== EOnboardingStatus.Terminated &&
+                        !selectedIds.includes(it.id)
+                      ) {
+                        onToggleSelect(it);
+                      }
+                    });
+                  }
+                }}
+                className={cn(
+                  "inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] transition",
+                  allSelectedOnPage
+                    ? "bg-[var(--dash-red)] border-[var(--dash-red)] text-[var(--dash-surface)]"
+                    : someSelectedOnPage
+                    ? "bg-[var(--dash-surface)] border-[var(--dash-border)] text-[var(--dash-text)]"
+                    : "bg-[var(--dash-surface)] border-[var(--dash-border)] text-[var(--dash-muted)]",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dash-red-soft)]"
+                )}
+                aria-label={
+                  allSelectedOnPage
+                    ? "Deselect all"
+                    : "Select all on this page"
+                }
+                aria-pressed={allSelectedOnPage}
+              >
+                {allSelectedOnPage && <Check className="h-3 w-3" />}
+                {!allSelectedOnPage && someSelectedOnPage && (
+                  <span className="h-0.5 w-2 rounded-sm bg-[var(--dash-text)]" />
+                )}
+              </button>
+            )}
+
+            <span>
+              {loading ? (
+                "Loading…"
+              ) : error ? (
+                "—"
+              ) : (
+                `${total} result(s)`
+              )}
+            </span>
+            {selectionCount > 0 && (
+              <span className="inline-flex items-center rounded-full bg-[var(--dash-surface-2)] px-2 py-0.5 text-[11px] font-semibold text-[var(--dash-text)]">
+                {selectionCount} selected
+              </span>
             )}
           </div>
 
-          <SmartPagination page={page} pages={pages} onPage={onPage} />
+          <div className="flex items-center gap-3">
+            {selectionCount > 0 && onBulkTerminateSelected && (
+              <button
+                type="button"
+                onClick={onBulkTerminateSelected}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition",
+                  "border-[var(--dash-red-soft)] bg-[var(--dash-red-soft)] text-[var(--dash-red)] hover:brightness-[0.98]",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dash-red-soft)]"
+                )}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Terminate selected
+              </button>
+            )}
+
+            <SmartPagination page={page} pages={pages} onPage={onPage} />
+          </div>
         </div>
 
         <div className="hidden md:grid grid-cols-[1.25fr_1.2fr_1.35fr_1.7fr_0.9fr] gap-4 px-5 py-3 border-b border-[var(--dash-border)] text-xs font-semibold text-[var(--dash-muted)]">
@@ -181,29 +284,64 @@ export function OnboardingsDataGrid({
                           ease: "easeOut",
                         }}
                         className={cn(
-                          "border-b border-[var(--dash-border)] px-5 py-4",
+                          "group border-b border-[var(--dash-border)] px-5 py-4",
                           "md:grid md:grid-cols-[1.25fr_1.2fr_1.35fr_1.7fr_0.9fr] md:gap-4 md:items-center"
                         )}
                       >
-                {/* Employee (name + optional employee number) */}
-                <div className="min-w-0">
-                  <div className="text-xs text-[var(--dash-muted)] truncate">
-                    EN#:{" "}
-                    <span className="font-mono text-[var(--dash-text)]">
-                      {it.employeeNumber || "—"}
-                    </span>
-                  </div>
+                {/* Employee (selection + name + optional employee number) */}
+                <div className="min-w-0 flex items-start gap-3">
+                  {onToggleSelect ? (
+                    (() => {
+                      const isSelected = selectedIds.includes(it.id);
+                      const canSelect = it.status !== EOnboardingStatus.Terminated;
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!canSelect) return;
+                            onToggleSelect(it);
+                          }}
+                          disabled={!canSelect}
+                          className={cn(
+                            "mt-1 inline-flex h-4 w-4 items-center justify-center rounded border text-[10px] transition",
+                            canSelect
+                              ? isSelected
+                                ? "bg-[var(--dash-red)] border-[var(--dash-red)] text-[var(--dash-surface)]"
+                                : "bg-[var(--dash-surface)] border-[var(--dash-border)] text-[var(--dash-muted)]"
+                              : "bg-[var(--dash-surface-2)] border-[var(--dash-border)] text-[var(--dash-muted)] opacity-60 cursor-not-allowed",
+                            !selectionActive &&
+                              !isSelected &&
+                              canSelect &&
+                              "opacity-0 group-hover:opacity-100"
+                          )}
+                          aria-pressed={isSelected}
+                          aria-label={isSelected ? "Deselect onboarding" : "Select onboarding"}
+                        >
+                          {isSelected && <Check className="h-3 w-3" />}
+                        </button>
+                      );
+                    })()
+                  ) : null}
 
-                  <div className="mt-1 text-sm font-semibold truncate">
-                    {fullName}
-                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs text-[var(--dash-muted)] truncate">
+                      EN#:{" "}
+                      <span className="font-mono text-[var(--dash-text)]">
+                        {it.employeeNumber || "—"}
+                      </span>
+                    </div>
 
-                  {/* Mobile: stack email under name */}
-                  <div className="mt-1 text-xs text-[var(--dash-muted)] truncate md:hidden">
-                    {it.email}
-                  </div>
-                  <div className="mt-0.5 text-xs text-[var(--dash-muted)] md:hidden">
-                    {methodLabel}
+                    <div className="mt-1 text-sm font-semibold truncate">
+                      {fullName}
+                    </div>
+
+                    {/* Mobile: stack email under name */}
+                    <div className="mt-1 text-xs text-[var(--dash-muted)] truncate md:hidden">
+                      {it.email}
+                    </div>
+                    <div className="mt-0.5 text-xs text-[var(--dash-muted)] md:hidden">
+                      {methodLabel}
+                    </div>
                   </div>
                 </div>
 

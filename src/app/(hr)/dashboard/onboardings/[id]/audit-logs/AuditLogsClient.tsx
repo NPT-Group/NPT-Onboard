@@ -28,6 +28,9 @@ export function AuditLogsClient({
   const [error, setError] = useState<string | null>(initialError);
   const [loading, setLoading] = useState(false);
 
+  // Per-row expansion state for metadata (id -> expanded)
+  const [expandedIds, setExpandedIds] = useState<string[]>([]);
+
   const page = Math.max(1, Number(sp.get("page") ?? String(meta?.page ?? 1)) || 1);
   const pageSize = Math.min(
     100,
@@ -83,6 +86,25 @@ export function AuditLogsClient({
 
   const rows = useMemo(() => items ?? [], [items]);
 
+  function toggleExpanded(id: string) {
+    setExpandedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  function formatMetadataValue(value: unknown): string {
+    if (value === null || value === undefined) return "";
+    if (typeof value === "string") return value;
+    if (typeof value === "number" || typeof value === "boolean") {
+      return String(value);
+    }
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-surface)] shadow-[var(--dash-shadow)] overflow-hidden">
@@ -136,35 +158,88 @@ export function AuditLogsClient({
               </div>
             ) : (
               <div className="space-y-2">
-                {rows.map((it) => (
-                  <div
-                    key={it.id}
-                    className="rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-surface-2)] p-4"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="text-sm font-semibold text-[var(--dash-text)]">
-                          {it.action}
+                {rows.map((it) => {
+                  const hasMetadata =
+                    it.metadata && Object.keys(it.metadata || {}).length > 0;
+                  const isExpanded = expandedIds.includes(it.id);
+
+                  return (
+                    <div
+                      key={it.id}
+                      className="rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-surface-2)] p-4"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-[var(--dash-text)]">
+                            {it.action}
+                          </div>
+                          <div className="mt-1 text-sm text-[var(--dash-muted)]">
+                            {it.message}
+                          </div>
                         </div>
-                        <div className="mt-1 text-sm text-[var(--dash-muted)]">
-                          {it.message}
+                        <div className="flex flex-col items-end gap-2 text-right">
+                          <div className="text-xs text-[var(--dash-muted)]">
+                            {new Date(it.createdAt as any).toLocaleString()}
+                          </div>
+                          {hasMetadata && (
+                            <button
+                              type="button"
+                              onClick={() => toggleExpanded(it.id)}
+                              className={cn(
+                                "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition",
+                                "border-[var(--dash-border)] bg-[var(--dash-surface)] text-[var(--dash-muted)] hover:bg-[var(--dash-surface)] hover:text-[var(--dash-text)]",
+                                "focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dash-red-soft)]"
+                              )}
+                              aria-expanded={isExpanded}
+                            >
+                              {isExpanded ? "Hide details" : "View details"}
+                            </button>
+                          )}
                         </div>
                       </div>
-                      <div className="text-xs text-[var(--dash-muted)]">
-                        {new Date(it.createdAt as any).toLocaleString()}
-                      </div>
+
+                      {it.actor && (
+                        <div className="mt-2 text-xs text-[var(--dash-muted)]">
+                          Actor:{" "}
+                          <span className="text-[var(--dash-text)]">
+                            {it.actor?.name ?? "—"}
+                          </span>{" "}
+                          ({it.actor?.type ?? "—"})
+                        </div>
+                      )}
+
+                      {hasMetadata && isExpanded && (
+                        <div className="mt-3 rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-surface)] p-3">
+                          <div className="text-xs font-semibold text-[var(--dash-muted)] mb-2">
+                            Metadata
+                          </div>
+                          <div className="space-y-1 text-xs font-mono">
+                            {Object.entries(it.metadata ?? {}).map(
+                              ([key, value]) => (
+                                <div key={key}>
+                                  <span className="text-[var(--dash-muted)]">
+                                    {key}
+                                    {": "}
+                                  </span>
+                                  {typeof value === "object" &&
+                                  value !== null ? (
+                                    <pre className="mt-1 whitespace-pre-wrap break-words text-[var(--dash-text)] bg-[var(--dash-surface-2)] rounded-lg px-2 py-1">
+                                      {formatMetadataValue(value)}
+                                    </pre>
+                                  ) : (
+                                    <span className="text-[var(--dash-text)]">
+                                      {formatMetadataValue(value)}
+                                    </span>
+                                  )}
+                                </div>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    {it.actor && (
-                      <div className="mt-2 text-xs text-[var(--dash-muted)]">
-                        Actor:{" "}
-                        <span className="text-[var(--dash-text)]">
-                          {it.actor?.name ?? "—"}
-                        </span>{" "}
-                        ({it.actor?.type ?? "—"})
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

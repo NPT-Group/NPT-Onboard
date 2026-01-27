@@ -1,7 +1,7 @@
 // src/app/(hr)/dashboard/DashboardHomeClient.tsx
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { ESubsidiary } from "@/types/shared.types";
@@ -77,6 +77,16 @@ export function DashboardHomeClient() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
 
+  // Multi-select state for bulk actions (e.g. terminate several onboardings at once)
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const selectionCount = selectedIds.length;
+  const selectedItems = useMemo(
+    () => items.filter((it) => selectedIds.includes(it.id)),
+    [items, selectedIds]
+  );
+
+  const [bulkTerminateOpen, setBulkTerminateOpen] = useState(false);
+
   type ExportUiState =
     | { state: "idle" }
     | { state: "running"; showProgress: boolean; progressPercent: number }
@@ -101,6 +111,11 @@ export function DashboardHomeClient() {
     // if you later make sort dynamic, include it here too
     // sortBy, sortDir
   ]);
+
+  // Clear selection whenever the underlying list context changes
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [subsidiary, q, statusGroup, hasEmployeeNumber, dateField, from, to, page]);
 
   const isSupportedSubsidiary = subsidiary === ESubsidiary.INDIA;
 
@@ -416,6 +431,18 @@ export function DashboardHomeClient() {
             }
           }}
           resendingId={resendingId}
+          selectedIds={selectedIds}
+          onToggleSelect={(item) => {
+            setSelectedIds((prev) =>
+              prev.includes(item.id)
+                ? prev.filter((id) => id !== item.id)
+                : [...prev, item.id]
+            );
+          }}
+          onBulkTerminateSelected={() => {
+            if (selectionCount === 0) return;
+            setBulkTerminateOpen(true);
+          }}
         />
       )}
 
@@ -430,6 +457,41 @@ export function DashboardHomeClient() {
           await terminateOnboarding(selected.id, payload);
           setTerminateOpen(false);
           setReloadNonce((n) => n + 1);
+        }}
+      />
+
+      {/* Bulk terminate: apply same termination type + reason to all selected onboardings */}
+      <TerminateModal
+        open={bulkTerminateOpen}
+        onClose={() => setBulkTerminateOpen(false)}
+        employeeLabel={
+          selectionCount === 1 && selectedItems[0]
+            ? `${selectedItems[0].firstName} ${selectedItems[0].lastName}`.trim() ||
+              "1 onboarding"
+            : `${selectionCount} selected onboardings`
+        }
+        onConfirm={async (payload) => {
+          const ids = [...selectedIds];
+          if (ids.length === 0) return;
+
+          // Best-effort: attempt termination for all, surfacing the last error (if any)
+          let lastError: unknown = null;
+          for (const id of ids) {
+            try {
+              await terminateOnboarding(id, payload);
+            } catch (e) {
+              lastError = e;
+            }
+          }
+
+          setBulkTerminateOpen(false);
+          setSelectedIds([]);
+          setReloadNonce((n) => n + 1);
+
+          if (lastError) {
+            // Let TerminateModal display the error
+            throw lastError;
+          }
         }}
       />
 
