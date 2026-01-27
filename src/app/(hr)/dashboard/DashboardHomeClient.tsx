@@ -39,8 +39,12 @@ export function DashboardHomeClient() {
     "pending",
     "modificationRequested",
     "pendingReview",
+    "detailsConfirmed",
+    "contractSent",
+    "contractSubmitted",
     "approved",
     "manual",
+    "terminated",
   ] as const;
   const statusGroup = statusGroupAllowed.includes(
     statusGroupRaw as StatusGroupKey
@@ -164,7 +168,8 @@ export function DashboardHomeClient() {
           to: to || undefined,
           page,
           pageSize: PAGE_SIZE,
-          sortBy: "createdAt",
+          // Sort by most recently updated so HR always sees the latest activity first.
+          sortBy: "updatedAt",
           sortDir: "desc",
         });
         if (cancelled) return;
@@ -257,7 +262,8 @@ export function DashboardHomeClient() {
         dateField,
         from: from || undefined,
         to: to || undefined,
-        sortBy: "createdAt",
+          // Keep export ordering consistent with the dashboard list.
+          sortBy: "updatedAt",
         sortDir: "desc",
         format: "xlsx",
         // filename: optional, if you want:

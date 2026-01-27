@@ -8,16 +8,39 @@ import { Calendar, ChevronDown, Search, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { ESubsidiary } from "@/types/shared.types";
 
-export type StatusGroupKey = "" | "pending" | "modificationRequested" | "pendingReview" | "approved" | "manual";
+/**
+ * Dashboard-friendly status shortcuts for filtering.
+ *
+ * Notes:
+ * - Some keys map to "groups" (multiple statuses), others map 1:1 to a status.
+ * - See API route `/api/v1/admin/onboardings` for the server-side group map.
+ */
+export type StatusGroupKey =
+  | ""
+  | "pending"
+  | "modificationRequested"
+  | "pendingReview"
+  | "detailsConfirmed"
+  | "contractSent"
+  | "contractSubmitted"
+  | "approved"
+  | "manual"
+  | "terminated";
 
 const statusGroups: Array<{ key: StatusGroupKey; label: string }> = [
   // No status filter selected by default → show all.
   { key: "", label: "All" },
-  { key: "approved", label: "Approved" },
-  { key: "pendingReview", label: "Pending review" },
-  { key: "modificationRequested", label: "Modification requested" },
+  // Phase A – information onboarding
   { key: "pending", label: "Digital application sent" },
   { key: "manual", label: "Manual application sent" },
+  { key: "pendingReview", label: "Pending review" },
+  { key: "modificationRequested", label: "Modification requested" },
+  { key: "detailsConfirmed", label: "Details confirmed" },
+  // Phase B – contracts & policies
+  { key: "contractSent", label: "Contract sent" },
+  { key: "contractSubmitted", label: "Contract submitted" },
+  { key: "approved", label: "Approved" },
+  { key: "terminated", label: "Terminated" },
 ];
 
 const subsidiaryOptions: Array<{ value: ESubsidiary; label: string }> = [

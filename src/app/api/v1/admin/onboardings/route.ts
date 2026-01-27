@@ -200,7 +200,17 @@ export const GET = async (req: NextRequest) => {
     const statusGroupRaw = sp.get("statusGroup");
 
     if (statusGroupRaw != null) {
-      const allowedStatusGroups = ["pending", "modificationRequested", "pendingReview", "approved", "manual", "terminated"] as const;
+      const allowedStatusGroups = [
+        "pending",
+        "modificationRequested",
+        "pendingReview",
+        "detailsConfirmed",
+        "contractSent",
+        "contractSubmitted",
+        "approved",
+        "manual",
+        "terminated",
+      ] as const;
       parseEnumParam(statusGroupRaw, allowedStatusGroups, "statusGroup");
     }
 
@@ -239,6 +249,9 @@ export const GET = async (req: NextRequest) => {
         pending: [EOnboardingStatus.InviteGenerated],
         modificationRequested: [EOnboardingStatus.ModificationRequested],
         pendingReview: [EOnboardingStatus.Submitted, EOnboardingStatus.Resubmitted],
+        detailsConfirmed: [EOnboardingStatus.DETAILS_CONFIRMED],
+        contractSent: [EOnboardingStatus.CONTRACT_SENT],
+        contractSubmitted: [EOnboardingStatus.CONTRACT_SUBMITTED],
         approved: [EOnboardingStatus.Approved],
         manual: [EOnboardingStatus.ManualPDFSent],
         terminated: [EOnboardingStatus.Terminated],

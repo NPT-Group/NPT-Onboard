@@ -58,7 +58,16 @@ export type GetAdminOnboardingsResponse = {
 export type GetAdminOnboardingsParams = {
   subsidiary: ESubsidiary;
   q?: string;
-  statusGroup?: "pending" | "modificationRequested" | "pendingReview" | "approved" | "manual" | "terminated";
+  statusGroup?:
+    | "pending"
+    | "modificationRequested"
+    | "pendingReview"
+    | "detailsConfirmed"
+    | "contractSent"
+    | "contractSubmitted"
+    | "approved"
+    | "manual"
+    | "terminated";
   hasEmployeeNumber?: "true" | "false";
   dateField?: AdminOnboardingsListFilters["dateField"];
   from?: string; // yyyy-mm-dd
