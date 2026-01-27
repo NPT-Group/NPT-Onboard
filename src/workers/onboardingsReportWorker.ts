@@ -170,11 +170,14 @@ function buildFilter(payload: Payload) {
     filter.$and = filter.$and ? [...filter.$and, ...tokenClauses] : tokenClauses;
   }
 
-  // statuses vs statusGroup map (same as route)
+  // statuses vs statusGroup map (must stay in sync with list route)
   const groupMap: Record<string, EOnboardingStatus[]> = {
     pending: [EOnboardingStatus.InviteGenerated],
     modificationRequested: [EOnboardingStatus.ModificationRequested],
     pendingReview: [EOnboardingStatus.Submitted, EOnboardingStatus.Resubmitted],
+    detailsConfirmed: [EOnboardingStatus.DETAILS_CONFIRMED],
+    contractSent: [EOnboardingStatus.CONTRACT_SENT],
+    contractSubmitted: [EOnboardingStatus.CONTRACT_SUBMITTED],
     approved: [EOnboardingStatus.Approved],
     manual: [EOnboardingStatus.ManualPDFSent],
     terminated: [EOnboardingStatus.Terminated],

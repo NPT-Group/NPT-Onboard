@@ -58,7 +58,16 @@ export type GetAdminOnboardingsResponse = {
 export type GetAdminOnboardingsParams = {
   subsidiary: ESubsidiary;
   q?: string;
-  statusGroup?: "pending" | "modificationRequested" | "pendingReview" | "approved" | "manual" | "terminated";
+  statusGroup?:
+    | "pending"
+    | "modificationRequested"
+    | "pendingReview"
+    | "detailsConfirmed"
+    | "contractSent"
+    | "contractSubmitted"
+    | "approved"
+    | "manual"
+    | "terminated";
   hasEmployeeNumber?: "true" | "false";
   dateField?: AdminOnboardingsListFilters["dateField"];
   from?: string; // yyyy-mm-dd
@@ -100,6 +109,10 @@ export async function getAdminOnboarding(id: string) {
 
 export async function approveOnboarding(id: string, body: { employeeNumber?: string }) {
   return postJson<typeof body, { onboarding: any }>(`/api/v1/admin/onboardings/${id}/approve`, body);
+}
+
+export async function confirmDetailsOnboarding(id: string) {
+  return postJson<undefined, { onboarding: any }>(`/api/v1/admin/onboardings/${id}/confirm-details`, undefined);
 }
 
 export async function requestModification(id: string, body: { message: string }) {
