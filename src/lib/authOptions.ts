@@ -16,6 +16,11 @@ export const authOptions: AuthOptions = {
       clientId: AZURE_AD_CLIENT_ID,
       clientSecret: AZURE_AD_CLIENT_SECRET,
       tenantId: "organizations",
+      authorization: {
+        params: {
+          prompt: "select_account",
+        },
+      },
     }),
   ],
 
