@@ -1,5 +1,6 @@
 // src/lib/authOptions.ts
 import AzureADProvider from "next-auth/providers/azure-ad";
+import CredentialsProvider from "next-auth/providers/credentials";
 import type { AuthOptions } from "next-auth";
 import {
   AZURE_AD_CLIENT_ID,
@@ -9,6 +10,12 @@ import {
   isProd,
 } from "@/config/env";
 import { isAdminEmail } from "@/config/adminAuth";
+import connectDB from "@/lib/utils/connectDB";
+import { AdminUserModel } from "@/mongoose/models/AdminUser";
+import { normalizeAdminEmail, verifyPassword } from "@/lib/utils/auth/password";
+
+const MAX_FAILED_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 
 export const authOptions: AuthOptions = {
   providers: [
@@ -16,6 +23,57 @@ export const authOptions: AuthOptions = {
       clientId: AZURE_AD_CLIENT_ID,
       clientSecret: AZURE_AD_CLIENT_SECRET,
       tenantId: "organizations",
+    }),
+    CredentialsProvider({
+      id: "credentials",
+      name: "Email and password",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        const email = normalizeAdminEmail(credentials?.email ?? "");
+        const password = credentials?.password ?? "";
+
+        if (!email || !password || !isAdminEmail(email)) {
+          return null;
+        }
+
+        await connectDB();
+
+        const adminUser = await AdminUserModel.findOne({ email }).select("+passwordHash");
+        if (!adminUser?.isActive) {
+          return null;
+        }
+
+        const now = new Date();
+        if (adminUser.lockedUntil && adminUser.lockedUntil > now) {
+          return null;
+        }
+
+        const passwordMatches = await verifyPassword(password, adminUser.passwordHash);
+        if (!passwordMatches) {
+          const failedAttempts = adminUser.failedLoginAttempts + 1;
+          adminUser.failedLoginAttempts = failedAttempts;
+          adminUser.lockedUntil =
+            failedAttempts >= MAX_FAILED_LOGIN_ATTEMPTS
+              ? new Date(now.getTime() + LOCKOUT_DURATION_MS)
+              : null;
+          await adminUser.save();
+          return null;
+        }
+
+        adminUser.failedLoginAttempts = 0;
+        adminUser.lockedUntil = null;
+        adminUser.lastLoginAt = now;
+        await adminUser.save();
+
+        return {
+          id: adminUser._id.toString(),
+          email: adminUser.email,
+          name: adminUser.name,
+        };
+      },
     }),
   ],
 
